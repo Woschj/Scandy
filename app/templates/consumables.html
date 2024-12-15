@@ -8,10 +8,9 @@
 <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Verbrauchsmaterialübersicht</h1>
-            <a href="{{ url_for('admin.add_consumable') }}" 
-               class="btn bg-[#5b69a7] hover:bg-[#4c5789] text-white">
-                Neues Material hinzufügen
+            <h2 class="text-2xl font-bold">Verbrauchsmaterial</h2>
+            <a href="{{ url_for('consumables.add') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Neues Verbrauchsmaterial
             </a>
         </div>
 

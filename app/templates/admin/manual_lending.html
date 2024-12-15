@@ -92,30 +92,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for lending in active_lendings %}
-                        {% if lending.item_type == 'tool' %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('tools.details', barcode=lending.item_barcode) }}" 
-                                       class="link link-hover text-primary">
-                                        {{ lending.item_name }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
-                                       class="link link-hover text-primary">
-                                        {{ lending.worker_name }}
-                                    </a>
-                                </td>
-                                <td>{{ lending.formatted_time }}</td>
-                                <td>
-                                    <button onclick="returnTool('{{ lending.item_barcode }}', 'tool')"
-                                            class="btn btn-success btn-sm">
-                                        Zurückgeben
-                                    </button>
-                                </td>
-                            </tr>
-                        {% endif %}
+                    {% for lending in tool_lendings %}
+                        <tr>
+                            <td>{{ lending.tool_name }}</td>
+                            <td>{{ lending.tool_barcode }}</td>
+                            <td>{{ lending.worker_name }}</td>
+                            <td>{{ lending.worker_barcode }}</td>
+                            <td>{{ lending.lent_at }}</td>
+                            <td>
+                                <button onclick="returnTool('{{ lending.item_barcode }}', 'tool')"
+                                        class="btn btn-success btn-sm">
+                                    Zurückgeben
+                                </button>
+                            </td>
+                        </tr>
                     {% else %}
                         <tr>
                             <td colspan="4" class="text-center">Keine aktiven Werkzeugausleihen</td>

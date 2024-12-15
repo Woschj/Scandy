@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from flask import g
+from datetime import datetime
 
 class DBConfig:
     DATABASE_PATH = os.path.join('database', 'inventory.db')
@@ -20,9 +21,79 @@ def get_db(database_name='inventory.db'):
 
 def get_db_connection():
     """Stellt eine Verbindung zur Datenbank her"""
-    conn = sqlite3.connect(DBConfig.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return sqlite3.connect('database/inventory.db')
+
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Werkzeuge (Tools)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'verfügbar',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Verbrauchsmaterialien (Consumables)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS consumables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            quantity INTEGER DEFAULT 0,
+            min_quantity INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Mitarbeiter (Workers)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS workers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT UNIQUE NOT NULL,
+            firstname TEXT NOT NULL,
+            lastname TEXT NOT NULL,
+            department TEXT,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Ausleihvorgänge (Lendings)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS lendings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tool_barcode TEXT,
+            worker_barcode TEXT,
+            lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            returned_at TIMESTAMP,
+            FOREIGN KEY (tool_barcode) REFERENCES tools (barcode),
+            FOREIGN KEY (worker_barcode) REFERENCES workers (barcode)
+        )
+    ''')
+
+    # System-Logs
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS system_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            level TEXT,
+            message TEXT,
+            details TEXT
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
 
 def init_database():
     """Initialisiert die Datenbank"""
@@ -88,3 +159,6 @@ class Worker:
         cursor = db.cursor()
         cursor.execute('SELECT COUNT(*) FROM workers WHERE deleted = 0 OR deleted IS NULL')
         return cursor.fetchone()[0]
+
+def create_tables():
+    init_db()

@@ -111,3 +111,24 @@ def update_status():
     except Exception as e:
         current_app.logger.error(f'Fehler bei Statusänderung: {str(e)}')
         return {'success': False, 'error': str(e)} 
+
+@bp.route('/add', methods=['GET', 'POST'])
+@admin_required
+def add():
+    """Neues Werkzeug hinzufügen"""
+    if request.method == 'POST':
+        barcode = request.form.get('barcode')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        
+        with get_db_connection() as conn:
+            conn.execute('''
+                INSERT INTO tools (barcode, name, description, created_at, deleted)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP, 0)
+            ''', [barcode, name, description])
+            conn.commit()
+            
+        flash('Werkzeug erfolgreich hinzugefügt', 'success')
+        return redirect(url_for('tools.index'))
+        
+    return render_template('tools/add.html') 

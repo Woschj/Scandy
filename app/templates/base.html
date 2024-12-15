@@ -26,19 +26,55 @@
                 }
             },
             daisyui: {
-                themes: ["light", "dark"],
+                themes: [
+                    "light",
+                    "dark",
+                    "corporate",
+                    "business",
+                    "professional",
+                    "modern",
+                    "night",
+                    "forest",
+                    "autumn"
+                ],
             }
         }
     </script>
 
     <style>
         @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
+            0% { 
+                transform: translateX(-100%);
+                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+            }
+            50% { 
+                transform: translateX(100%);
+                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+            }
+            100% { 
+                transform: translateX(-100%);
+                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+            }
         }
-        .animate-scan {
-            animation: scan 2s linear infinite;
+
+        .scan-animation {
+            position: relative;
+            height: 2px;
+            background: #eee;
+            overflow: hidden;
+            margin: 1rem 0;
+            border-radius: 1px;
         }
+
+        .scan-line {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+            animation: scan 3s ease-in-out infinite;
+        }
+
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
@@ -49,6 +85,15 @@
         
         .table-link {
             @apply link-primary no-underline hover:underline;
+        }
+
+        /* Dark mode Anpassungen */
+        [data-theme='dark'] .scan-animation {
+            background: #2a303c;
+        }
+        
+        [data-theme='dark'] .scan-line {
+            background: linear-gradient(90deg, transparent, #a6adba, transparent);
         }
     </style>
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -99,7 +144,8 @@
                 <!-- QuickScan Button in der Navbar -->
                 <button onclick="showQuickScan()" 
                         class="btn btn-circle bg-[#5b69a7] text-white hover:bg-[#4c5789] absolute left-1/2 transform -translate-x-1/2 z-10"
-                        style="transform: scale(3);">
+                        type="button"
+                        style="transform: translate(-50%, 0) scale(1.5);">
                     <i class="fas fa-barcode"></i>
                 </button>
                 
@@ -185,10 +231,8 @@
                     </div>
 
                     <!-- Scan Animation -->
-                    <div class="relative h-1 bg-base-200">
-                        <div class="absolute top-0 left-0 w-full h-full">
-                            <div class="h-1 bg-primary opacity-50 animate-scan"></div>
-                        </div>
+                    <div class="scan-animation">
+                        <div class="scan-line"></div>
                     </div>
                 </form>
             </dialog>
@@ -386,6 +430,80 @@
 
     // Initialisierung nach dem Laden der Seite
     document.addEventListener('DOMContentLoaded', initializeFilters);
+
+    // QuickScan Funktionen
+    function showQuickScan() {
+        const modal = document.getElementById('quickScanModal');
+        if (modal) {
+            modal.showModal();
+            // Fokus auf das versteckte Input-Feld setzen
+            setTimeout(() => {
+                const input = document.getElementById('main-scanner-input');
+                if (input) {
+                    input.focus();
+                }
+            }, 100);
+        }
+    }
+
+    function resetQuickScan() {
+        const modal = document.getElementById('quickScanModal');
+        if (modal) {
+            modal.close();
+        }
+        // Reset der Scan-Schritte
+        document.querySelectorAll('.scan-step').forEach(step => {
+            if (step.id === 'step-tool') {
+                step.style.display = 'block';
+            } else {
+                step.style.display = 'none';
+            }
+        });
+        // Reset der Vorschau-Felder
+        document.querySelector('#tool-preview .text-xl').textContent = '---';
+        document.querySelector('#worker-preview .text-xl').textContent = '---';
+    }
+
+    // Event Listener für das Modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('quickScanModal');
+        const input = document.getElementById('main-scanner-input');
+        
+        if (modal && input) {
+            // Automatischer Fokus beim Öffnen
+            modal.addEventListener('show', () => {
+                setTimeout(() => input.focus(), 100);
+            });
+            
+            // Fokus wiederherstellen, wenn er verloren geht
+            modal.addEventListener('click', () => {
+                input.focus();
+            });
+        }
+    });
+
+    // Theme Management
+    document.addEventListener('DOMContentLoaded', function() {
+        // Theme aus localStorage laden oder System-Einstellung nutzen
+        const savedTheme = localStorage.getItem('theme') || 
+                          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        // Theme initial setzen
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Checkbox-Status setzen
+        const themeToggle = document.querySelector('.theme-controller');
+        if (themeToggle) {
+            themeToggle.checked = savedTheme === 'dark';
+        }
+
+        // Theme Toggle Event Listener
+        document.querySelector('.theme-controller')?.addEventListener('change', function(e) {
+            const newTheme = e.target.checked ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    });
     </script>
 </body>
 </html>

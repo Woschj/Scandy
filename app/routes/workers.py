@@ -74,3 +74,26 @@ def edit(barcode):
     if worker is None:
         return redirect(url_for('workers.index'))
     return render_template('worker_details.html', worker=worker)
+
+@bp.route('/add', methods=['GET', 'POST'])
+@admin_required
+def add():
+    """Neuen Mitarbeiter hinzufügen"""
+    if request.method == 'POST':
+        barcode = request.form.get('barcode')
+        firstname = request.form.get('firstname')
+        lastname = request.form.get('lastname')
+        department = request.form.get('department')
+        email = request.form.get('email')
+        
+        with get_db_connection() as conn:
+            conn.execute('''
+                INSERT INTO workers (barcode, firstname, lastname, department, email, created_at, deleted)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0)
+            ''', [barcode, firstname, lastname, department, email])
+            conn.commit()
+            
+        flash('Mitarbeiter erfolgreich hinzugefügt', 'success')
+        return redirect(url_for('workers.index'))
+        
+    return render_template('workers/add.html')

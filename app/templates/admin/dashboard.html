@@ -2,124 +2,328 @@
 
 {% block title %}Admin Dashboard{% endblock %}
 
-{% block content %}
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-base-content mb-8">Admin Dashboard</h1>
+{% block styles %}
+<style>
+:root {
+    --p: {{ colors.primary }};
+    --s: {{ colors.secondary }};
+    --a: {{ colors.accent }};
+    --b1: {{ colors.get('base-100', '#FFFFFF') }};
+    --b2: {{ colors.get('base-200', '#F8F9FA') }};
+    --b3: {{ colors.get('base-300', '#E9ECEF') }};
+    --n: {{ colors.get('neutral', '#2A2A2A') }};
+    --nf: {{ colors.get('neutral-focus', '#1A1A1A') }};
+    --navbar-bg: {{ colors.get('navbar-bg', '#6B5CA5') }};
+    --navbar-text: {{ colors.get('navbar-text', '#FFFFFF') }};
+    --sidebar-bg: {{ colors.get('sidebar-bg', '#F8F9FA') }};
+    --card-bg: {{ colors.get('card-bg', '#FFFFFF') }};
+    --footer-bg: {{ colors.get('footer-bg', '#6B5CA5') }};
+}
+
+/* Basis Styles */
+body {
+    background-color: var(--b1);
+    color: var(--n);
+}
+
+/* Navbar Styles */
+.navbar {
+    background-color: var(--navbar-bg);
+    color: var(--navbar-text);
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--b3);
+}
+
+/* Card Styles */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--b3);
+}
+
+/* Footer Styles */
+.footer {
+    background-color: var(--footer-bg);
+    color: var(--navbar-text);
+}
+
+/* Dark Mode spezifische Anpassungen */
+[data-theme="dark"] {
+    .card {
+        background-color: var(--card-bg);
+        border-color: var(--b3);
+    }
     
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Werkzeug-Statistiken Card -->
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body p-4">
-                <h2 class="card-title text-lg mb-2">Werkzeug-Status</h2>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    <a href="{{ url_for('tools.index') }}" 
-                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Gesamt</div>
-                        <div class="stat-value text-primary text-2xl">{{ tools_stats.total }}</div>
-                    </a>
-                    <a href="{{ url_for('tools.index', status='Verfügbar') }}" 
-                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Verfügbar</div>
-                        <div class="stat-value text-success text-2xl">{{ tools_stats.available }}</div>
-                    </a>
-                    <a href="{{ url_for('tools.index', status='Ausgeliehen') }}" 
-                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Ausgeliehen</div>
-                        <div class="stat-value text-warning text-2xl">{{ tools_stats.lent }}</div>
-                    </a>
-                    <a href="{{ url_for('tools.index', status='Wartung') }}" 
-                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">In Wartung</div>
-                        <div class="stat-value text-info text-2xl">{{ tools_stats.maintenance }}</div>
-                    </a>
-                    <a href="{{ url_for('tools.index', status='Defekt') }}" 
-                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Defekt</div>
-                        <div class="stat-value text-error text-2xl">{{ tools_stats.broken }}</div>
-                    </a>
-                </div>
-            </div>
-        </div>
+    .navbar {
+        border-bottom: 1px solid var(--b3);
+    }
+    
+    .sidebar {
+        border-right: 1px solid var(--b3);
+    }
+}
 
-        <!-- Verbrauchsmaterial-Statistiken Card -->
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body p-4">
-                <h2 class="card-title text-lg mb-2">Verbrauchsmaterial-Status</h2>
-                <div class="grid grid-cols-3 gap-2">
-                    <a href="{{ url_for('consumables.index') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Gesamt</div>
-                        <div class="stat-value text-primary text-2xl">{{ consumables_stats.total }}</div>
-                    </a>
-                    <a href="{{ url_for('consumables.index', filter='low_stock') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Niedriger Bestand</div>
-                        <div class="stat-value text-warning text-2xl">{{ consumables_stats.low_stock }}</div>
-                        <div class="stat-desc text-xs">Unter Mindestbestand</div>
-                    </a>
-                    <a href="{{ url_for('consumables.index', filter='out_of_stock') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Nicht verfügbar</div>
-                        <div class="stat-value text-error text-2xl">{{ consumables_stats.out_of_stock }}</div>
-                        <div class="stat-desc text-xs">Bestand = 0</div>
-                    </a>
-                </div>
-            </div>
-        </div>
+.quick-scan-btn {
+    transition: all 0.3s ease;
+    background-color: var(--p);
+    border-color: var(--s);
+    color: var(--a);
+}
 
-        <!-- Mitarbeiter-Statistiken Card -->
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body p-4">
-                <h2 class="card-title text-lg mb-2">Mitarbeiter-Status</h2>
-                <div class="grid grid-cols-2 gap-2">
-                    <a href="{{ url_for('workers.index') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Aktive Mitarbeiter</div>
-                        <div class="stat-value text-primary text-2xl">{{ workers_stats.total }}</div>
-                    </a>
-                    <a href="{{ url_for('workers.index', filter='with_tools') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
-                        <div class="stat-title text-sm">Mit Ausleihen</div>
-                        <div class="stat-value text-secondary text-2xl">{{ workers_stats.with_tools }}</div>
-                        <div class="stat-desc text-xs">Aktive Ausleihen</div>
-                    </a>
-                </div>
-            </div>
-        </div>
+.preview-section button.btn-secondary {
+    background-color: var(--s);
+    border-color: var(--s);
+    color: var(--p);
+}
 
-        <!-- Aktuelle Ausleihen Card -->
-        {% if current_lendings %}
-        <div class="card bg-base-200 shadow-xl">
-            <div class="card-body p-4">
-                <h2 class="card-title text-lg mb-2">Aktuelle Ausleihen</h2>
-                <div class="overflow-x-auto">
-                    <table class="table table-sm w-full">
-                        <thead>
-                            <tr>
-                                <th>Werkzeug</th>
-                                <th>Mitarbeiter</th>
-                                <th>Ausgeliehen seit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for lending in current_lendings %}
-                            <tr class="hover">
-                                <td>
-                                    <a href="{{ url_for('tools.details', barcode=lending.tool_barcode) }}" 
-                                       class="link link-primary">
-                                        {{ lending.tool_name }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
-                                       class="link link-secondary">
-                                        {{ lending.worker_name }} {{ lending.worker_lastname }}
-                                    </a>
-                                </td>
-                                <td>{{ lending.lending_time|datetime }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+.preview-section button.btn-accent {
+    background-color: var(--a);
+    border-color: var(--p);
+    color: var(--p);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <!-- Werkzeug-Statistiken -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Werkzeuge</h2>
+            <p>Gesamt: {{ tools_stats.total }}</p>
+            <p>Ausgeliehen: {{ tools_stats.lent }}</p>
+            <div class="card-actions justify-end">
+                <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Neues Werkzeug
+                </a>
             </div>
         </div>
-        {% endif %}
     </div>
+
+    <!-- Mitarbeiter-Statistiken -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Mitarbeiter</h2>
+            <p>Gesamt: {{ workers_stats.total }}</p>
+            <div class="card-actions justify-end">
+                <a href="{{ url_for('workers.add') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Neuer Mitarbeiter
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verbrauchsmaterial-Statistiken -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Verbrauchsmaterial</h2>
+            <p>Gesamt: {{ consumables_stats.total }}</p>
+            <p>Niedriger Bestand: {{ consumables_stats.low_stock }}</p>
+            <div class="card-actions justify-end">
+                <a href="{{ url_for('consumables.add') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Neues Material
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Corporate Design Einstellungen -->
+<div class="card bg-base-100 shadow-xl mb-6">
+    <div class="card-body">
+        <h2 class="card-title mb-4">Corporate Design</h2>
+        
+        <form method="POST" action="{{ url_for('admin.update_design') }}" enctype="multipart/form-data" class="space-y-6">
+            <!-- Logo Upload -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Logo</span>
+                </label>
+                <div class="flex items-center gap-4">
+                    <img src="{{ current_logo }}" alt="Aktuelles Logo" class="h-12">
+                    <input type="file" name="logo" accept="image/svg+xml,image/png,image/jpeg" class="file-input file-input-bordered w-full max-w-xs">
+                </div>
+            </div>
+
+            <!-- Farbschema Auswahl -->
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Farbschema</span>
+                </label>
+                <select name="color_scheme" class="select select-bordered w-full" onchange="updatePreview(this.value)">
+                    <optgroup label="BTZ">
+                        <option value="btz">BTZ Standard</option>
+                        <option value="btz-dark">BTZ Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Blau">
+                        <option value="blue">Blau-Professional</option>
+                        <option value="blue-dark">Blau-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Grün">
+                        <option value="green">Grün-Nachhaltig</option>
+                        <option value="green-dark">Grün-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Lila">
+                        <option value="purple">Lila-Innovation</option>
+                        <option value="purple-dark">Lila-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Orange">
+                        <option value="orange">Orange-Dynamisch</option>
+                        <option value="orange-dark">Orange-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Rot">
+                        <option value="red">Rot-Energie</option>
+                        <option value="red-dark">Rot-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Türkis">
+                        <option value="teal">Türkis-Modern</option>
+                        <option value="teal-dark">Türkis-Dunkel</option>
+                    </optgroup>
+                    <optgroup label="Grau">
+                        <option value="gray">Grau-Neutral</option>
+                        <option value="gray-dark">Grau-Dunkel</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Vorschau -->
+            <div class="preview-section space-y-4 p-4 border rounded-lg" style="background: var(--base-100);">
+                <h3 class="font-bold mb-2" style="color: var(--neutral);">Vorschau</h3>
+                <div class="flex gap-2">
+                    <button type="button" class="btn" style="background: var(--primary); color: var(--accent);">Primär</button>
+                    <button type="button" class="btn" style="background: var(--secondary); color: var(--neutral);">Sekundär</button>
+                    <button type="button" class="btn" style="background: var(--accent); color: var(--neutral);">Akzent</button>
+                </div>
+                <div class="card" style="background: var(--card-bg);">
+                    <div class="card-body">
+                        <p style="color: var(--neutral);">Beispieltext</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-ghost" onclick="resetDesign()">Zurücksetzen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const colorSchemes = {
+    'btz': {
+        primary: '#6B5CA5',      // BTZ Lila
+        secondary: '#9ED167',    // BTZ Grün
+        accent: '#FFFFFF',       // Weiß
+        'base-100': '#FFFFFF',     
+        'base-200': '#F8F9FA',     
+        'base-300': '#E9ECEF',     
+        'neutral': '#2A2A2A',      
+        'neutral-focus': '#1A1A1A', 
+        'navbar-bg': '#6B5CA5',    
+        'navbar-text': '#FFFFFF',   
+        'sidebar-bg': '#F8F9FA',   
+        'card-bg': '#FFFFFF',      
+        'footer-bg': '#6B5CA5'     
+    },
+    'ocean': {
+        primary: '#0EA5E9',      // Hellblau
+        secondary: '#22D3EE',    // Türkis
+        accent: '#F0F9FF',       // Sehr helles Blau
+        'base-100': '#F0F9FF',   // Hellblauer Hintergrund
+        'base-200': '#E0F2FE',     
+        'base-300': '#BAE6FD',     
+        'neutral': '#0C4A6E',    // Dunkles Blau für Text
+        'neutral-focus': '#082F49', 
+        'navbar-bg': '#0369A1',  // Mittelblau
+        'navbar-text': '#F0F9FF',  
+        'sidebar-bg': '#E0F2FE',   
+        'card-bg': '#FFFFFF',      
+        'footer-bg': '#0EA5E9'     
+    },
+    'forest': {
+        primary: '#059669',      // Smaragdgrün
+        secondary: '#10B981',    // Mintgrün
+        accent: '#ECFDF5',       // Sehr helles Grün
+        'base-100': '#F0FDF4',   // Hellgrüner Hintergrund
+        'base-200': '#DCFCE7',     
+        'base-300': '#BBF7D0',     
+        'neutral': '#064E3B',    // Dunkelgrün für Text
+        'neutral-focus': '#022C22', 
+        'navbar-bg': '#047857',    
+        'navbar-text': '#ECFDF5',  
+        'sidebar-bg': '#DCFCE7',   
+        'card-bg': '#FFFFFF',      
+        'footer-bg': '#059669'     
+    },
+    'sunset': {
+        primary: '#EA580C',      // Orange
+        secondary: '#FB923C',    // Helles Orange
+        accent: '#FFF7ED',       // Cremeweiß
+        'base-100': '#FFF7ED',   // Warmer Hintergrund
+        'base-200': '#FFEDD5',     
+        'base-300': '#FED7AA',     
+        'neutral': '#7C2D12',    // Dunkelorange für Text
+        'neutral-focus': '#431407', 
+        'navbar-bg': '#C2410C',    
+        'navbar-text': '#FFF7ED',  
+        'sidebar-bg': '#FFEDD5',   
+        'card-bg': '#FFFFFF',      
+        'footer-bg': '#EA580C'     
+    },
+    'royal': {
+        primary: '#7E22CE',      // Königslila
+        secondary: '#A855F7',    // Helles Lila
+        accent: '#FAF5FF',       // Sehr helles Lila
+        'base-100': '#FAF5FF',   // Lilafarbener Hintergrund
+        'base-200': '#F3E8FF',     
+        'base-300': '#E9D5FF',     
+        'neutral': '#581C87',    // Dunkles Lila für Text
+        'neutral-focus': '#3B0764', 
+        'navbar-bg': '#6B21A8',    
+        'navbar-text': '#FAF5FF',  
+        'sidebar-bg': '#F3E8FF',   
+        'card-bg': '#FFFFFF',      
+        'footer-bg': '#7E22CE'     
+    }
+};
+
+function updatePreview(scheme) {
+    const colors = colorSchemes[scheme];
+    if (!colors) return;
+    
+    // Update alle CSS-Variablen
+    Object.entries(colors).forEach(([key, value]) => {
+        const cssVar = '--' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
+        document.documentElement.style.setProperty(cssVar, value);
+    });
+    
+    // Dark-Mode Toggle
+    document.documentElement.setAttribute('data-theme', 
+        scheme.endsWith('-dark') ? 'dark' : 'light');
+}
+
+// Initial das aktuelle Farbschema setzen
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.querySelector('select[name="color_scheme"]');
+    if (select) {
+        updatePreview(select.value);
+    }
+});
+</script>
+
+<div class="flex gap-2">
+    <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Werkzeug
+    </a>
+    <a href="{{ url_for('consumables.add') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Verbrauchsmaterial
+    </a>
+    <a href="{{ url_for('workers.add') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Mitarbeiter
+    </a>
 </div>
 {% endblock %} 

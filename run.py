@@ -1,5 +1,9 @@
 from app import create_app
+from app.models.database import init_db
 from app.utils.structure_viewer import print_database_structure, print_app_structure
+
+# Datenbank initialisieren
+init_db()
 
 app = create_app()
 

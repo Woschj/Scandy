@@ -126,4 +126,27 @@ def update_stock():
         current_app.logger.error(f'Fehler bei Bestandsaktualisierung: {str(e)}')
         return {'success': False, 'message': str(e)}, 500
 
+@bp.route('/add', methods=['GET', 'POST'])
+@admin_required
+def add():
+    """Neues Verbrauchsmaterial hinzufügen"""
+    if request.method == 'POST':
+        barcode = request.form.get('barcode')
+        name = request.form.get('name')
+        description = request.form.get('description')
+        quantity = request.form.get('quantity', type=int)
+        min_quantity = request.form.get('min_quantity', type=int)
+        
+        with get_db_connection() as conn:
+            conn.execute('''
+                INSERT INTO consumables (barcode, name, description, quantity, min_quantity, created_at, deleted)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0)
+            ''', [barcode, name, description, quantity, min_quantity])
+            conn.commit()
+            
+        flash('Verbrauchsmaterial erfolgreich hinzugefügt', 'success')
+        return redirect(url_for('consumables.index'))
+        
+    return render_template('consumables/add.html')
+
 # ... weitere Routen ...
