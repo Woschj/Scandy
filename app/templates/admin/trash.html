@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Papierkorb{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-base-content mb-8">Papierkorb</h1>
+
+    <!-- Tabs für verschiedene Kategorien -->
+    <div class="tabs tabs-boxed mb-6">
+        <a class="tab tab-active" onclick="showTab('tools')">Werkzeuge</a>
+        <a class="tab" onclick="showTab('consumables')">Verbrauchsmaterial</a>
+        <a class="tab" onclick="showTab('workers')">Mitarbeiter</a>
+    </div>
+
+    <!-- Werkzeuge -->
+    <div id="tools-tab" class="tab-content">
+        <h2 class="text-xl font-semibold mb-4">Gelöschte Werkzeuge</h2>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Name</th>
+                        <th>Beschreibung</th>
+                        <th>Standort</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tool in deleted_tools %}
+                    <tr>
+                        <td>{{ tool.barcode }}</td>
+                        <td>{{ tool.name }}</td>
+                        <td>{{ tool.description }}</td>
+                        <td>{{ tool.location }}</td>
+                        <td>{{ tool.deleted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <button onclick="restoreItem('tool', '{{ tool.barcode }}')"
+                                    class="btn btn-sm btn-primary">
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Verbrauchsmaterial -->
+    <div id="consumables-tab" class="tab-content hidden">
+        <h2 class="text-xl font-semibold mb-4">Gelöschtes Verbrauchsmaterial</h2>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Bezeichnung</th>
+                        <th>Typ</th>
+                        <th>Ort</th>
+                        <th>Bestand</th>
+                        <th>Einheit</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in deleted_consumables %}
+                    <tr>
+                        <td>{{ item.barcode }}</td>
+                        <td>{{ item.bezeichnung }}</td>
+                        <td>{{ item.typ }}</td>
+                        <td>{{ item.ort }}</td>
+                        <td>{{ item.bestand }}</td>
+                        <td>{{ item.einheit }}</td>
+                        <td>{{ item.deleted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <button onclick="restoreItem('consumable', '{{ item.barcode }}')"
+                                    class="btn btn-sm btn-primary">
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mitarbeiter -->
+    <div id="workers-tab" class="tab-content hidden">
+        <h2 class="text-xl font-semibold mb-4">Gelöschte Mitarbeiter</h2>
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Name</th>
+                        <th>Nachname</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for worker in deleted_workers %}
+                    <tr>
+                        <td>{{ worker.barcode }}</td>
+                        <td>{{ worker.name }}</td>
+                        <td>{{ worker.lastname }}</td>
+                        <td>{{ worker.deleted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <button onclick="restoreItem('worker', '{{ worker.barcode }}')"
+                                    class="btn btn-sm btn-primary">
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function showTab(tabName) {
+    // Alle Tab-Inhalte ausblenden
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+    });
+    
+    // Gewählten Tab-Inhalt anzeigen
+    document.getElementById(tabName + '-tab').classList.remove('hidden');
+    
+    // Tab-Buttons aktualisieren
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('tab-active');
+    });
+    event.target.classList.add('tab-active');
+}
+
+function restoreItem(type, barcode) {
+    if (!confirm('Möchten Sie diesen Eintrag wirklich wiederherstellen?')) return;
+    
+    fetch(`/admin/restore/${type}/${barcode}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler beim Wiederherstellen: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler beim Wiederherstellen');
+    });
+}
+</script>
+{% endblock %}

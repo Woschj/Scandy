@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Neues Werkzeug{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <h1 class="text-2xl font-bold mb-6">Neues Werkzeug hinzufügen</h1>
+        
+        <form method="post" action="{{ url_for('admin.add_tool') }}" 
+              enctype="multipart/form-data" 
+              class="space-y-4"
+              onsubmit="return validateForm(event)">
+            {{ form.csrf_token if form }}
+            <div class="mb-4">
+                <label class="block text-sm font-medium">Barcode</label>
+                <input type="text" name="barcode" id="barcodeInput" required
+                       class="input input-bordered w-full" autocomplete="off">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Bezeichnung</label>
+                <input type="text" name="name" required
+                       class="input input-bordered w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Beschreibung</label>
+                <input type="text" name="description"
+                       class="input input-bordered w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Ort</label>
+                <input type="text" name="location"
+                       class="input input-bordered w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Bild (max. 200KB)</label>
+                <input type="file" 
+                       name="image" 
+                       id="imageInput"
+                       accept="image/*"
+                       class="file-input file-input-bordered w-full">
+                <div id="imagePreview" class="mt-2"></div>
+            </div>
+            <button type="submit" class="btn bg-[#5b69a7] hover:bg-[#4c5789] text-white">
+                Speichern
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function validateForm(event) {
+    console.log('Form wird gesendet...');
+    
+    // Formular-Daten sammeln
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    // Debug-Ausgaben
+    console.log('Barcode:', formData.get('barcode'));
+    console.log('Name:', formData.get('name'));
+    console.log('Beschreibung:', formData.get('description'));
+    console.log('Ort:', formData.get('location'));
+    console.log('Bild:', formData.get('image'));
+    
+    return true; // Formular absenden erlauben
+}
+
+// Einfache Bildvorschau mit Debug
+const imageInput = document.getElementById('imageInput');
+const imagePreview = document.getElementById('imagePreview');
+
+imageInput.onchange = function() {
+    const file = this.files[0];
+    console.log('Ausgewähltes Bild:', file);
+    
+    if (file) {
+        console.log('Bildgröße:', file.size, 'bytes');
+        console.log('Bildtyp:', file.type);
+        
+        // Größenprüfung
+        if (file.size > 200 * 1024) {
+            console.log('Bild zu groß:', file.size);
+            alert('Bild ist zu groß. Maximale Größe ist 200KB.');
+            this.value = '';
+            imagePreview.innerHTML = '';
+            return;
+        }
+        
+        // Vorschau erstellen
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            console.log('Bild erfolgreich geladen');
+            imagePreview.innerHTML = `
+                <img src="${e.target.result}" 
+                     class="max-w-[200px] rounded-lg shadow-lg" 
+                     alt="Vorschau">
+            `;
+        };
+        reader.onerror = function(e) {
+            console.error('Fehler beim Laden des Bildes:', e);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        imagePreview.innerHTML = '';
+    }
+};
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-base-content mb-8">Admin Dashboard</h1>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Werkzeug-Statistiken Card -->
+        <div class="card bg-base-200 shadow-xl">
+            <div class="card-body p-4">
+                <h2 class="card-title text-lg mb-2">Werkzeug-Status</h2>
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    <a href="{{ url_for('tools.index') }}" 
+                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Gesamt</div>
+                        <div class="stat-value text-primary text-2xl">{{ tools_stats.total }}</div>
+                    </a>
+                    <a href="{{ url_for('tools.index', status='Verfügbar') }}" 
+                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Verfügbar</div>
+                        <div class="stat-value text-success text-2xl">{{ tools_stats.available }}</div>
+                    </a>
+                    <a href="{{ url_for('tools.index', status='Ausgeliehen') }}" 
+                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Ausgeliehen</div>
+                        <div class="stat-value text-warning text-2xl">{{ tools_stats.lent }}</div>
+                    </a>
+                    <a href="{{ url_for('tools.index', status='Wartung') }}" 
+                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">In Wartung</div>
+                        <div class="stat-value text-info text-2xl">{{ tools_stats.maintenance }}</div>
+                    </a>
+                    <a href="{{ url_for('tools.index', status='Defekt') }}" 
+                       class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Defekt</div>
+                        <div class="stat-value text-error text-2xl">{{ tools_stats.broken }}</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verbrauchsmaterial-Statistiken Card -->
+        <div class="card bg-base-200 shadow-xl">
+            <div class="card-body p-4">
+                <h2 class="card-title text-lg mb-2">Verbrauchsmaterial-Status</h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <a href="{{ url_for('consumables.index') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Gesamt</div>
+                        <div class="stat-value text-primary text-2xl">{{ consumables_stats.total }}</div>
+                    </a>
+                    <a href="{{ url_for('consumables.index', filter='low_stock') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Niedriger Bestand</div>
+                        <div class="stat-value text-warning text-2xl">{{ consumables_stats.low_stock }}</div>
+                        <div class="stat-desc text-xs">Unter Mindestbestand</div>
+                    </a>
+                    <a href="{{ url_for('consumables.index', filter='out_of_stock') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Nicht verfügbar</div>
+                        <div class="stat-value text-error text-2xl">{{ consumables_stats.out_of_stock }}</div>
+                        <div class="stat-desc text-xs">Bestand = 0</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mitarbeiter-Statistiken Card -->
+        <div class="card bg-base-200 shadow-xl">
+            <div class="card-body p-4">
+                <h2 class="card-title text-lg mb-2">Mitarbeiter-Status</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="{{ url_for('workers.index') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Aktive Mitarbeiter</div>
+                        <div class="stat-value text-primary text-2xl">{{ workers_stats.total }}</div>
+                    </a>
+                    <a href="{{ url_for('workers.index', filter='with_tools') }}" class="stat bg-base-100 rounded-lg p-2 hover:bg-base-300 transition-colors">
+                        <div class="stat-title text-sm">Mit Ausleihen</div>
+                        <div class="stat-value text-secondary text-2xl">{{ workers_stats.with_tools }}</div>
+                        <div class="stat-desc text-xs">Aktive Ausleihen</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aktuelle Ausleihen Card -->
+        {% if current_lendings %}
+        <div class="card bg-base-200 shadow-xl">
+            <div class="card-body p-4">
+                <h2 class="card-title text-lg mb-2">Aktuelle Ausleihen</h2>
+                <div class="overflow-x-auto">
+                    <table class="table table-sm w-full">
+                        <thead>
+                            <tr>
+                                <th>Werkzeug</th>
+                                <th>Mitarbeiter</th>
+                                <th>Ausgeliehen seit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lending in current_lendings %}
+                            <tr class="hover">
+                                <td>
+                                    <a href="{{ url_for('tools.details', barcode=lending.tool_barcode) }}" 
+                                       class="link link-primary">
+                                        {{ lending.tool_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
+                                       class="link link-secondary">
+                                        {{ lending.worker_name }} {{ lending.worker_lastname }}
+                                    </a>
+                                </td>
+                                <td>{{ lending.lending_time|datetime }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 
