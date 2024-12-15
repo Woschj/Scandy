@@ -3,52 +3,12 @@
 {% block title %}Manuelle Ausleihe{% endblock %}
 
 {% block content %}
-<div class="bg-white shadow rounded-lg p-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">Werkzeug Ausleihe/Rückgabe</h1>
-
-<<<<<<< Updated upstream:templates/manual_lending.html
-    <!-- Manuelle Ausleihe Form -->
-    <div class="mb-8">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">Neue Ausleihe/Ausgabe</h2>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <!-- Typ Auswahl -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
-                <select id="itemType" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                    <option value="">Bitte wählen</option>
-                    <option value="tool">Werkzeug</option>
-                    <option value="consumable">Verbrauchsmaterial</option>
-                </select>
-            </div>
-
-            <!-- Gegenstand Auswahl -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Gegenstand</label>
-                <select id="itemSelect" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" disabled>
-                    <option value="">Bitte wählen</option>
-                </select>
-            </div>
-
-            <!-- Mitarbeiter Auswahl -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Mitarbeiter</label>
-                <select id="workerSelect" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-                    <option value="">Bitte wählen</option>
-                </select>
-            </div>
-
-            <!-- Menge (nur für Verbrauchsmaterial) -->
-            <div id="amountContainer" class="hidden">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Menge</label>
-                <input type="number" id="amount" min="1" value="1" 
-                       class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-            </div>
-
-            <!-- Submit Button -->
-            <div class="md:col-span-4">
-                <button onclick="submitLending()" 
-                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-=======
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Manuelle Ausleihe</h1>
+        </div>
+        
         <form id="lendingForm" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Mitarbeiter-Auswahl -->
@@ -82,7 +42,7 @@
                             class="select select-bordered w-full" required>
                         <option value="">Werkzeug auswählen...</option>
                         {% for tool in tools %}
-                        <option value="{{ tool.barcode }}">{{ tool.bezeichnung }}</option>
+                        <option value="{{ tool.barcode }}">{{ tool.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -108,193 +68,114 @@
 
             <!-- Aktions-Buttons -->
             <div class="flex justify-end space-x-4 mt-4">
-                <button type="submit" class="btn bg-[#5b69a7] hover:bg-[#4c5789] text-white">
->>>>>>> Stashed changes:app/templates/admin/manual_lending.html
+                <button type="submit" class="btn btn-primary">
                     Ausleihen/Ausgeben
                 </button>
             </div>
+        </form>
+
+        <!-- Tabs -->
+        <div class="tabs tabs-boxed mt-8">
+            <a class="tab tab-active" id="tools-tab" onclick="switchTab('tools')">Werkzeuge</a>
+            <a class="tab" id="consumables-tab" onclick="switchTab('consumables')">Verbrauchsmaterial</a>
         </div>
-    </div>
 
-    <!-- Tab Navigation -->
-    <div class="mb-4 border-b border-gray-200">
-        <nav class="-mb-px flex" aria-label="Tabs">
-            <button onclick="switchTab('tools')" 
-                    id="tools-tab"
-                    class="tab-button w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm border-blue-500 text-blue-600">
-                Werkzeuge
-            </button>
-            <button onclick="switchTab('consumables')" 
-                    id="consumables-tab"
-                    class="tab-button w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                Verbrauchsgüter
-            </button>
-        </nav>
-    </div>
-
-    <!-- Werkzeuge Tab -->
-    <div id="tools-content" class="tab-content">
-        <div class="mt-8">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Aktuelle Werkzeug-Ausleihen</h2>
-            <div class="overflow-x-auto bg-white rounded-lg shadow">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausgeliehen am</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Werkzeug</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mitarbeiter</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
-                        </tr>
-                    </thead>
-<<<<<<< Updated upstream:templates/manual_lending.html
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for lending in tool_lendings %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.formatted_checkout_time }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ lending.gegenstand }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.item_barcode }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.worker_name }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="returnItem('{{ lending.item_barcode }}')"
-                                        class="text-blue-600 hover:text-blue-900">
-                                    Rückgabe
-                                </button>
-                            </td>
-                        </tr>
-=======
-                    <tbody class="bg-base-100">
-                        {% for lending in active_lendings %}
-                            {% if lending.item_type == 'tool' %}
-                                <tr>
-                                    <td class="text-base-content">
-                                        <a href="{{ url_for('tools.details', barcode=lending.item_barcode) }}" 
-                                           class="link link-hover text-primary">
-                                            {{ lending.item_name }}
-                                        </a>
-                                    </td>
-                                    <td class="text-base-content">
-                                        <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
-                                           class="link link-hover text-primary">
-                                            {{ lending.worker_name }}
-                                        </a>
-                                    </td>
-                                    <td class="text-base-content">{{ lending.formatted_time }}</td>
-                                    <td>
-                                        <button onclick="returnTool('{{ lending.item_barcode }}', 'tool')"
-                                                class="btn btn-success btn-sm">
-                                            Zurückgeben
-                                        </button>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        {% else %}
+        <!-- Werkzeug-Tabelle -->
+        <div id="tools-table" class="overflow-x-auto mt-4">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th>Werkzeug</th>
+                        <th>Mitarbeiter</th>
+                        <th>Ausgeliehen am</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lending in active_lendings %}
+                        {% if lending.item_type == 'tool' %}
                             <tr>
-                                <td colspan="4" class="text-center text-base-content">Keine aktiven Werkzeugausleihen</td>
+                                <td>
+                                    <a href="{{ url_for('tools.details', barcode=lending.item_barcode) }}" 
+                                       class="link link-hover text-primary">
+                                        {{ lending.item_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
+                                       class="link link-hover text-primary">
+                                        {{ lending.worker_name }}
+                                    </a>
+                                </td>
+                                <td>{{ lending.formatted_time }}</td>
+                                <td>
+                                    <button onclick="returnTool('{{ lending.item_barcode }}', 'tool')"
+                                            class="btn btn-success btn-sm">
+                                        Zurückgeben
+                                    </button>
+                                </td>
                             </tr>
->>>>>>> Stashed changes:app/templates/admin/manual_lending.html
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                        {% endif %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center">Keine aktiven Werkzeugausleihen</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </div>
 
-    <!-- Verbrauchsgüter Tab -->
-    <div id="consumables-content" class="tab-content hidden">
-        <div class="mt-8">
-            <h2 class="text-lg font-medium text-gray-900 mb-4">Ausgegebene Verbrauchsgüter</h2>
-            <div class="overflow-x-auto bg-white rounded-lg shadow">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausgegeben am</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barcode</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mitarbeiter</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
-                        </tr>
-                    </thead>
-<<<<<<< Updated upstream:templates/manual_lending.html
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for lending in consumable_lendings %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.formatted_checkout_time }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ lending.bezeichnung }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.item_barcode }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.worker_name }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ lending.amount }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                {% if not lending.return_time %}
-                                <button onclick="returnItem('{{ lending.item_barcode }}')"
-                                        class="text-blue-600 hover:text-blue-900">
-                                    Rückgabe
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-=======
-                    <tbody class="bg-base-100">
-                        {% for lending in active_lendings %}
-                            {% if lending.item_type == 'consumable' %}
-                                <tr>
-                                    <td class="text-base-content">
-                                        <a href="{{ url_for('consumables.details', barcode=lending.item_barcode) }}"
-                                           class="link link-hover text-primary">
-                                            {{ lending.item_name }}
-                                        </a>
-                                    </td>
-                                    <td class="text-base-content">
-                                        <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
-                                           class="link link-hover text-primary">
-                                            {{ lending.worker_name }}
-                                        </a>
-                                    </td>
-                                    <td class="text-base-content">{{ lending.amount }} {{ lending.einheit }}</td>
-                                    <td class="text-base-content">{{ lending.formatted_time }}</td>
-                                    <td>
-                                        <button onclick="returnTool('{{ lending.item_barcode }}', 'consumable')"
-                                                class="btn btn-success btn-sm">
-                                            Bestätigen
-                                        </button>
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        {% else %}
+        <!-- Verbrauchsmaterial-Tabelle -->
+        <div id="consumables-table" class="overflow-x-auto mt-4 hidden">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Mitarbeiter</th>
+                        <th>Menge</th>
+                        <th>Ausgegeben am</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lending in active_lendings %}
+                        {% if lending.item_type == 'consumable' %}
                             <tr>
-                                <td colspan="5" class="text-center text-base-content">Keine aktiven Materialausgaben</td>
+                                <td>
+                                    <a href="{{ url_for('consumables.details', barcode=lending.item_barcode) }}"
+                                       class="link link-hover text-primary">
+                                        {{ lending.item_name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
+                                       class="link link-hover text-primary">
+                                        {{ lending.worker_name }}
+                                    </a>
+                                </td>
+                                <td>{{ lending.amount }} {{ lending.einheit }}</td>
+                                <td>{{ lending.formatted_time }}</td>
+                                <td>
+                                    <button onclick="returnTool('{{ lending.item_barcode }}', 'consumable')"
+                                            class="btn btn-success btn-sm">
+                                        Bestätigen
+                                    </button>
+                                </td>
                             </tr>
->>>>>>> Stashed changes:app/templates/admin/manual_lending.html
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                        {% endif %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">Keine aktiven Materialausgaben</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-<<<<<<< Updated upstream:templates/manual_lending.html
     console.log('Seite geladen, lade Mitarbeiter...');
     loadWorkers();
     
@@ -337,62 +218,70 @@ function loadWorkers() {
         })
         .catch(error => {
             console.error('Fehler beim Laden der Mitarbeiter:', error);
-=======
-    const itemTypeSelect = document.getElementById('item_type');
-    const toolSelect = document.getElementById('tool_select');
-    const consumableSelect = document.getElementById('consumable_select');
-    const amountContainer = document.getElementById('amount_container');
-    const toolBarcode = document.getElementById('tool_barcode');
-    const consumableBarcode = document.getElementById('consumable_barcode');
+        });
+}
 
-    // Typ-Änderung Handler
-    itemTypeSelect.addEventListener('change', function() {
-        const isConsumable = this.value === 'consumable';
-        
-        toolSelect.classList.toggle('hidden', isConsumable);
-        consumableSelect.classList.toggle('hidden', !isConsumable);
-        amountContainer.classList.toggle('hidden', !isConsumable);
-        
-        // Required-Attribute anpassen
-        toolBarcode.required = !isConsumable;
-        consumableBarcode.required = isConsumable;
-    });
-
-    // Form Submit Handler
-    document.getElementById('lendingForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = {
-            worker_barcode: this.worker_barcode.value,
-            item_type: this.item_type.value,
-            item_barcode: this.item_type.value === 'tool' ? 
-                         this.tool_barcode.value : 
-                         this.consumable_barcode.value,
-            amount: parseInt(this.amount?.value || '1'),
-            action: 'lend'
-        };
-
-        console.log('Sending form data:', formData);
-
-        fetch('/admin/process_lending', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
+function loadItems(type) {
+    console.log('Lade Items vom Typ:', type);
+    fetch(`/get_items/${type}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Netzwerk-Antwort war nicht ok');
+            return response.json();
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message || data.error || 'Fehler bei der Ausleihe');
-            }
+        .then(items => {
+            console.log('Items geladen:', items);
+            const select = document.getElementById('itemSelect');
+            select.innerHTML = '<option value="">Bitte wählen</option>';
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.barcode;
+                option.textContent = item.name;
+                select.appendChild(option);
+            });
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Fehler bei der Ausleihe');
+            console.error('Fehler beim Laden der Items:', error);
         });
+}
+
+function submitLending() {
+    const itemType = document.getElementById('itemType').value;
+    const itemBarcode = document.getElementById('itemSelect').value;
+    const workerBarcode = document.getElementById('workerSelect').value;
+    const amount = document.getElementById('amount').value;
+
+    if (!itemType || !itemBarcode || !workerBarcode) {
+        alert('Bitte alle Pflichtfelder ausfüllen');
+        return;
+    }
+
+    const data = {
+        item_type: itemType,
+        item_barcode: itemBarcode,
+        worker_barcode: workerBarcode,
+        amount: itemType === 'consumable' ? parseInt(amount) : 1
+    };
+
+    fetch('/lend_item', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        } else {
+            alert(result.error || 'Fehler bei der Ausleihe/Ausgabe');
+        }
+    })
+    .catch(error => {
+        console.error('Fehler beim Senden der Ausleihe:', error);
+        alert('Fehler bei der Ausleihe/Ausgabe');
     });
-});
+}
 
 function switchTab(tabName) {
     const toolsTable = document.getElementById('tools-table');
@@ -589,86 +478,8 @@ function filterTable() {
                     showRow = false;
                 }
             }
->>>>>>> Stashed changes:app/templates/admin/manual_lending.html
         });
-}
-
-function loadItems(type) {
-    console.log('Lade Items vom Typ:', type);
-    fetch(`/get_items/${type}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Netzwerk-Antwort war nicht ok');
-            return response.json();
-        })
-        .then(items => {
-            console.log('Items geladen:', items);
-            const select = document.getElementById('itemSelect');
-            select.innerHTML = '<option value="">Bitte wählen</option>';
-            items.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.barcode;
-                option.textContent = item.name;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Items:', error);
-        });
-}
-
-function submitLending() {
-    const itemType = document.getElementById('itemType').value;
-    const itemBarcode = document.getElementById('itemSelect').value;
-    const workerBarcode = document.getElementById('workerSelect').value;
-    const amount = document.getElementById('amount').value;
-
-    if (!itemType || !itemBarcode || !workerBarcode) {
-        alert('Bitte alle Pflichtfelder ausfüllen');
-        return;
-    }
-
-<<<<<<< Updated upstream:templates/manual_lending.html
-    const data = {
-        item_type: itemType,
-        item_barcode: itemBarcode,
-        worker_barcode: workerBarcode,
-        amount: itemType === 'consumable' ? parseInt(amount) : 1
-    };
-
-    fetch('/lend_item', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            location.reload();
-        } else {
-            alert(result.error || 'Fehler bei der Ausleihe/Ausgabe');
-        }
-    })
-    .catch(error => {
-        console.error('Fehler beim Senden der Ausleihe:', error);
-        alert('Fehler bei der Ausleihe/Ausgabe');
     });
 }
-=======
-// Optional: Autocomplete für Mitarbeiter
-document.getElementById('workerBarcode')?.addEventListener('input', function(e) {
-    const query = e.target.value;
-    if (query.length > 2) {
-        fetch(`/admin/search_worker/${query}`)
-            .then(response => response.json())
-            .then(data => {
-                if (!data.error && !data.multiple) {
-                    this.value = data.worker.barcode;
-                }
-            });
-    }
-});
->>>>>>> Stashed changes:app/templates/admin/manual_lending.html
 </script>
 {% endblock %}

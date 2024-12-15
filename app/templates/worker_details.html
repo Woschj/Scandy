@@ -20,13 +20,8 @@
         <div>
             <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ worker.name }} {{ worker.lastname }}</h2>
             
-<<<<<<< Updated upstream:templates/worker_details.html
-            <form action="{{ url_for('update_worker', barcode=worker.barcode) }}" method="post" class="space-y-6">
+            <form action="{{ url_for('workers.edit', barcode=worker.barcode) }}" method="POST" class="space-y-6">
                 <!-- Barcode (nicht editierbar) -->
-=======
-            <form action="{{ url_for('workers.edit', barcode=worker.barcode) }}" method="post" class="space-y-6">
-                <!-- Barcode (readonly) -->
->>>>>>> Stashed changes:app/templates/worker_details.html
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Mitarbeiternummer</label>
                     <input type="text" value="{{ worker.barcode }}" readonly
