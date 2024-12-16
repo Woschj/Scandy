@@ -4,263 +4,298 @@
 
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Linke Spalte: Verfügbare Items -->
+    <!-- Linke Spalte: Item-Auswahl -->
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <h2 class="card-title">Verfügbare Items</h2>
-            
-            <!-- Tabs für Item-Typen -->
-            <div class="tabs tabs-boxed mb-4">
-                <button class="tab tab-active" onclick="switchTab('tools')">Werkzeuge</button>
-                <button class="tab" onclick="switchTab('consumables')">Verbrauchsmaterial</button>
-            </div>
-            
-            <!-- Suchfeld -->
-            <div class="form-control mb-4">
-                <input type="text" id="itemSearch" 
-                       placeholder="Suchen..." 
-                       class="input input-bordered">
-            </div>
-            
-            <!-- Drag-Container für Items -->
-            <div id="toolsList" class="space-y-2">
-                {% for tool in tools %}
-                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
-                     draggable="true"
-                     data-type="tool"
-                     data-id="{{ tool.id }}"
-                     data-barcode="{{ tool.barcode }}"
-                     data-name="{{ tool.name }}">
-                    <span class="font-medium">{{ tool.name }}</span>
-                    <span class="text-sm text-gray-500 block">{{ tool.barcode }}</span>
+            <div class="flex gap-4">
+                <!-- Icon-Buttons statt Tabs -->
+                <div class="flex flex-col gap-2">
+                    <button class="btn btn-square btn-active" 
+                            data-tab="tools" 
+                            onclick="switchType('tools')">
+                        <i class="fas fa-tools"></i>
+                    </button>
+                    <button class="btn btn-square" 
+                            data-tab="consumables" 
+                            onclick="switchType('consumables')">
+                        <i class="fas fa-box-open"></i>
+                    </button>
                 </div>
-                {% endfor %}
-            </div>
-            
-            <div id="consumablesList" class="space-y-2 hidden">
-                {% for consumable in consumables %}
-                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
-                     draggable="true"
-                     data-type="consumable"
-                     data-id="{{ consumable.id }}"
-                     data-barcode="{{ consumable.barcode }}"
-                     data-name="{{ consumable.name }}">
-                    <span class="font-medium">{{ consumable.name }}</span>
-                    <span class="text-sm text-gray-500 block">Bestand: {{ consumable.quantity }}</span>
+
+                <div class="flex-1">
+                    <h2 class="card-title mb-4">Artikel auswählen</h2>
+
+                    <!-- Item Details -->
+                    <div id="itemDetails" class="mb-4 p-4 bg-base-200 rounded-lg hidden">
+                        <h3 class="font-bold mb-2" id="itemDetailName"></h3>
+                        <div class="text-sm space-y-1">
+                            <p>Barcode: <span id="itemDetailBarcode"></span></p>
+                            <p id="itemDetailQuantity" class="hidden">Bestand: <span></span></p>
+                            <p id="itemDetailStatus" class="hidden">Status: <span></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Suchfeld -->
+                    <div class="form-control mb-4">
+                        <input type="text" 
+                               id="itemSearch" 
+                               placeholder="Suchen..." 
+                               class="input input-bordered">
+                    </div>
+
+                    <!-- Item Liste -->
+                    <div class="form-control">
+                        <select id="itemSelect" size="10" class="select select-bordered w-full h-[400px] overflow-y-auto">
+                            <optgroup label="Werkzeuge" id="toolsGroup">
+                                {% for tool in tools %}
+                                <option value="tool:{{ tool.id }}:{{ tool.barcode }}:{{ tool.name }}"
+                                        class="p-2 hover:bg-base-200">
+                                    {{ tool.name }} ({{ tool.barcode }})
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Verbrauchsmaterial" id="consumablesGroup" style="display:none;">
+                                {% for consumable in consumables %}
+                                <option value="consumable:{{ consumable.id }}:{{ consumable.barcode }}:{{ consumable.name }}"
+                                        class="p-2 hover:bg-base-200">
+                                    {{ consumable.name }} (Bestand: {{ consumable.quantity }})
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
                 </div>
-                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Mittlere Spalte: Drop-Zonen -->
+    <!-- Mittlere Spalte: Mitarbeiter-Auswahl -->
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <h2 class="card-title mb-4">Neue Ausleihe</h2>
-            
-            <!-- Drop-Zone für Item -->
-            <div id="itemDropZone" 
-                 class="drop-zone bg-base-200 p-4 rounded-lg mb-4 min-h-[100px] border-2 border-dashed border-primary">
-                <div class="text-center text-gray-500" id="itemDropText">
-                    Werkzeug/Material hier ablegen
-                </div>
-                <div id="selectedItem" class="hidden bg-primary bg-opacity-10 p-2 rounded">
-                    <span id="selectedItemName"></span>
+            <div class="flex gap-4">
+                <!-- Platzhalter für Symmetrie -->
+                <div class="w-[52px]"></div>
+
+                <div class="flex-1">
+                    <h2 class="card-title mb-4">Mitarbeiter auswählen</h2>
+
+                    <!-- Mitarbeiter Details -->
+                    <div id="workerDetails" class="mb-4 p-4 bg-base-200 rounded-lg hidden">
+                        <h3 class="font-bold mb-2" id="workerDetailName"></h3>
+                        <div class="text-sm space-y-1">
+                            <p>Abteilung: <span id="workerDetailDepartment"></span></p>
+                            <p>Barcode: <span id="workerDetailBarcode"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Mitarbeiter-Suche -->
+                    <div class="form-control mb-4">
+                        <input type="text" 
+                               id="workerSearch" 
+                               placeholder="Mitarbeiter suchen..." 
+                               class="input input-bordered">
+                    </div>
+
+                    <!-- Mitarbeiter Liste -->
+                    <div class="form-control">
+                        <select id="workerSelect" size="10" class="select select-bordered w-full h-[400px] overflow-y-auto">
+                            {% for worker in workers %}
+                            <option value="{{ worker.barcode }}"
+                                    class="p-2 hover:bg-base-200">
+                                {{ worker.firstname }} {{ worker.lastname }} ({{ worker.department }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
             </div>
-            
-            <!-- Drop-Zone für Mitarbeiter -->
-            <div id="workerDropZone"
-                 class="drop-zone bg-base-200 p-4 rounded-lg mb-4 min-h-[100px] border-2 border-dashed border-secondary">
-                <div class="text-center text-gray-500" id="workerDropText">
-                    Mitarbeiter hier ablegen
-                </div>
-                <div id="selectedWorker" class="hidden bg-secondary bg-opacity-10 p-2 rounded">
-                    <span id="selectedWorkerName"></span>
-                </div>
-            </div>
-            
-            <!-- Ausleihe-Button -->
-            <button id="confirmLending" 
-                    class="btn btn-primary w-full mt-4" 
-                    disabled>
-                Ausleihe bestätigen
-            </button>
         </div>
     </div>
 
-    <!-- Rechte Spalte: Mitarbeiter -->
+    <!-- Rechte Spalte: Vorschau und Bestätigung -->
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <h2 class="card-title">Mitarbeiter</h2>
-            
-            <!-- Mitarbeiter-Suche -->
-            <div class="form-control mb-4">
-                <input type="text" id="workerSearch" 
-                       placeholder="Mitarbeiter suchen..." 
-                       class="input input-bordered">
-            </div>
-            
-            <!-- Mitarbeiter-Liste -->
-            <div id="workersList" class="space-y-2">
-                {% for worker in workers %}
-                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
-                     draggable="true"
-                     data-type="worker"
-                     data-id="{{ worker.id }}"
-                     data-barcode="{{ worker.barcode }}"
-                     data-name="{{ worker.firstname }} {{ worker.lastname }}">
-                    <span class="font-medium">{{ worker.firstname }} {{ worker.lastname }}</span>
-                    <span class="text-sm text-gray-500 block">{{ worker.department }}</span>
+            <div class="flex gap-4">
+                <!-- Platzhalter für Symmetrie -->
+                <div class="w-[52px]"></div>
+
+                <div class="flex-1">
+                    <h2 class="card-title mb-4">Ausleihe bestätigen</h2>
+
+                    <!-- Vorschau -->
+                    <div class="bg-base-200 p-4 rounded-lg mb-6">
+                        <h3 class="font-bold mb-4">Zusammenfassung</h3>
+                        
+                        <!-- Item Vorschau -->
+                        <div class="mb-4">
+                            <p class="text-sm font-medium text-gray-500">Artikel</p>
+                            <p id="previewItem" class="font-medium">-</p>
+                        </div>
+
+                        <!-- Mitarbeiter Vorschau -->
+                        <div class="mb-4">
+                            <p class="text-sm font-medium text-gray-500">Mitarbeiter</p>
+                            <p id="previewWorker" class="font-medium">-</p>
+                        </div>
+
+                        <!-- Menge (nur für Verbrauchsmaterial) -->
+                        <div id="amountContainer" class="mb-4 hidden">
+                            <p class="text-sm font-medium text-gray-500">Menge</p>
+                            <input type="number" 
+                                   id="amountInput" 
+                                   class="input input-bordered w-full" 
+                                   value="1" 
+                                   min="1">
+                        </div>
+                    </div>
+
+                    <!-- Bestätigungs-Button -->
+                    <button id="confirmButton" 
+                            class="btn btn-primary w-full" 
+                            disabled 
+                            onclick="processLending()">
+                        Ausleihe bestätigen
+                    </button>
                 </div>
-                {% endfor %}
             </div>
         </div>
     </div>
 </div>
 
-{% endblock %}
+<!-- Aktuelle Ausleihen -->
+<div class="card bg-base-100 shadow-xl mt-6">
+    <div class="card-body">
+        <div class="flex gap-4">
+            <!-- Platzhalter für Symmetrie -->
+            <div class="w-[52px]"></div>
 
-{% block scripts %}
+            <div class="flex-1">
+                <h2 class="card-title mb-4">Aktuelle Ausleihen</h2>
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Artikel</th>
+                                <th>Mitarbeiter</th>
+                                <th>Ausgeliehen am</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lending in tool_lendings %}
+                            <tr>
+                                <td>{{ lending.tool_name }}</td>
+                                <td>{{ lending.worker_name }}</td>
+                                <td>{{ lending.lent_at }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let selectedItem = null;
 let selectedWorker = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("Initialisiere Drag & Drop...");
-    
-    // Alle draggable Elemente
-    const draggableItems = document.querySelectorAll('.draggable-item');
-    console.log(`Gefundene draggable Items: ${draggableItems.length}`);
-    
-    draggableItems.forEach(item => {
-        item.setAttribute('draggable', 'true');
-        
-        item.addEventListener('dragstart', function(e) {
-            console.log('Dragstart:', e.target.dataset);
-            e.target.classList.add('opacity-50');
-            e.dataTransfer.setData('application/json', JSON.stringify({
-                type: e.target.dataset.type,
-                id: e.target.dataset.id,
-                barcode: e.target.dataset.barcode,
-                name: e.target.dataset.name
-            }));
-        });
-        
-        item.addEventListener('dragend', function(e) {
-            console.log('Dragend');
-            e.target.classList.remove('opacity-50');
-        });
-    });
-
-    // Drop-Zonen
-    const dropZones = document.querySelectorAll('.drop-zone');
-    console.log(`Gefundene Drop-Zonen: ${dropZones.length}`);
-    
-    dropZones.forEach(zone => {
-        zone.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            zone.classList.add('border-primary', 'bg-primary', 'bg-opacity-10');
-        });
-        
-        zone.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
-        });
-        
-        zone.addEventListener('drop', function(e) {
-            console.log('Drop event triggered');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
-            
-            try {
-                const data = JSON.parse(e.dataTransfer.getData('application/json'));
-                console.log('Dropped data:', data);
-                
-                if (zone.id === 'itemDropZone' && (data.type === 'tool' || data.type === 'consumable')) {
-                    selectedItem = data;
-                    document.getElementById('itemDropText').classList.add('hidden');
-                    const selectedDiv = document.getElementById('selectedItem');
-                    selectedDiv.classList.remove('hidden');
-                    selectedDiv.querySelector('#selectedItemName').textContent = data.name;
-                }
-                else if (zone.id === 'workerDropZone' && data.type === 'worker') {
-                    selectedWorker = data;
-                    document.getElementById('workerDropText').classList.add('hidden');
-                    const selectedDiv = document.getElementById('selectedWorker');
-                    selectedDiv.classList.remove('hidden');
-                    selectedDiv.querySelector('#selectedWorkerName').textContent = data.name;
-                }
-                
-                updateConfirmButton();
-            } catch (error) {
-                console.error('Fehler beim Verarbeiten der Drop-Daten:', error);
-            }
-        });
+function switchType(type) {
+    // Button-Aktivierung
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+        if (btn.dataset.tab === type) {
+            btn.classList.add('btn-active');
+        } else {
+            btn.classList.remove('btn-active');
+        }
     });
     
-    // Tab-Funktionalität
-    document.querySelectorAll('.tabs .tab').forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            const targetTab = this.getAttribute('data-tab');
-            console.log(`Tab gewechselt zu: ${targetTab}`);
-            
-            // Tabs umschalten
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active'));
-            this.classList.add('tab-active');
-            
-            // Listen umschalten
-            document.getElementById('toolsList').classList.toggle('hidden', targetTab !== 'tools');
-            document.getElementById('consumablesList').classList.toggle('hidden', targetTab !== 'consumables');
-        });
-    });
+    const toolsGroup = document.getElementById('toolsGroup');
+    const consumablesGroup = document.getElementById('consumablesGroup');
+    const amountContainer = document.getElementById('amountContainer');
     
-    // Suchfunktionalität
-    initSearch();
-});
-
-function updateConfirmButton() {
-    const button = document.getElementById('confirmLending');
-    button.disabled = !(selectedItem && selectedWorker);
-    if (selectedItem && selectedWorker) {
-        button.classList.add('btn-primary');
+    if (type === 'tools') {
+        toolsGroup.style.display = '';
+        consumablesGroup.style.display = 'none';
+        amountContainer.classList.add('hidden');
     } else {
-        button.classList.remove('btn-primary');
+        toolsGroup.style.display = 'none';
+        consumablesGroup.style.display = '';
+        amountContainer.classList.remove('hidden');
     }
-}
-
-function initSearch() {
-    document.getElementById('itemSearch').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        document.querySelectorAll('#toolsList .draggable-item, #consumablesList .draggable-item').forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            item.style.display = name.includes(searchTerm) ? '' : 'none';
-        });
-    });
     
-    document.getElementById('workerSearch').addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        document.querySelectorAll('#workersList .draggable-item').forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            item.style.display = name.includes(searchTerm) ? '' : 'none';
-        });
-    });
+    // Reset selection
+    document.getElementById('itemSelect').value = '';
+    document.getElementById('itemDetails').classList.add('hidden');
+    updatePreview();
 }
 
-// Ausleihe verarbeiten
-document.getElementById('confirmLending').addEventListener('click', function() {
+function updateItemDetails(itemValue) {
+    const itemDetails = document.getElementById('itemDetails');
+    if (!itemValue) {
+        itemDetails.classList.add('hidden');
+        return;
+    }
+
+    const [type, id, barcode, name] = itemValue.split(':');
+    selectedItem = { type, id, barcode, name };
+
+    document.getElementById('itemDetailName').textContent = name;
+    document.getElementById('itemDetailBarcode').textContent = barcode;
+    
+    const quantityElement = document.getElementById('itemDetailQuantity');
+    const statusElement = document.getElementById('itemDetailStatus');
+    
+    if (type === 'consumable') {
+        quantityElement.classList.remove('hidden');
+        statusElement.classList.add('hidden');
+    } else {
+        quantityElement.classList.add('hidden');
+        statusElement.classList.remove('hidden');
+    }
+    
+    itemDetails.classList.remove('hidden');
+    updatePreview();
+}
+
+function updateWorkerDetails(workerValue) {
+    const workerDetails = document.getElementById('workerDetails');
+    if (!workerValue) {
+        workerDetails.classList.add('hidden');
+        return;
+    }
+
+    selectedWorker = {
+        barcode: workerValue,
+        name: workerSelect.options[workerSelect.selectedIndex].text
+    };
+
+    document.getElementById('workerDetailName').textContent = selectedWorker.name;
+    document.getElementById('workerDetailBarcode').textContent = selectedWorker.barcode;
+    document.getElementById('workerDetailDepartment').textContent = 
+        selectedWorker.name.split('(')[1].replace(')', '');
+    
+    workerDetails.classList.remove('hidden');
+    updatePreview();
+}
+
+function updatePreview() {
+    const previewItem = document.getElementById('previewItem');
+    const previewWorker = document.getElementById('previewWorker');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    previewItem.textContent = selectedItem ? selectedItem.name : '-';
+    previewWorker.textContent = selectedWorker ? selectedWorker.name : '-';
+    
+    confirmButton.disabled = !(selectedItem && selectedWorker);
+}
+
+function processLending() {
     if (!selectedItem || !selectedWorker) return;
     
-    let amount = 1;
-    if (selectedItem.type === 'consumable') {
-        amount = prompt('Menge eingeben:', '1');
-        if (!amount) return;
-        amount = parseInt(amount);
-    }
+    const amount = selectedItem.type === 'consumable' 
+        ? parseInt(document.getElementById('amountInput').value) 
+        : 1;
     
     fetch('/api/lending/process', {
         method: 'POST',
@@ -286,6 +321,45 @@ document.getElementById('confirmLending').addEventListener('click', function() {
         console.error('Fehler:', error);
         alert('Fehler bei der Ausleihe');
     });
+}
+
+// Event Listener
+document.addEventListener('DOMContentLoaded', function() {
+    const itemSelect = document.getElementById('itemSelect');
+    const workerSelect = document.getElementById('workerSelect');
+    const itemSearch = document.getElementById('itemSearch');
+    const workerSearch = document.getElementById('workerSearch');
+    
+    itemSelect.addEventListener('change', () => updateItemDetails(itemSelect.value));
+    workerSelect.addEventListener('change', () => updateWorkerDetails(workerSelect.value));
+    
+    itemSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        Array.from(itemSelect.options).forEach(option => {
+            const text = option.text.toLowerCase();
+            option.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    workerSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        Array.from(workerSelect.options).forEach(option => {
+            const text = option.text.toLowerCase();
+            option.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
 });
 </script>
+
+<style>
+/* Aktiver Button-Zustand */
+.btn-active {
+    @apply bg-primary text-primary-content;
+}
+
+/* Hover-Effekt für inaktive Buttons */
+.btn-square:not(.btn-active):hover {
+    @apply bg-base-200;
+}
+</style>
 {% endblock %}
