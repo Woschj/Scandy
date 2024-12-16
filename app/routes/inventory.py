@@ -5,33 +5,22 @@ from flask import (
     jsonify, 
     current_app, 
     redirect, 
-    url_for
+    url_for, 
+    flash
 )
-from app.models.database import get_db_connection
+from ..models.database import Database
+from ..models.tool import Tool
+from ..models.worker import Worker
+from ..models.consumable import Consumable
 from app.utils.decorators import login_required, admin_required
 
 bp = Blueprint('inventory', __name__, url_prefix='/inventory')
-
-@bp.route('/add_consumable')
-@admin_required
-def add_consumable():
-    return render_template('add_consumable.html')
-
-@bp.route('/add_tool')
-@admin_required
-def add_tool():
-    return render_template('add_tool.html')
-
-@bp.route('/add_worker')
-@admin_required
-def add_worker():
-    return render_template('add_worker.html')
 
 @bp.route('/consumables/<barcode>')
 @login_required
 def consumable_details(barcode):
     try:
-        with get_db_connection() as conn:
+        with Database.get_db() as conn:
             print(f"Aufgerufener Barcode: {barcode}")
             
             consumable = conn.execute('''
@@ -68,47 +57,30 @@ def consumable_details(barcode):
 @login_required
 def tool_details(barcode):
     try:
-        with get_db_connection() as conn:
-            print(f"Aufgerufener Barcode: {barcode}")
-            
+        with Database.get_db() as conn:
+            # Tool-Details abrufen
             tool = conn.execute('''
                 SELECT t.*, 
-                       CASE 
-                           WHEN l.id IS NOT NULL AND l.return_time IS NULL 
-                           THEN w.name || ' ' || w.lastname 
-                           ELSE NULL 
-                       END as current_borrower
+                       l.lent_at,
+                       l.returned_at,
+                       w.firstname || ' ' || w.lastname as borrower_name
                 FROM tools t
                 LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
-                    AND l.return_time IS NULL
+                    AND l.returned_at IS NULL
                 LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE t.barcode = ? AND t.deleted = 0
             ''', (barcode,)).fetchone()
             
-            print(f"Gefundene Daten: {dict(tool) if tool else 'Nicht gefunden'}")
-            
-            # Ausleihhistorie
-            lendings = conn.execute('''
+            # Ausleihhistorie abrufen
+            history = conn.execute('''
                 SELECT 
-                    strftime('%d.%m.%Y %H:%M', l.lending_time) as checkout_time,
-                    strftime('%d.%m.%Y %H:%M', l.return_time) as return_time,
-                    w.name || ' ' || w.lastname as worker_name
+                    l.lent_at,
+                    l.returned_at,
+                    w.firstname || ' ' || w.lastname as worker_name
                 FROM lendings l
                 LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE l.tool_barcode = ?
-                ORDER BY l.lending_time DESC
-            ''', (barcode,)).fetchall()
-            
-            # Statushistorie - Angepasst an die tool_status_history Tabelle
-            status_history = conn.execute('''
-                SELECT 
-                    strftime('%d.%m.%Y %H:%M', tsh.timestamp) as formatted_time,
-                    tsh.action as new_status,
-                    w.name || ' ' || w.lastname as changed_by
-                FROM tool_status_history tsh
-                LEFT JOIN workers w ON tsh.worker_barcode = w.barcode
-                WHERE tsh.tool_barcode = ?
-                ORDER BY tsh.timestamp DESC
+                ORDER BY l.lent_at DESC
             ''', (barcode,)).fetchall()
             
             if not tool:
@@ -116,8 +88,8 @@ def tool_details(barcode):
                 
             return render_template('tool_details.html', 
                                  tool=tool,
-                                 lendings=lendings,
-                                 status_history=status_history)
+                                 history=history)
+                                 
     except Exception as e:
         print(f"Fehler in tool_details: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -126,54 +98,48 @@ def tool_details(barcode):
 @login_required
 def worker_details(barcode):
     try:
-        with get_db_connection() as conn:
-            print(f"Aufgerufener Barcode: {barcode}")
-            
+        with Database.get_db() as conn:
+            # Worker-Details abrufen
             worker = conn.execute('''
-                SELECT w.*,
-                       COUNT(DISTINCT CASE WHEN l.return_time IS NULL THEN l.tool_barcode END) as active_lendings
+                SELECT w.*, 
+                       COUNT(CASE WHEN l.returned_at IS NULL THEN 1 END) as active_lendings
                 FROM workers w
                 LEFT JOIN lendings l ON w.barcode = l.worker_barcode
                 WHERE w.barcode = ? AND w.deleted = 0
                 GROUP BY w.id
             ''', (barcode,)).fetchone()
             
-            print(f"Gefundene Daten: {dict(worker) if worker else 'Nicht gefunden'}")
-            
             # Aktuelle Ausleihen
             current_lendings = conn.execute('''
-                SELECT 
-                    strftime('%d.%m.%Y %H:%M', l.lending_time) as formatted_checkout_time,
-                    t.name as item_name,
-                    t.name as item_type,
-                    '1 Stück' as amount_display
+                SELECT t.*, l.lent_at
                 FROM lendings l
                 JOIN tools t ON l.tool_barcode = t.barcode
-                WHERE l.worker_barcode = ? AND l.return_time IS NULL
-                ORDER BY l.lending_time DESC
+                WHERE l.worker_barcode = ? 
+                AND l.returned_at IS NULL
+                ORDER BY l.lent_at DESC
             ''', (barcode,)).fetchall()
             
-            # Vergangene Ausleihen
+            # Ausleihhistorie
             lending_history = conn.execute('''
-                SELECT 
-                    strftime('%d.%m.%Y %H:%M', l.lending_time) as formatted_checkout_time,
-                    strftime('%d.%m.%Y %H:%M', l.return_time) as formatted_return_time,
-                    t.name as item_name,
-                    t.name as item_type,
-                    '1 Stück' as amount_display
+                SELECT t.name as tool_name,
+                       l.lent_at,
+                       l.returned_at,
+                       t.barcode as tool_barcode
                 FROM lendings l
                 JOIN tools t ON l.tool_barcode = t.barcode
-                WHERE l.worker_barcode = ? AND l.return_time IS NOT NULL
-                ORDER BY l.lending_time DESC
+                WHERE l.worker_barcode = ?
+                AND l.returned_at IS NOT NULL
+                ORDER BY l.lent_at DESC
             ''', (barcode,)).fetchall()
             
             if not worker:
                 return "Mitarbeiter nicht gefunden", 404
                 
-            return render_template('worker_details.html', 
+            return render_template('worker_details.html',
                                  worker=worker,
                                  current_lendings=current_lendings,
                                  lending_history=lending_history)
+                                 
     except Exception as e:
         print(f"Fehler in worker_details: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -181,154 +147,96 @@ def worker_details(barcode):
 @bp.route('/tools')
 @login_required
 def tools():
-    try:
-        with get_db_connection() as conn:
-            tools = conn.execute('''
-                SELECT t.*, 
-                       CASE 
-                           WHEN l.id IS NOT NULL AND l.return_time IS NULL 
-                           THEN w.name || ' ' || w.lastname 
-                           ELSE NULL 
-                       END as current_borrower
-                FROM tools t
-                LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
-                    AND l.return_time IS NULL
-                LEFT JOIN workers w ON l.worker_barcode = w.barcode
-                WHERE t.deleted = 0 
-                ORDER BY t.name
-            ''').fetchall()
-            
-            # Orte für Filter
-            orte = conn.execute('''
-                SELECT DISTINCT location 
-                FROM tools 
-                WHERE location IS NOT NULL 
-                AND deleted = 0
-            ''').fetchall()
-            
-            return render_template('tools.html', 
-                                tools=tools,
-                                orte=[o[0] for o in orte if o[0]])
-    except Exception as e:
-        current_app.logger.error(f'Datenbankfehler: {str(e)}')
-        return jsonify({'error': str(e)}), 500
+    tools = Database.query('''
+        SELECT t.*, 
+               l.worker_barcode,
+               l.lent_at,
+               l.returned_at,
+               w.firstname || ' ' || w.lastname as borrower_name
+        FROM tools t
+        LEFT JOIN (
+            SELECT l1.*
+            FROM lendings l1
+            LEFT JOIN lendings l2 ON l1.tool_barcode = l2.tool_barcode 
+                AND l1.lent_at < l2.lent_at
+            WHERE l2.tool_barcode IS NULL
+        ) l ON t.barcode = l.tool_barcode
+        LEFT JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE t.deleted = 0
+        ORDER BY t.name
+    ''')
+    return render_template('tools.html', tools=tools)
 
 @bp.route('/consumables')
 @login_required
 def consumables():
-    try:
-        with get_db_connection() as conn:
-            consumables = conn.execute('''
-                SELECT c.*,
-                       CASE 
-                           WHEN c.bestand <= c.mindestbestand THEN 'Nachbestellen'
-                           WHEN c.bestand = 0 THEN 'Leer'
-                           ELSE 'Verfügbar'
-                       END as status
-                FROM consumables c
-                WHERE c.deleted = 0
-                ORDER BY c.bezeichnung
-            ''').fetchall()
-            
-            # Orte und Typen für Filter
-            orte = conn.execute('SELECT DISTINCT ort FROM consumables WHERE deleted = 0').fetchall()
-            typen = conn.execute('SELECT DISTINCT typ FROM consumables WHERE deleted = 0').fetchall()
-            
-            return render_template('consumables.html', 
-                                consumables=consumables,
-                                orte=[o[0] for o in orte if o[0]],
-                                typen=[t[0] for t in typen if t[0]])
-    except Exception as e:
-        current_app.logger.error(f'Datenbankfehler: {str(e)}')
-        return jsonify({'error': str(e)}), 500
+    consumables = Database.query('''
+        SELECT c.*, 
+               c.quantity as current_stock,
+               CASE 
+                   WHEN c.quantity <= c.min_quantity THEN 'low'
+                   ELSE 'ok'
+               END as stock_status
+        FROM consumables c
+        WHERE c.deleted = 0
+        ORDER BY c.name
+    ''')
+    return render_template('consumables.html', consumables=consumables)
 
 @bp.route('/workers')
 @login_required
 def workers():
-    try:
-        with get_db_connection() as conn:
-            workers = conn.execute('''
-                SELECT w.*, 
-                       COUNT(DISTINCT l.tool_barcode) as active_lendings
-                FROM workers w
-                LEFT JOIN lendings l ON w.barcode = l.worker_barcode 
-                    AND l.return_time IS NULL
-                WHERE w.deleted = 0
-                GROUP BY w.id
-                ORDER BY w.lastname, w.name
-            ''').fetchall()
-            
-            # Bereiche für Filter (nur wenn die Spalte existiert)
-            try:
-                bereiche = conn.execute('''
-                    SELECT DISTINCT bereich 
-                    FROM workers 
-                    WHERE bereich IS NOT NULL 
-                    AND deleted = 0
-                ''').fetchall()
-            except:
-                bereiche = []
-            
-            return render_template('workers.html', 
-                                workers=workers,
-                                bereiche=[b[0] for b in bereiche if b[0]])
-    except Exception as e:
-        current_app.logger.error(f'Datenbankfehler: {str(e)}')
-        return jsonify({'error': str(e)}), 500
+    workers = Database.query('''
+        SELECT w.*, 
+               COUNT(CASE WHEN l.returned_at IS NULL THEN 1 END) as active_lendings
+        FROM workers w
+        LEFT JOIN lendings l ON w.barcode = l.worker_barcode
+        WHERE w.deleted = 0
+        GROUP BY w.id
+        ORDER BY w.lastname, w.firstname
+    ''')
+    return render_template('workers.html', workers=workers)
 
 @bp.route('/manual-lending')
 @admin_required
 def manual_lending():
     return render_template('inventory/manual_lending.html')
 
-@bp.route('/tools/update/<barcode>', methods=['POST'])
+@bp.route('/tools/<barcode>/update', methods=['POST'])
 @login_required
 def update_tool(barcode):
     try:
-        data = request.form
-        print(f"Empfangene Formulardaten: {dict(data)}")
+        print(f"Update für Werkzeug {barcode} mit Daten:", request.form)
         
-        with get_db_connection() as conn:
-            # Aktuelle Daten abrufen
-            current_tool = conn.execute('SELECT * FROM tools WHERE barcode = ?', 
-                                     (barcode,)).fetchone()
+        with Database.get_db() as conn:
+            data = request.form
             
-            # Update durchführen
-            update_query = '''
+            # SQL-Query mit korrekten Spaltennamen
+            result = conn.execute('''
                 UPDATE tools 
                 SET name = ?,
-                    location = ?,
                     description = ?,
-                    status = ?,
-                    updated_at = datetime('now')
+                    location = ?,
+                    status = ?
                 WHERE barcode = ?
-            '''
-            update_values = (
-                data.get('name', current_tool['name']),
-                data.get('location', current_tool['location']),
-                data.get('description', current_tool['description']),
-                data.get('status', current_tool['status']),
+            ''', (
+                data.get('name'),
+                data.get('typ'),  # typ wird in description gespeichert
+                data.get('ort'),  # ort wird in location gespeichert
+                data.get('status'),
                 barcode
-            )
-            
-            conn.execute(update_query, update_values)
-            
-            # Statusänderung in Historie eintragen mit "admin" als worker_barcode
-            if data.get('status') != current_tool['status']:
-                conn.execute('''
-                    INSERT INTO tool_status_history 
-                    (tool_barcode, action, worker_barcode, timestamp)
-                    VALUES (?, ?, 'admin', datetime('now'))
-                ''', (barcode, data.get('status')))
+            ))
             
             conn.commit()
             
-        return redirect(url_for('inventory.tools'))
-        
+            print(f"Anzahl aktualisierter Zeilen: {result.rowcount}")
+            
+            flash('Werkzeug erfolgreich aktualisiert', 'success')
+            return redirect(url_for('inventory.tool_details', barcode=barcode))
+            
     except Exception as e:
-        print(f"Fehler beim Update: {str(e)}")
-        current_app.logger.error(f'Fehler beim Aktualisieren des Werkzeugs: {str(e)}')
-        return jsonify({'error': str(e)}), 500 
+        print(f"Fehler beim Update des Werkzeugs: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/consumables/update/<barcode>', methods=['POST'])
 @login_required
@@ -337,7 +245,7 @@ def update_consumable_stock(barcode):
         data = request.form
         print(f"Empfangene Formulardaten: {dict(data)}")
         
-        with get_db_connection() as conn:
+        with Database.get_db() as conn:
             # Aktuelle Daten abrufen
             current_consumable = conn.execute('''
                 SELECT * FROM consumables 
@@ -387,38 +295,38 @@ def update_consumable_stock(barcode):
         return jsonify({'error': str(e)}), 500 
 
 @bp.route('/workers/update/<barcode>', methods=['POST'])
-@admin_required
+@login_required
 def update_worker(barcode):
     try:
-        data = request.form
-        print(f"Empfangene Formulardaten: {dict(data)}")
+        print("Empfangene Formulardaten:", request.form)
         
-        with get_db_connection() as conn:
-            # Aktuelle Daten abrufen
-            current_worker = conn.execute('''
-                SELECT * FROM workers 
-                WHERE barcode = ? AND deleted = 0
-            ''', (barcode,)).fetchone()
-            
-            if not current_worker:
-                return "Mitarbeiter nicht gefunden", 404
+        with Database.get_db() as conn:
+            # Prüfen ob der Mitarbeiter existiert
+            worker = conn.execute('SELECT * FROM workers WHERE barcode = ?', (barcode,)).fetchone()
+            if not worker:
+                raise ValueError("Mitarbeiter nicht gefunden")
             
             # Update durchführen
             conn.execute('''
                 UPDATE workers 
-                SET name = ?,
-                    lastname = ?
+                SET firstname = ?,
+                    lastname = ?,
+                    email = ?,
+                    department = ?
                 WHERE barcode = ?
             ''', (
-                data.get('name', current_worker['name']),
-                data.get('lastname', current_worker['lastname']),
+                request.form.get('firstname'),
+                request.form.get('lastname'),
+                request.form.get('email'),
+                request.form.get('department'),
                 barcode
             ))
             
             conn.commit()
             
-        return redirect(url_for('inventory.workers'))
-        
+            flash('Mitarbeiter erfolgreich aktualisiert', 'success')
+            return redirect(url_for('inventory.worker_details', barcode=barcode))
+            
     except Exception as e:
         print(f"Fehler beim Update des Mitarbeiters: {str(e)}")
         return jsonify({'error': str(e)}), 500

@@ -3,473 +3,289 @@
 {% block title %}Manuelle Ausleihe{% endblock %}
 
 {% block content %}
-<div class="card bg-base-100 shadow-xl">
-    <div class="card-body">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">Manuelle Ausleihe</h1>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Linke Spalte: Verfügbare Items -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Verfügbare Items</h2>
+            
+            <!-- Tabs für Item-Typen -->
+            <div class="tabs tabs-boxed mb-4">
+                <button class="tab tab-active" onclick="switchTab('tools')">Werkzeuge</button>
+                <button class="tab" onclick="switchTab('consumables')">Verbrauchsmaterial</button>
+            </div>
+            
+            <!-- Suchfeld -->
+            <div class="form-control mb-4">
+                <input type="text" id="itemSearch" 
+                       placeholder="Suchen..." 
+                       class="input input-bordered">
+            </div>
+            
+            <!-- Drag-Container für Items -->
+            <div id="toolsList" class="space-y-2">
+                {% for tool in tools %}
+                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
+                     draggable="true"
+                     data-type="tool"
+                     data-id="{{ tool.id }}"
+                     data-barcode="{{ tool.barcode }}"
+                     data-name="{{ tool.name }}">
+                    <span class="font-medium">{{ tool.name }}</span>
+                    <span class="text-sm text-gray-500 block">{{ tool.barcode }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div id="consumablesList" class="space-y-2 hidden">
+                {% for consumable in consumables %}
+                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
+                     draggable="true"
+                     data-type="consumable"
+                     data-id="{{ consumable.id }}"
+                     data-barcode="{{ consumable.barcode }}"
+                     data-name="{{ consumable.name }}">
+                    <span class="font-medium">{{ consumable.name }}</span>
+                    <span class="text-sm text-gray-500 block">Bestand: {{ consumable.quantity }}</span>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        
-        <form id="lendingForm" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- Mitarbeiter-Auswahl -->
-                <div>
-                    <label class="block text-sm font-medium">Mitarbeiter</label>
-                    <select name="worker_barcode" required id="worker_barcode"
-                            class="select select-bordered w-full">
-                        <option value="">Mitarbeiter auswählen...</option>
-                        {% for worker in workers %}
-                        <option value="{{ worker.barcode }}">
-                            {{ worker.name }} {{ worker.lastname }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+    </div>
 
-                <!-- Artikel-Typ Auswahl -->
-                <div>
-                    <label class="block text-sm font-medium">Artikel-Typ</label>
-                    <select name="item_type" id="item_type" 
-                            class="select select-bordered w-full" required>
-                        <option value="tool">Werkzeug</option>
-                        <option value="consumable">Verbrauchsmaterial</option>
-                    </select>
+    <!-- Mittlere Spalte: Drop-Zonen -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Neue Ausleihe</h2>
+            
+            <!-- Drop-Zone für Item -->
+            <div id="itemDropZone" 
+                 class="drop-zone bg-base-200 p-4 rounded-lg mb-4 min-h-[100px] border-2 border-dashed border-primary">
+                <div class="text-center text-gray-500" id="itemDropText">
+                    Werkzeug/Material hier ablegen
                 </div>
-
-                <!-- Dynamische Artikel-Auswahl -->
-                <div id="tool_select">
-                    <label class="block text-sm font-medium">Werkzeug</label>
-                    <select name="tool_barcode" id="tool_barcode" 
-                            class="select select-bordered w-full" required>
-                        <option value="">Werkzeug auswählen...</option>
-                        {% for tool in tools %}
-                        <option value="{{ tool.barcode }}">{{ tool.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div id="consumable_select" class="hidden">
-                    <label class="block text-sm font-medium">Verbrauchsmaterial</label>
-                    <select name="consumable_barcode" id="consumable_barcode" 
-                            class="select select-bordered w-full">
-                        <option value="">Verbrauchsmaterial auswählen...</option>
-                        {% for consumable in consumables %}
-                        <option value="{{ consumable.barcode }}">{{ consumable.bezeichnung }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Menge Input -->
-                <div id="amount_container" class="hidden">
-                    <label class="block text-sm font-medium">Menge</label>
-                    <input type="number" id="amount" name="amount" value="1" min="1"
-                           class="input input-bordered w-full">
+                <div id="selectedItem" class="hidden bg-primary bg-opacity-10 p-2 rounded">
+                    <span id="selectedItemName"></span>
                 </div>
             </div>
-
-            <!-- Aktions-Buttons -->
-            <div class="flex justify-end space-x-4 mt-4">
-                <button type="submit" class="btn btn-primary">
-                    Ausleihen/Ausgeben
-                </button>
+            
+            <!-- Drop-Zone für Mitarbeiter -->
+            <div id="workerDropZone"
+                 class="drop-zone bg-base-200 p-4 rounded-lg mb-4 min-h-[100px] border-2 border-dashed border-secondary">
+                <div class="text-center text-gray-500" id="workerDropText">
+                    Mitarbeiter hier ablegen
+                </div>
+                <div id="selectedWorker" class="hidden bg-secondary bg-opacity-10 p-2 rounded">
+                    <span id="selectedWorkerName"></span>
+                </div>
             </div>
-        </form>
-
-        <!-- Tabs -->
-        <div class="tabs tabs-boxed mt-8">
-            <a class="tab tab-active" id="tools-tab" onclick="switchTab('tools')">Werkzeuge</a>
-            <a class="tab" id="consumables-tab" onclick="switchTab('consumables')">Verbrauchsmaterial</a>
+            
+            <!-- Ausleihe-Button -->
+            <button id="confirmLending" 
+                    class="btn btn-primary w-full mt-4" 
+                    disabled>
+                Ausleihe bestätigen
+            </button>
         </div>
+    </div>
 
-        <!-- Werkzeug-Tabelle -->
-        <div id="tools-table" class="overflow-x-auto mt-4">
-            <table class="table table-zebra w-full">
-                <thead>
-                    <tr>
-                        <th>Werkzeug</th>
-                        <th>Mitarbeiter</th>
-                        <th>Ausgeliehen am</th>
-                        <th>Aktion</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for lending in tool_lendings %}
-                        <tr>
-                            <td>{{ lending.tool_name }}</td>
-                            <td>{{ lending.tool_barcode }}</td>
-                            <td>{{ lending.worker_name }}</td>
-                            <td>{{ lending.worker_barcode }}</td>
-                            <td>{{ lending.lent_at }}</td>
-                            <td>
-                                <button onclick="returnTool('{{ lending.item_barcode }}', 'tool')"
-                                        class="btn btn-success btn-sm">
-                                    Zurückgeben
-                                </button>
-                            </td>
-                        </tr>
-                    {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center">Keine aktiven Werkzeugausleihen</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Verbrauchsmaterial-Tabelle -->
-        <div id="consumables-table" class="overflow-x-auto mt-4 hidden">
-            <table class="table table-zebra w-full">
-                <thead>
-                    <tr>
-                        <th>Material</th>
-                        <th>Mitarbeiter</th>
-                        <th>Menge</th>
-                        <th>Ausgegeben am</th>
-                        <th>Aktion</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for lending in active_lendings %}
-                        {% if lending.item_type == 'consumable' %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('consumables.details', barcode=lending.item_barcode) }}"
-                                       class="link link-hover text-primary">
-                                        {{ lending.item_name }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('workers.details', barcode=lending.worker_barcode) }}"
-                                       class="link link-hover text-primary">
-                                        {{ lending.worker_name }}
-                                    </a>
-                                </td>
-                                <td>{{ lending.amount }} {{ lending.einheit }}</td>
-                                <td>{{ lending.formatted_time }}</td>
-                                <td>
-                                    <button onclick="returnTool('{{ lending.item_barcode }}', 'consumable')"
-                                            class="btn btn-success btn-sm">
-                                        Bestätigen
-                                    </button>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center">Keine aktiven Materialausgaben</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- Rechte Spalte: Mitarbeiter -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Mitarbeiter</h2>
+            
+            <!-- Mitarbeiter-Suche -->
+            <div class="form-control mb-4">
+                <input type="text" id="workerSearch" 
+                       placeholder="Mitarbeiter suchen..." 
+                       class="input input-bordered">
+            </div>
+            
+            <!-- Mitarbeiter-Liste -->
+            <div id="workersList" class="space-y-2">
+                {% for worker in workers %}
+                <div class="draggable-item bg-base-200 p-3 rounded-lg cursor-move"
+                     draggable="true"
+                     data-type="worker"
+                     data-id="{{ worker.id }}"
+                     data-barcode="{{ worker.barcode }}"
+                     data-name="{{ worker.firstname }} {{ worker.lastname }}">
+                    <span class="font-medium">{{ worker.firstname }} {{ worker.lastname }}</span>
+                    <span class="text-sm text-gray-500 block">{{ worker.department }}</span>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
+let selectedItem = null;
+let selectedWorker = null;
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Seite geladen, lade Mitarbeiter...');
-    loadWorkers();
+    console.log("Initialisiere Drag & Drop...");
     
-    // Event Listener für Typ-Auswahl
-    document.getElementById('itemType').addEventListener('change', function() {
-        const type = this.value;
-        console.log('Typ geändert zu:', type);
-        const itemSelect = document.getElementById('itemSelect');
-        const amountContainer = document.getElementById('amountContainer');
+    // Alle draggable Elemente
+    const draggableItems = document.querySelectorAll('.draggable-item');
+    console.log(`Gefundene draggable Items: ${draggableItems.length}`);
+    
+    draggableItems.forEach(item => {
+        item.setAttribute('draggable', 'true');
         
-        if (type) {
-            itemSelect.disabled = false;
-            loadItems(type);
-            amountContainer.classList.toggle('hidden', type === 'tool');
-        } else {
-            itemSelect.disabled = true;
-            itemSelect.innerHTML = '<option value="">Bitte wählen</option>';
-            amountContainer.classList.add('hidden');
-        }
+        item.addEventListener('dragstart', function(e) {
+            console.log('Dragstart:', e.target.dataset);
+            e.target.classList.add('opacity-50');
+            e.dataTransfer.setData('application/json', JSON.stringify({
+                type: e.target.dataset.type,
+                id: e.target.dataset.id,
+                barcode: e.target.dataset.barcode,
+                name: e.target.dataset.name
+            }));
+        });
+        
+        item.addEventListener('dragend', function(e) {
+            console.log('Dragend');
+            e.target.classList.remove('opacity-50');
+        });
     });
+
+    // Drop-Zonen
+    const dropZones = document.querySelectorAll('.drop-zone');
+    console.log(`Gefundene Drop-Zonen: ${dropZones.length}`);
+    
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.add('border-primary', 'bg-primary', 'bg-opacity-10');
+        });
+        
+        zone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+        });
+        
+        zone.addEventListener('drop', function(e) {
+            console.log('Drop event triggered');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+            
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                console.log('Dropped data:', data);
+                
+                if (zone.id === 'itemDropZone' && (data.type === 'tool' || data.type === 'consumable')) {
+                    selectedItem = data;
+                    document.getElementById('itemDropText').classList.add('hidden');
+                    const selectedDiv = document.getElementById('selectedItem');
+                    selectedDiv.classList.remove('hidden');
+                    selectedDiv.querySelector('#selectedItemName').textContent = data.name;
+                }
+                else if (zone.id === 'workerDropZone' && data.type === 'worker') {
+                    selectedWorker = data;
+                    document.getElementById('workerDropText').classList.add('hidden');
+                    const selectedDiv = document.getElementById('selectedWorker');
+                    selectedDiv.classList.remove('hidden');
+                    selectedDiv.querySelector('#selectedWorkerName').textContent = data.name;
+                }
+                
+                updateConfirmButton();
+            } catch (error) {
+                console.error('Fehler beim Verarbeiten der Drop-Daten:', error);
+            }
+        });
+    });
+    
+    // Tab-Funktionalität
+    document.querySelectorAll('.tabs .tab').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            const targetTab = this.getAttribute('data-tab');
+            console.log(`Tab gewechselt zu: ${targetTab}`);
+            
+            // Tabs umschalten
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active'));
+            this.classList.add('tab-active');
+            
+            // Listen umschalten
+            document.getElementById('toolsList').classList.toggle('hidden', targetTab !== 'tools');
+            document.getElementById('consumablesList').classList.toggle('hidden', targetTab !== 'consumables');
+        });
+    });
+    
+    // Suchfunktionalität
+    initSearch();
 });
 
-function loadWorkers() {
-    console.log('Lade Mitarbeiter...');
-    fetch('/get_workers')
-        .then(response => {
-            if (!response.ok) throw new Error('Netzwerk-Antwort war nicht ok');
-            return response.json();
-        })
-        .then(workers => {
-            console.log('Mitarbeiter geladen:', workers);
-            const select = document.getElementById('workerSelect');
-            select.innerHTML = '<option value="">Bitte wählen</option>';
-            workers.forEach(worker => {
-                const option = document.createElement('option');
-                option.value = worker.barcode;
-                option.textContent = worker.full_name;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Mitarbeiter:', error);
-        });
-}
-
-function loadItems(type) {
-    console.log('Lade Items vom Typ:', type);
-    fetch(`/get_items/${type}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Netzwerk-Antwort war nicht ok');
-            return response.json();
-        })
-        .then(items => {
-            console.log('Items geladen:', items);
-            const select = document.getElementById('itemSelect');
-            select.innerHTML = '<option value="">Bitte wählen</option>';
-            items.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.barcode;
-                option.textContent = item.name;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Items:', error);
-        });
-}
-
-function submitLending() {
-    const itemType = document.getElementById('itemType').value;
-    const itemBarcode = document.getElementById('itemSelect').value;
-    const workerBarcode = document.getElementById('workerSelect').value;
-    const amount = document.getElementById('amount').value;
-
-    if (!itemType || !itemBarcode || !workerBarcode) {
-        alert('Bitte alle Pflichtfelder ausfüllen');
-        return;
-    }
-
-    const data = {
-        item_type: itemType,
-        item_barcode: itemBarcode,
-        worker_barcode: workerBarcode,
-        amount: itemType === 'consumable' ? parseInt(amount) : 1
-    };
-
-    fetch('/lend_item', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            location.reload();
-        } else {
-            alert(result.error || 'Fehler bei der Ausleihe/Ausgabe');
-        }
-    })
-    .catch(error => {
-        console.error('Fehler beim Senden der Ausleihe:', error);
-        alert('Fehler bei der Ausleihe/Ausgabe');
-    });
-}
-
-function switchTab(tabName) {
-    const toolsTable = document.getElementById('tools-table');
-    const consumablesTable = document.getElementById('consumables-table');
-    const toolsTab = document.getElementById('tools-tab');
-    const consumablesTab = document.getElementById('consumables-tab');
-    
-    if (tabName === 'tools') {
-        toolsTable.classList.remove('hidden');
-        consumablesTable.classList.add('hidden');
-        toolsTab.classList.add('border-primary', 'text-primary');
-        toolsTab.classList.remove('border-transparent', 'text-gray-500');
-        consumablesTab.classList.remove('border-primary', 'text-primary');
-        consumablesTab.classList.add('border-transparent', 'text-gray-500');
+function updateConfirmButton() {
+    const button = document.getElementById('confirmLending');
+    button.disabled = !(selectedItem && selectedWorker);
+    if (selectedItem && selectedWorker) {
+        button.classList.add('btn-primary');
     } else {
-        toolsTable.classList.add('hidden');
-        consumablesTable.classList.remove('hidden');
-        consumablesTab.classList.add('border-primary', 'text-primary');
-        consumablesTab.classList.remove('border-transparent', 'text-gray-500');
-        toolsTab.classList.remove('border-primary', 'text-primary');
-        toolsTab.classList.add('border-transparent', 'text-gray-500');
+        button.classList.remove('btn-primary');
     }
-    
-    // Speichere aktiven Tab in sessionStorage
-    sessionStorage.setItem('activeManualLendingTab', tabName);
 }
 
-// Beim Laden der Seite den gespeicherten Tab wiederherstellen
-document.addEventListener('DOMContentLoaded', function() {
-    const savedTab = sessionStorage.getItem('activeManualLendingTab') || 'tools';
-    switchTab(savedTab);
-});
+function initSearch() {
+    document.getElementById('itemSearch').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('#toolsList .draggable-item, #consumablesList .draggable-item').forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            item.style.display = name.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    document.getElementById('workerSearch').addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        document.querySelectorAll('#workersList .draggable-item').forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            item.style.display = name.includes(searchTerm) ? '' : 'none';
+        });
+    });
+}
 
-// Funktion für die Rückgabe anpassen
-function returnTool(barcode, type) {
-    console.log('=== RETURN TOOL STARTED ===');
-    console.log('Return data:', { barcode, type });
-
-    fetch('/admin/process_return', {
+// Ausleihe verarbeiten
+document.getElementById('confirmLending').addEventListener('click', function() {
+    if (!selectedItem || !selectedWorker) return;
+    
+    let amount = 1;
+    if (selectedItem.type === 'consumable') {
+        amount = prompt('Menge eingeben:', '1');
+        if (!amount) return;
+        amount = parseInt(amount);
+    }
+    
+    fetch('/api/lending/process', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            item_barcode: barcode,
-            item_type: type
+            item_type: selectedItem.type,
+            item_barcode: selectedItem.barcode,
+            worker_barcode: selectedWorker.barcode,
+            amount: amount
         })
     })
-    .then(response => {
-        console.log('Return response status:', response.status);
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log('Return response data:', data);
         if (data.success) {
-            console.log('Return successful, reloading page');
             location.reload();
         } else {
-            console.error('Return failed:', data.message);
-            alert(data.message || 'Fehler bei der Rückgabe');
+            alert(data.message || 'Fehler bei der Ausleihe');
         }
     })
     .catch(error => {
-        console.error('Error in returnTool:', error);
-        alert('Fehler bei der Rückgabe');
+        console.error('Fehler:', error);
+        alert('Fehler bei der Ausleihe');
     });
-}
-
-// Hilfsfunktion für Alerts
-function showAlert(message, type = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} fixed top-4 right-4 p-4 rounded-lg shadow-lg`;
-    
-    // Farben basierend auf dem Typ
-    if (type === 'success') {
-        alertDiv.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
-    } else if (type === 'error') {
-        alertDiv.classList.add('bg-red-100', 'border-red-500', 'text-red-700');
-    } else {
-        alertDiv.classList.add('bg-blue-100', 'border-blue-500', 'text-blue-700');
-    }
-    
-    alertDiv.textContent = message;
-    document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
-}
-
-let currentSort = {
-    column: null,
-    ascending: true
-};
-
-function sortTable(column, tableId = '') {
-    const tableSelector = tableId ? `#${tableId} table` : 'table';
-    const table = document.querySelector(tableSelector);
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    
-    // Reset alle Sortier-Indikatoren
-    document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '↕');
-    
-    // Sortierrichtung umkehren wenn gleiche Spalte
-    if (currentSort.column === column) {
-        currentSort.ascending = !currentSort.ascending;
-    } else {
-        currentSort.column = column;
-        currentSort.ascending = true;
-    }
-    
-    // Sortier-Indikator aktualisieren
-    const indicator = document.getElementById(`sort-${column}`);
-    if (indicator) {
-        indicator.textContent = currentSort.ascending ? '↑' : '↓';
-    }
-    
-    // Zeilen sortieren
-    rows.sort((a, b) => {
-        const aValue = a.children[getColumnIndex(column)].textContent.trim();
-        const bValue = b.children[getColumnIndex(column)].textContent.trim();
-        
-        // Spezielle Behandlung für numerische Werte
-        if (['bestand', 'mindestbestand', 'amount', 'barcode'].includes(column)) {
-            const aNum = parseFloat(aValue.replace(/[^\d.-]/g, ''));
-            const bNum = parseFloat(bValue.replace(/[^\d.-]/g, ''));
-            return currentSort.ascending ? aNum - bNum : bNum - aNum;
-        }
-        
-        // Spezielle Behandlung für Datumsfelder
-        if (column === 'date') {
-            return compareDates(aValue, bValue);
-        }
-        
-        return currentSort.ascending ? 
-            aValue.localeCompare(bValue) : 
-            bValue.localeCompare(aValue);
-    });
-    
-    // Sortierte Zeilen wieder einfügen
-    rows.forEach(row => tbody.appendChild(row));
-}
-
-function getColumnIndex(column) {
-    const columnMap = {
-        'bezeichnung': 0,
-        'typ': 1,
-        'ort': 2,
-        'bestand': 3,
-        'mindestbestand': 4,
-        'status': 5,
-        'barcode': 6,
-        
-        'material': 0,
-        'worker': 1,
-        'amount': 2,
-        'date': 3,
-        
-        'name': 0,
-        'bereich': 1,
-        'barcode': 2,
-        'email': 3,
-        'date': 0,
-        'worker': 1,
-        'amount': 3,
-        // ... weitere Spalten je nach Bedarf
-    };
-    return columnMap[column] || 0;
-}
-
-function compareDates(a, b) {
-    const dateA = new Date(a);
-    const dateB = new Date(b);
-    return currentSort.ascending ? 
-        dateA - dateB : 
-        dateB - dateA;
-}
-
-// Filter-Funktion
-function filterTable() {
-    const filterInputs = document.querySelectorAll('select[id^="filter"]');
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach(row => {
-        let showRow = true;
-        
-        filterInputs.forEach(filter => {
-            const filterValue = filter.value.toLowerCase();
-            if (filterValue) {
-                const columnIndex = getFilterColumnIndex(filter.id);
-                const cellValue = row.children[columnIndex].textContent.toLowerCase();
-                if (!cellValue.includes(filterValue)) {
-                    showRow = false;
-                }
-            }
-        });
-    });
-}
+});
 </script>
 {% endblock %}

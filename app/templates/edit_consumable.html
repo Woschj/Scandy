@@ -6,7 +6,7 @@
 <div class="bg-white shadow rounded-lg p-6">
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Verbrauchsmaterial bearbeiten</h1>
 
-    <form method="POST" action="{{ url_for('edit_consumable', barcode=consumable.barcode) }}" class="max-w-lg">
+    <form method="POST" action="{{ url_for('inventory.edit_consumable', barcode=consumable.barcode) }}" class="max-w-lg">
         <!-- Barcode (readonly) -->
         <div class="mb-4">
             <label for="barcode" class="block text-sm font-medium text-gray-700">Barcode</label>

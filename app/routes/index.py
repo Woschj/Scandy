@@ -4,4 +4,4 @@ bp = Blueprint('index', __name__)
 
 @bp.route('/')
 def index():
-    return redirect(url_for('tools.index'))
+    return redirect(url_for('inventory.tools'))

@@ -122,7 +122,7 @@ async function processBarcode(barcode) {
     if (currentStep === 'tool') {
         // Werkzeug scannen
         try {
-            const response = await fetch(`/api/get_item/${barcode}`);
+            const response = await fetch(`/api/inventory/scan/${barcode}`);
             const data = await response.json();
             
             if (data.error) {

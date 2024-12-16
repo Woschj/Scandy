@@ -1,11 +1,11 @@
 from functools import wraps
-from flask import session, redirect, url_for, flash
+from flask import session, redirect, url_for
+from flask_login import current_user
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session:
-            flash('Bitte melden Sie sich an', 'error')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -13,12 +13,8 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session:
-            flash('Bitte melden Sie sich an', 'error')
-            return redirect(url_for('auth.login'))
         if not session.get('is_admin'):
-            flash('Keine Administratorrechte', 'error')
-            return redirect(url_for('inventory.tools'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 

@@ -1,3 +1,42 @@
+:root {
+    --primary-color: {{ settings.get('primary_color', '#3B82F6') }};
+    --accent-color: {{ settings.get('accent_color', '#10B981') }};
+}
+
+/* Primärfarbe für Buttons */
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-primary:hover {
+    background-color: color-mix(in srgb, var(--primary-color) 85%, black) !important;
+    border-color: color-mix(in srgb, var(--primary-color) 85%, black) !important;
+}
+
+/* Akzentfarbe für Navbar und Karten */
+.navbar {
+    background-color: var(--accent-color) !important;
+}
+
+.card {
+    background-color: color-mix(in srgb, var(--accent-color) 10%, white) !important;
+}
+
+/* Andere Elemente die die Primärfarbe verwenden */
+.link-primary {
+    color: var(--primary-color) !important;
+}
+
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+/* Andere Elemente die die Akzentfarbe verwenden */
+.bg-accent {
+    background-color: var(--accent-color) !important;
+}
+
 /* Basis Styles */
 .navbar {
     padding: 10px;

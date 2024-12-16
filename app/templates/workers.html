@@ -10,7 +10,7 @@
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Mitarbeiter</h2>
-            <a href="{{ url_for('workers.add') }}" class="btn btn-primary">
+            <a href="{{ url_for(urls.add_worker) }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Neuer Mitarbeiter
             </a>
         </div>
@@ -53,12 +53,12 @@
                     {% for worker in workers %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for('workers.details', barcode=worker.barcode) }}"
-                               class="table-link">
-                                {{ worker.lastname }}, {{ worker.name }}
+                            <a href="{{ url_for('inventory.worker_details', barcode=worker.barcode) }}"
+                               class="link-primary">
+                                {{ worker.firstname }} {{ worker.lastname }}
                             </a>
                         </td>
-                        <td class="px-6 py-4">{{ worker.bereich or '-' }}</td>
+                        <td class="px-6 py-4">{{ worker.department or '-' }}</td>
                         <td class="px-6 py-4">{{ worker.email or '-' }}</td>
                         <td class="px-6 py-4 text-right">
                             <button onclick="showBarcodeModal('{{ worker.barcode }}')" 

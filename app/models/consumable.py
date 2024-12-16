@@ -1,39 +1,19 @@
-from app.models.database import get_db
+from .database import BaseModel, Database
 
-class Consumable:
-    @staticmethod
-    def count_active():
-        db = get_db('inventory.db')
-        cursor = db.cursor()
-        cursor.execute('SELECT COUNT(*) FROM consumables WHERE deleted = 0 OR deleted IS NULL')
-        return cursor.fetchone()[0] 
+class Consumable(BaseModel):
+    TABLE_NAME = 'consumables'
 
     @staticmethod
-    def get_all_active():
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('SELECT * FROM consumables WHERE deleted = 0 OR deleted IS NULL')
-        return cursor.fetchall() 
-
-    @staticmethod
-    def count_low_stock():
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('''
-            SELECT COUNT(*) FROM consumables 
-            WHERE bestand <= mindestbestand 
-            AND bestand > 0 
-            AND (deleted = 0 OR deleted IS NULL)
-        ''')
-        return cursor.fetchone()[0]
-
-    @staticmethod
-    def count_out_of_stock():
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('''
-            SELECT COUNT(*) FROM consumables 
-            WHERE bestand = 0 
-            AND (deleted = 0 OR deleted IS NULL)
-        ''')
-        return cursor.fetchone()[0]
+    def get_all_with_stock():
+        sql = '''
+        SELECT c.*, 
+               c.quantity as current_stock,
+               CASE 
+                   WHEN c.quantity <= c.min_quantity THEN 'low'
+                   ELSE 'ok'
+               END as stock_status
+        FROM consumables c
+        WHERE c.deleted = 0
+        ORDER BY c.name
+        '''
+        return Database.query(sql)

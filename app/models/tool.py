@@ -1,37 +1,28 @@
-from app.models.database import get_db
+from .database import BaseModel, Database
 
-class Tool:
-    @staticmethod
-    def count_active():
-        db = get_db('inventory.db')
-        cursor = db.cursor()
-        cursor.execute('SELECT COUNT(*) FROM tools WHERE deleted = 0 OR deleted IS NULL')
-        return cursor.fetchone()[0] 
+class Tool(BaseModel):
+    TABLE_NAME = 'tools'
 
     @staticmethod
-    def get_all_active():
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('SELECT * FROM tools WHERE deleted = 0 OR deleted IS NULL')
-        return cursor.fetchall()
-
-    @staticmethod
-    def count_by_status(status):
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('SELECT COUNT(*) FROM tools WHERE status = ? AND (deleted = 0 OR deleted IS NULL)', (status,))
-        return cursor.fetchone()[0]
-
-    @staticmethod
-    def get_current_lendings():
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('''
-            SELECT t.name as tool_name, w.name as worker_name, l.lending_time
-            FROM lendings l
-            JOIN tools t ON l.tool_barcode = t.barcode
-            JOIN workers w ON l.worker_barcode = w.barcode
-            WHERE l.return_time IS NULL
-            ORDER BY l.lending_time DESC
-        ''')
-        return [dict(row) for row in cursor.fetchall()]
+    def get_all_with_status():
+        sql = '''
+        SELECT t.*, 
+               l.worker_barcode,
+               l.lent_at,
+               l.returned_at,
+               w.firstname || ' ' || w.lastname as current_borrower
+        FROM tools t
+        LEFT JOIN (
+            SELECT tool_barcode, worker_barcode, lent_at, returned_at
+            FROM lendings l1
+            WHERE NOT EXISTS (
+                SELECT 1 FROM lendings l2
+                WHERE l2.tool_barcode = l1.tool_barcode
+                AND l2.lent_at > l1.lent_at
+            )
+        ) l ON t.barcode = l.tool_barcode
+        LEFT JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE t.deleted = 0
+        ORDER BY t.name
+        '''
+        return Database.query(sql)

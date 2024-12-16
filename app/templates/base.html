@@ -44,16 +44,13 @@
     <style>
         @keyframes scan {
             0% { 
-                transform: translateX(-100%);
-                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+                background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
             }
             50% { 
-                transform: translateX(100%);
-                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+                background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
             }
             100% { 
-                transform: translateX(-100%);
-                background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+                background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
             }
         }
 
@@ -71,7 +68,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, #5b69a7, transparent);
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
             animation: scan 3s ease-in-out infinite;
         }
 
@@ -95,6 +92,39 @@
         [data-theme='dark'] .scan-line {
             background: linear-gradient(90deg, transparent, #a6adba, transparent);
         }
+
+        :root {
+            --primary-color: {{ colors.primary|default('#5b69a7') }};
+            --secondary-color: {{ colors.secondary|default('#4c5789') }};
+            --accent-color: {{ colors.accent|default('#3d4675') }};
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+        .btn-primary:hover {
+            background-color: var(--secondary-color) !important;
+            border-color: var(--secondary-color) !important;
+        }
+        
+        .table-link {
+            color: var(--primary-color);
+        }
+        .table-link:hover {
+            color: var(--secondary-color);
+        }
+
+        /* Weitere Farbanpassungen */
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+        .bg-primary {
+            background-color: var(--primary-color) !important;
+        }
+        .border-primary {
+            border-color: var(--primary-color) !important;
+        }
     </style>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -106,55 +136,50 @@
         <div class="drawer-content flex flex-col">
             <!-- Navbar -->
             <div class="navbar bg-base-100 shadow-lg px-4 relative">
+                <!-- Linke Seite -->
                 <div class="flex-1">
-                    <!-- Linke Seite mit Logo und Menü -->
-                    <div class="flex items-center">
-                        <label for="drawer-toggle" class="btn btn-ghost drawer-button lg:hidden">
-                            <i class="fas fa-bars"></i>
-                        </label>
-                        <a href="{{ url_for('index.index') }}" class="flex items-center">
-                            <img src="{{ url_for('static', filename='images/Logo-BTZ-WEISS.svg') }}" 
-                                 alt="BTZ Logo" 
-                                 class="logo-light">
+                    <!-- Logo -->
+                    <a href="{{ url_for(routes.TOOLS_INDEX) }}" class="flex items-center">
+                        <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
+                             alt="Scandy Logo" 
+                             class="h-12 w-auto"
+                             style="min-width: 120px; object-fit: contain;">
+                    </a>
+                    
+                    <!-- Hauptmenü (Desktop) -->
+                    <div class="hidden lg:flex ml-4">
+                        <a href="{{ url_for('inventory.tools') }}" 
+                           class="btn btn-ghost {% if request.endpoint == routes.TOOLS_INDEX %}btn-active{% endif %}">
+                            <i class="fas fa-tools mr-2"></i>Werkzeuge
                         </a>
-                        <!-- Hauptmenü (nur Desktop) -->
-                        <div class="hidden lg:flex ml-4">
-                            <a href="{{ url_for('tools.index') }}" 
-                               class="btn btn-ghost {% if request.endpoint == 'tools.index' %}btn-active{% endif %}">
-                                <i class="fas fa-tools mr-2"></i>Werkzeuge
-                            </a>
-                            <a href="{{ url_for('consumables.index') }}" 
-                               class="btn btn-ghost {% if request.endpoint == 'consumables.index' %}btn-active{% endif %}">
-                                <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
-                            </a>
-                            <a href="{{ url_for('workers.index') }}"
-                               class="btn btn-ghost {% if request.endpoint == 'workers.index' %}btn-active{% endif %}">
-                                <i class="fas fa-users mr-2"></i>Mitarbeiter
-                            </a>
-                            {% if session.get('is_admin') %}
-                            <a href="{{ url_for('admin.manual_lending') }}" 
-                               class="btn btn-ghost {% if request.endpoint == 'admin.manual_lending' %}btn-active{% endif %}">
-                                <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
-                            </a>
-                            {% endif %}
-                        </div>
+                        <a href="{{ url_for('inventory.consumables') }}" 
+                           class="btn btn-ghost {% if request.endpoint == routes.CONSUMABLES_INDEX %}btn-active{% endif %}">
+                            <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
+                        </a>
+                        <a href="{{ url_for('inventory.workers') }}"
+                           class="btn btn-ghost {% if request.endpoint == routes.WORKERS_INDEX %}btn-active{% endif %}">
+                            <i class="fas fa-users mr-2"></i>Mitarbeiter
+                        </a>
                     </div>
                 </div>
-                
-                <!-- QuickScan Button in der Navbar -->
+
+                <!-- QuickScan Button (Mittig) -->
                 <button onclick="showQuickScan()" 
-                        class="btn btn-circle bg-[#5b69a7] text-white hover:bg-[#4c5789] absolute left-1/2 transform -translate-x-1/2 z-10"
-                        type="button"
+                        class="btn btn-circle btn-primary text-white"
                         style="transform: translate(-50%, 0) scale(1.5);">
                     <i class="fas fa-barcode"></i>
                 </button>
-                
+
+                <!-- Rechte Seite -->
                 <div class="flex-none">
-                    <!-- Rechte Navigation -->
                     <div class="hidden lg:flex items-center gap-4">
                         {% if session.get('is_admin') %}
-                        <a href="{{ url_for('admin.dashboard') }}" 
-                           class="btn btn-ghost {% if request.endpoint == 'admin.dashboard' %}btn-active{% endif %}">
+                        <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}" 
+                           class="btn btn-ghost {% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}btn-active{% endif %}">
+                            <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
+                        </a>
+                        <a href="{{ url_for(routes.ADMIN_DASHBOARD) }}" 
+                           class="btn btn-ghost {% if request.endpoint == routes.ADMIN_DASHBOARD %}btn-active{% endif %}">
                             <i class="fas fa-chart-line mr-2"></i>Dashboard
                         </a>
                         {% endif %}
@@ -168,11 +193,11 @@
 
                         <!-- Login/Logout -->
                         {% if session.get('logged_in') %}
-                        <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost">
+                        <a href="{{ url_for(routes.LOGOUT) }}" class="btn btn-ghost">
                             <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </a>
                         {% else %}
-                        <a href="{{ url_for('auth.login') }}" class="btn btn-ghost">
+                        <a href="{{ url_for(routes.LOGIN) }}" class="btn btn-ghost">
                             <i class="fas fa-sign-in-alt mr-2"></i>Login
                         </a>
                         {% endif %}
@@ -180,122 +205,116 @@
                 </div>
             </div>
 
-            <!-- QuickScan Modal -->
-            <dialog id="quickScanModal" class="modal">
-                <form method="dialog" class="modal-box relative max-w-2xl overflow-y-auto max-h-[90vh] z-40">
-                    <!-- Verstecktes Input-Feld -->
-                    <input type="text" 
-                           id="main-scanner-input"
-                           class="w-0 h-0 opacity-0 absolute"
-                           autocomplete="off">
-                    
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold text-2xl">QuickScan</h3>
-                        <button class="btn btn-sm btn-circle" onclick="resetQuickScan()">✕</button>
-                    </div>
-
-                    <!-- Scan Steps -->
-                    <div id="scan-steps" class="mb-6">
-                        <!-- Step 1: Werkzeug -->
-                        <div id="step-tool" class="scan-step">
-                            <div class="text-center mb-6">
-                                <i class="fas fa-tools text-5xl text-primary mb-4"></i>
-                                <h4 class="text-xl font-bold mb-2">Werkzeug scannen</h4>
-                                <p class="text-sm opacity-70">Bitte scannen Sie den Barcode des Werkzeugs</p>
-                            </div>
-                            <div id="tool-preview" class="rounded-xl transition-all duration-300">
-                                <div class="text-center">
-                                    <p class="font-bold text-xl">---</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Mitarbeiter -->
-                        <div id="step-worker" class="scan-step" style="display: none;">
-                            <div class="text-center mb-6">
-                                <i class="fas fa-user text-5xl text-primary mb-4"></i>
-                                <h4 class="text-xl font-bold mb-2">Mitarbeiter scannen</h4>
-                                <p class="text-sm opacity-70">Bitte scannen Sie den Mitarbeiterausweis</p>
-                            </div>
-                            <div id="worker-preview" class="bg-base-200 rounded-xl p-6">
-                                <div class="text-center">
-                                    <p class="font-bold text-xl">---</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Bestätigung -->
-                        <div id="step-confirm" class="scan-step" style="display: none;">
-                            <!-- Wird dynamisch gefüllt -->
-                        </div>
-                    </div>
-
-                    <!-- Scan Animation -->
-                    <div class="scan-animation">
-                        <div class="scan-line"></div>
-                    </div>
-                </form>
-            </dialog>
+            <!-- Mobile Drawer -->
+            <div class="drawer-side z-30">
+                <label for="drawer-toggle" class="drawer-overlay"></label>
+                <ul class="menu p-4 w-80 h-full bg-base-200 gap-2">
+                    {% if session.get('is_admin') %}
+                    <li>
+                        <a href="{{ url_for(routes.ADMIN_DASHBOARD) }}"
+                           class="{% if request.endpoint == routes.ADMIN_DASHBOARD %}active{% endif %}">
+                            <i class="fas fa-chart-line"></i>Dashboard
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li>
+                        <a href="{{ url_for('index.index') }}" 
+                           class="{% if request.endpoint == routes.INDEX %}active{% endif %}">
+                            <i class="fas fa-home"></i>Start
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('inventory.tools') }}" 
+                           class="{% if request.endpoint == routes.TOOLS_INDEX %}active{% endif %}">
+                            <i class="fas fa-tools"></i>Werkzeuge
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('inventory.consumables') }}" 
+                           class="{% if request.endpoint == routes.CONSUMABLES_INDEX %}active{% endif %}">
+                            <i class="fas fa-box-open"></i>Verbrauchsmaterial
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('inventory.workers') }}"
+                           class="{% if request.endpoint == routes.WORKERS_INDEX %}active{% endif %}">
+                            <i class="fas fa-users"></i>Mitarbeiter
+                        </a>
+                    </li>
+                    {% if session.get('is_admin') %}
+                    <li>
+                        <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}"
+                           class="{% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}active{% endif %}">
+                            <i class="fas fa-hand-holding"></i>Manuelle Ausleihe
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
 
             <!-- Main Content -->
             <main class="container mx-auto px-4 py-8 relative z-0">
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                        <div class="alert {% if category == 'error' %}alert-error{% else %}alert-success{% endif %} mb-4">
-                            <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
-                            <span>{{ message }}</span>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
                 {% block content %}{% endblock %}
             </main>
         </div>
-
-        <!-- Mobile Drawer -->
-        <div class="drawer-side z-30">
-            <label for="drawer-toggle" class="drawer-overlay"></label>
-            <ul class="menu p-4 w-80 h-full bg-base-200 gap-2">
-                {% if session.get('is_admin') %}
-                <li>
-                    <a href="{{ url_for('admin.dashboard') }}"
-                       class="{% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
-                        <i class="fas fa-chart-line"></i>Dashboard
-                    </a>
-                </li>
-                {% endif %}
-                <li>
-                    <a href="{{ url_for('tools.index') }}" 
-                       class="{% if request.endpoint == 'tools.index' %}active{% endif %}">
-                        <i class="fas fa-tools"></i>Werkzeuge
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('consumables.index') }}" 
-                       class="{% if request.endpoint == 'consumables.index' %}active{% endif %}">
-                        <i class="fas fa-box-open"></i>Verbrauchsmaterial
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('workers.index') }}"
-                       class="{% if request.endpoint == 'workers.index' %}active{% endif %}">
-                        <i class="fas fa-users"></i>Mitarbeiter
-                    </a>
-                </li>
-                {% if session.get('is_admin') %}
-                <li>
-                    <a href="{{ url_for('admin.manual_lending') }}"
-                       class="{% if request.endpoint == 'admin.manual_lending' %}active{% endif %}">
-                        <i class="fas fa-hand-holding"></i>Manuelle Ausleihe
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </div>
     </div>
+
+    <!-- QuickScan Modal -->
+    <dialog id="quickScanModal" class="modal">
+        <form method="dialog" class="modal-box relative max-w-2xl overflow-y-auto max-h-[90vh] z-40">
+            <!-- Verstecktes Input-Feld -->
+            <input type="text" 
+                   id="main-scanner-input"
+                   class="w-0 h-0 opacity-0 absolute"
+                   autocomplete="off">
+            
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-2xl">QuickScan</h3>
+                <button class="btn btn-sm btn-circle" onclick="resetQuickScan()">✕</button>
+            </div>
+
+            <!-- Scan Steps -->
+            <div id="scan-steps" class="mb-6">
+                <!-- Step 1: Werkzeug -->
+                <div id="step-tool" class="scan-step">
+                    <div class="text-center mb-6">
+                        <i class="fas fa-tools text-5xl text-primary mb-4"></i>
+                        <h4 class="text-xl font-bold mb-2">Werkzeug scannen</h4>
+                        <p class="text-sm opacity-70">Bitte scannen Sie den Barcode des Werkzeugs</p>
+                    </div>
+                    <div id="tool-preview" class="rounded-xl transition-all duration-300">
+                        <div class="text-center">
+                            <p class="font-bold text-xl">---</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Mitarbeiter -->
+                <div id="step-worker" class="scan-step" style="display: none;">
+                    <div class="text-center mb-6">
+                        <i class="fas fa-user text-5xl text-primary mb-4"></i>
+                        <h4 class="text-xl font-bold mb-2">Mitarbeiter scannen</h4>
+                        <p class="text-sm opacity-70">Bitte scannen Sie den Mitarbeiterausweis</p>
+                    </div>
+                    <div id="worker-preview" class="bg-base-200 rounded-xl p-6">
+                        <div class="text-center">
+                            <p class="font-bold text-xl">---</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Bestätigung -->
+                <div id="step-confirm" class="scan-step" style="display: none;">
+                    <!-- Wird dynamisch gefüllt -->
+                </div>
+            </div>
+
+            <!-- Scan Animation -->
+            <div class="scan-animation">
+                <div class="scan-line"></div>
+            </div>
+        </form>
+    </dialog>
 
     <!-- QR-Code Modal -->
     <div id="qrModal" class="modal">

@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app.models.database import get_db_connection
+from app.models.database import Database
 from app.utils.decorators import admin_required
 from werkzeug.utils import secure_filename
 import os
 from flask import current_app
+from app.utils.db_schema import SchemaManager
 
 bp = Blueprint('admin', __name__)
 
@@ -49,49 +50,94 @@ def get_current_lendings(conn):
 @bp.route('/')
 @admin_required
 def dashboard():
-    with get_db_connection() as conn:
-        # Lade die Design-Einstellungen
-        colors = {
-            'primary': '#5b69a7',  # Standard-Werte
-            'secondary': '#4c5789',
-            'accent': '#3d4675'
-        }
-        
-        # Hole aktuelle Werte aus der Datenbank
-        settings = conn.execute('''
-            SELECT key, value FROM settings 
-            WHERE key IN ('primary_color', 'secondary_color', 'accent_color')
-        ''').fetchall()
-        
-        # Aktualisiere colors mit Werten aus der DB
-        for key, value in settings:
-            colors[key.replace('_color', '')] = value
-
-        # Logo-Pfad
-        logo = conn.execute('''
-            SELECT value FROM settings WHERE key = 'logo_path'
-        ''').fetchone()
-        current_logo = logo[0] if logo else 'Logo-BTZ-WEISS.svg'
-
-        # Statistiken
-        tools_stats = get_tools_stats(conn)
-        workers_stats = get_workers_stats(conn)
-        consumables_stats = get_consumables_stats(conn)
-        current_lendings = get_current_lendings(conn)
-
-        return render_template('admin/dashboard.html',
-                             tools_stats=tools_stats,
-                             workers_stats=workers_stats,
-                             consumables_stats=consumables_stats,
-                             current_lendings=current_lendings,
-                             colors=colors,
-                             current_logo=current_logo)
+    try:
+        with Database.get_db() as conn:
+            # Statistiken abrufen
+            stats = {
+                'tools_count': conn.execute('''
+                    SELECT COUNT(*) FROM tools 
+                    WHERE deleted = 0
+                ''').fetchone()[0],
+                
+                'consumables_count': conn.execute('''
+                    SELECT COUNT(*) FROM consumables 
+                    WHERE deleted = 0
+                ''').fetchone()[0],
+                
+                'workers_count': conn.execute('''
+                    SELECT COUNT(*) FROM workers 
+                    WHERE deleted = 0
+                ''').fetchone()[0],
+                
+                'active_lendings': conn.execute('''
+                    SELECT COUNT(*) FROM lendings 
+                    WHERE returned_at IS NULL
+                ''').fetchone()[0]
+            }
+            
+            # Aktuelle Ausleihen für die Tabelle
+            current_lendings = conn.execute('''
+                SELECT 
+                    t.name as tool_name,
+                    w.firstname || ' ' || w.lastname as worker_name,
+                    l.lent_at
+                FROM lendings l
+                JOIN tools t ON l.tool_barcode = t.barcode
+                JOIN workers w ON l.worker_barcode = w.barcode
+                WHERE l.returned_at IS NULL
+                ORDER BY l.lent_at DESC
+                LIMIT 10
+            ''').fetchall()
+            
+            # Farbeinstellungen laden
+            settings = {}
+            for row in conn.execute('SELECT key, value FROM settings').fetchall():
+                settings[row['key']] = row['value']
+            
+            return render_template('admin/dashboard.html',
+                                 stats=stats,
+                                 current_lendings=current_lendings,
+                                 settings=settings)
+                                 
+    except Exception as e:
+        print(f"Fehler im Admin-Dashboard: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/update_design', methods=['POST'])
 @admin_required
 def update_design():
-    color_scheme = request.form.get('color_scheme', 'btz')
+    color_scheme = request.form.get('color_scheme', 'scandy')
     schemes = {
+        'scandy': {
+            'primary': '#FF4D8D',      # Scandy Pink
+            'secondary': '#FF99B9',    # Helles Pink
+            'accent': '#FFFFFF',       # Weiß
+            'base-100': '#FFF5F8',     # Sehr helles Pink
+            'base-200': '#FFE6EE',     
+            'base-300': '#FFD6E6',     
+            'neutral': '#4A2B39',      # Dunkles Altrosa
+            'neutral-focus': '#2D1A23', 
+            'navbar-bg': '#FF4D8D',    
+            'navbar-text': '#FFFFFF',   
+            'sidebar-bg': '#FFF5F8',   
+            'card-bg': '#FFFFFF',      
+            'footer-bg': '#FF4D8D'     
+        },
+        'scandy-dark': {
+            'primary': '#FF4D8D',      
+            'secondary': '#FF99B9',    
+            'accent': '#FFFFFF',       
+            'base-100': '#2D1A23',     # Dunkles Altrosa
+            'base-200': '#4A2B39',     
+            'base-300': '#613647',     
+            'neutral': '#FFE6EE',      
+            'neutral-focus': '#FFFFFF', 
+            'navbar-bg': '#2D1A23',    
+            'navbar-text': '#FF4D8D',  
+            'sidebar-bg': '#4A2B39',   
+            'card-bg': '#4A2B39',      
+            'footer-bg': '#2D1A23'     
+        },
         'btz': {
             'primary': '#6B5CA5',      # BTZ Lila
             'secondary': '#9ED167',    # BTZ Grün
@@ -215,8 +261,84 @@ def reset_design():
 @bp.route('/manual_lending')
 @admin_required
 def manual_lending():
-    """Manuelle Ausleihe/Rückgabe"""
-    return render_template('admin/manual_lending.html')
+    try:
+        with Database.get_db() as conn:
+            # Debug: Schema überprüfen
+            SchemaManager.debug_schema()
+            
+            # Tools Query mit Debug
+            tools_query = SchemaManager.build_select_query(
+                'tools',
+                columns=['id', 'barcode', 'name', 'status'],
+                where='deleted = 0'  # Status-Check erstmal entfernt
+            )
+            print(f"\nTools Query: {tools_query}")
+            tools = conn.execute(tools_query).fetchall()
+            print(f"Tools Rohdaten: {tools}")
+            
+            # Consumables Query mit Debug
+            consumables_query = SchemaManager.build_select_query(
+                'consumables',
+                columns=['id', 'barcode', 'name', 'quantity', 'min_quantity', 'location', 'category'],
+                where='deleted = 0'  # Quantity-Check erstmal entfernt
+            )
+            print(f"\nConsumables Query: {consumables_query}")
+            consumables = conn.execute(consumables_query).fetchall()
+            print(f"Consumables Rohdaten: {consumables}")
+            
+            # Workers Query mit Debug
+            workers_query = SchemaManager.build_select_query(
+                'workers',
+                columns=['id', 'barcode', 'firstname', 'lastname', 'department'],
+                where='deleted = 0'
+            )
+            print(f"\nWorkers Query: {workers_query}")
+            workers = conn.execute(workers_query).fetchall()
+            print(f"Workers Rohdaten: {workers}")
+            
+            # Lendings Query mit Debug
+            lendings_query = """
+                SELECT 
+                    t.name as tool_name,
+                    w.firstname || ' ' || w.lastname as worker_name,
+                    l.lent_at,
+                    t.barcode as tool_barcode
+                FROM lendings l
+                JOIN tools t ON l.tool_barcode = t.barcode
+                JOIN workers w ON l.worker_barcode = w.barcode
+                WHERE l.returned_at IS NULL
+            """
+            print(f"\nLendings Query: {lendings_query}")
+            tool_lendings = conn.execute(lendings_query).fetchall()
+            print(f"Lendings Rohdaten: {tool_lendings}")
+
+            # Direkte Tabellen-Überprüfung
+            tables_check = conn.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name NOT LIKE 'sqlite_%'
+            """).fetchall()
+            print(f"\nVerfügbare Tabellen: {tables_check}")
+            
+            # Spalten-Überprüfung für tools
+            tools_columns = conn.execute("PRAGMA table_info(tools)").fetchall()
+            print(f"\nTools Spalten: {tools_columns}")
+
+            print(f"\nZusammenfassung:")
+            print(f"Tools: {len(tools)}")
+            print(f"Consumables: {len(consumables)}")
+            print(f"Workers: {len(workers)}")
+            print(f"Tool Lendings: {len(tool_lendings)}")
+            
+            return render_template('admin/manual_lending.html',
+                                tools=tools,
+                                consumables=consumables,
+                                workers=workers,
+                                tool_lendings=tool_lendings,
+                                consumable_lendings=[])
+                                
+    except Exception as e:
+        print(f"Fehler beim Laden der Daten für manuelle Ausleihe: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/process_lending', methods=['POST'])
 @admin_required
@@ -273,3 +395,100 @@ def process_return():
         
         flash('Rückgabe erfolgreich registriert', 'success')
     return redirect(url_for('admin.manual_lending'))
+
+@bp.route('/add_tool', methods=['GET', 'POST'])
+@admin_required
+def add_tool():
+    if request.method == 'POST':
+        with Database.get_db() as conn:
+            # Daten aus dem Formular holen
+            data = {
+                'barcode': request.form['barcode'],
+                'name': request.form['name'],
+                'description': request.form.get('description'),
+                'category': request.form.get('category'),
+                'location': request.form.get('location'),
+                'status': request.form.get('status', 'Verfügbar')
+            }
+            
+            # Neues Werkzeug einfügen
+            conn.execute('''
+                INSERT INTO tools (barcode, name, description, category, location, status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (data['barcode'], data['name'], data['description'], 
+                  data['category'], data['location'], data['status']))
+            
+            conn.commit()
+            flash('Werkzeug erfolgreich hinzugefügt', 'success')
+            return redirect(url_for('inventory.tools'))
+    
+    # GET-Request: Formular anzeigen
+    return render_template('admin/add_tool.html',
+                         categories=[],
+                         locations=[])
+
+@bp.route('/add_consumable', methods=['GET', 'POST'])
+@admin_required
+def add_consumable():
+    if request.method == 'POST':
+        with Database.get_db() as conn:
+            # Daten aus dem Formular holen
+            data = {
+                'barcode': request.form['barcode'],
+                'name': request.form['name'],
+                'description': request.form.get('description'),
+                'category': request.form.get('category'),
+                'location': request.form.get('location'),
+                'quantity': int(request.form.get('quantity', 0)),
+                'min_quantity': int(request.form.get('min_quantity', 0))
+            }
+            
+            # Neues Verbrauchsmaterial einfügen
+            conn.execute('''
+                INSERT INTO consumables (barcode, name, description, category, 
+                                      location, quantity, min_quantity, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ''', (data['barcode'], data['name'], data['description'], 
+                  data['category'], data['location'], data['quantity'], 
+                  data['min_quantity']))
+            
+            conn.commit()
+            flash('Verbrauchsmaterial erfolgreich hinzugefügt', 'success')
+            return redirect(url_for('inventory.consumables'))
+    
+    # GET-Request: Formular anzeigen
+    return render_template('admin/add_consumable.html',
+                         categories=[],
+                         locations=[])
+
+@bp.route('/add_worker', methods=['GET', 'POST'])
+@admin_required
+def add_worker():
+    if request.method == 'POST':
+        with Database.get_db() as conn:
+            # Daten aus dem Formular holen
+            data = {
+                'barcode': request.form['barcode'],
+                'first_name': request.form['first_name'],
+                'last_name': request.form['last_name'],
+                'department': request.form.get('department'),
+                'email': request.form.get('email')
+            }
+            
+            # Neuen Mitarbeiter einfügen
+            conn.execute('''
+                INSERT INTO workers (barcode, firstname, lastname, department, email, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            ''', (data['barcode'], data['first_name'], data['last_name'], 
+                  data['department'], data['email']))
+            
+            conn.commit()
+            flash('Mitarbeiter erfolgreich hinzugefügt', 'success')
+            return redirect(url_for('inventory.workers'))
+    
+    # GET-Request: Formular anzeigen
+    with Database.get_db() as conn:
+        departments = conn.execute('SELECT DISTINCT department FROM workers').fetchall()
+    
+    return render_template('admin/add_worker.html',
+                         departments=[dep[0] for dep in departments if dep[0]])
