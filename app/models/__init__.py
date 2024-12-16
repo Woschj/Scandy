@@ -1,4 +1,4 @@
-from app.models.database import Database
+from app.models.database import Database, get_db_connection
 from app.models.system_log import SystemLog
 from app.models.tool import Tool
 from app.models.worker import Worker
@@ -15,5 +15,6 @@ __all__ = [
     'Worker',
     'Consumable',
     'User',
-    'get_db'
+    'get_db',
+    'get_db_connection'
 ] 

@@ -8,11 +8,11 @@
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">{{ worker.firstname }} {{ worker.lastname }}</h2>
             <div class="flex gap-2">
-                <a href="{{ url_for('inventory.workers') }}" class="btn btn-ghost">
+                <a href="{{ url_for(routes.WORKERS_INDEX) }}" class="btn btn-ghost">
                     <i class="fas fa-arrow-left"></i> Zurück
                 </a>
                 {% if session.get('is_admin') %}
-                <a href="{{ url_for('inventory.update_worker', barcode=worker.barcode) }}" 
+                <a href="{{ url_for(routes.EDIT_WORKER, barcode=worker.barcode) }}" 
                    class="btn btn-primary">
                     <i class="fas fa-edit"></i> Bearbeiten
                 </a>
@@ -25,7 +25,7 @@
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ worker.name }} {{ worker.lastname }}</h2>
                 
-                <form action="{{ url_for('inventory.update_worker', barcode=worker.barcode) }}" method="POST" class="space-y-6">
+                <form action="{{ url_for('workers.edit', barcode=worker.barcode) }}" method="POST" class="space-y-6">
                     <!-- Barcode (nicht editierbar) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Mitarbeiternummer</label>

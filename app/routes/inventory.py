@@ -16,6 +16,66 @@ from app.utils.decorators import login_required, admin_required
 
 bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
+def get_tools_stats(conn):
+    """Gibt Statistiken über Werkzeuge zurück"""
+    total = conn.execute('''
+        SELECT COUNT(*) FROM tools WHERE deleted = 0
+    ''').fetchone()[0]
+    
+    lent = conn.execute('''
+        SELECT COUNT(DISTINCT tool_barcode) 
+        FROM lendings 
+        WHERE returned_at IS NULL
+    ''').fetchone()[0]
+    
+    return {
+        'total': total,
+        'lent': lent,
+        'available': total - lent
+    }
+
+def get_workers_stats(conn):
+    """Gibt Statistiken über Mitarbeiter zurück"""
+    total = conn.execute('''
+        SELECT COUNT(*) FROM workers WHERE deleted = 0
+    ''').fetchone()[0]
+    
+    return {
+        'total': total
+    }
+
+def get_consumables_stats(conn):
+    """Gibt Statistiken über Verbrauchsmaterialien zurück"""
+    total = conn.execute('''
+        SELECT COUNT(*) FROM consumables WHERE deleted = 0
+    ''').fetchone()[0]
+    
+    low_stock = conn.execute('''
+        SELECT COUNT(*) 
+        FROM consumables 
+        WHERE deleted = 0 
+        AND quantity <= min_quantity
+    ''').fetchone()[0]
+    
+    return {
+        'total': total,
+        'low_stock': low_stock
+    }
+
+def get_current_lendings(conn):
+    """Gibt aktuelle Ausleihen zurück"""
+    return conn.execute('''
+        SELECT 
+            t.name as tool_name,
+            w.firstname || ' ' || w.lastname as worker_name,
+            l.lent_at,
+            t.barcode as tool_barcode
+        FROM lendings l
+        JOIN tools t ON l.tool_barcode = t.barcode
+        JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE l.returned_at IS NULL
+    ''').fetchall()
+
 @bp.route('/consumables/<barcode>')
 @login_required
 def consumable_details(barcode):
@@ -145,7 +205,6 @@ def worker_details(barcode):
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/tools')
-@login_required
 def tools():
     tools = Database.query('''
         SELECT t.*, 
@@ -168,7 +227,6 @@ def tools():
     return render_template('tools.html', tools=tools)
 
 @bp.route('/consumables')
-@login_required
 def consumables():
     consumables = Database.query('''
         SELECT c.*, 
@@ -184,7 +242,7 @@ def consumables():
     return render_template('consumables.html', consumables=consumables)
 
 @bp.route('/workers')
-@login_required
+@admin_required
 def workers():
     workers = Database.query('''
         SELECT w.*, 
@@ -330,3 +388,58 @@ def update_worker(barcode):
     except Exception as e:
         print(f"Fehler beim Update des Mitarbeiters: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/tools/add', methods=['GET', 'POST'])
+@admin_required
+def add_tool():
+    if request.method == 'POST':
+        try:
+            barcode = request.form['barcode']
+            name = request.form['name']
+            description = request.form.get('description', '')
+            location = request.form.get('location', '')
+            status = request.form.get('status', 'available')
+            
+            Database.query(
+                '''INSERT INTO tools 
+                   (barcode, name, description, location, status) 
+                   VALUES (?, ?, ?, ?, ?)''',
+                [barcode, name, description, location, status]
+            )
+            flash('Werkzeug erfolgreich hinzugefügt', 'success')
+            return redirect(url_for('inventory.tools'))
+            
+        except Exception as e:
+            flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
+            
+    return render_template('admin/add_tool.html')
+
+@bp.route('/consumables/add', methods=['GET'])
+@admin_required
+def add_consumable():
+    return render_template('admin/add_consumable.html')
+
+@bp.route('/workers/add', methods=['GET', 'POST'])
+@admin_required
+def add_worker():
+    if request.method == 'POST':
+        try:
+            barcode = request.form['barcode']
+            firstname = request.form['firstname']
+            lastname = request.form['lastname']
+            department = request.form.get('department', '')
+            email = request.form.get('email', '')
+            
+            Database.query(
+                '''INSERT INTO workers 
+                   (barcode, firstname, lastname, department, email) 
+                   VALUES (?, ?, ?, ?, ?)''',
+                [barcode, firstname, lastname, department, email]
+            )
+            flash('Mitarbeiter erfolgreich hinzugefügt', 'success')
+            return redirect(url_for('inventory.workers'))
+            
+        except Exception as e:
+            flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
+            
+    return render_template('admin/add_worker.html')

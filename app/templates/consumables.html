@@ -9,7 +9,7 @@
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Verbrauchsmaterial</h2>
-            <a href="{{ url_for(urls.add_consumable) }}" class="btn btn-primary">
+            <a href="{{ url_for(routes.ADD_CONSUMABLE) }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Neues Verbrauchsmaterial
             </a>
         </div>
@@ -72,7 +72,7 @@
                     {% for item in consumables %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for(urls.consumable_details, barcode=item.barcode) }}"
+                            <a href="{{ url_for(routes.CONSUMABLE_DETAILS, barcode=item.barcode) }}"
                                class="link-primary">
                                 {{ item.bezeichnung }}
                             </a>

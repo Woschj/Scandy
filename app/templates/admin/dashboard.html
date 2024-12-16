@@ -10,7 +10,7 @@
             <h2 class="card-title">Werkzeuge</h2>
             <p>{{ stats.tools_count }} aktive Werkzeuge</p>
             <div class="card-actions justify-end">
-                <a href="{{ url_for(urls.add_tool) }}" class="btn btn-primary">
+                <a href="{{ urls['add_tool'] }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Neues Werkzeug
                 </a>
             </div>
@@ -23,7 +23,7 @@
             <h2 class="card-title">Verbrauchsmaterial</h2>
             <p>{{ stats.consumables_count }} aktive Materialien</p>
             <div class="card-actions justify-end">
-                <a href="{{ url_for(urls.add_consumable) }}" class="btn btn-primary">
+                <a href="{{ urls['add_consumable'] }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Neues Material
                 </a>
             </div>
@@ -36,7 +36,7 @@
             <h2 class="card-title">Mitarbeiter</h2>
             <p>{{ stats.workers_count }} aktive Mitarbeiter</p>
             <div class="card-actions justify-end">
-                <a href="{{ url_for(urls.add_worker) }}" class="btn btn-primary">
+                <a href="{{ urls['add_worker'] }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Neuer Mitarbeiter
                 </a>
             </div>
@@ -81,7 +81,7 @@
             <form id="colorForm" class="space-y-4">
                 <!-- Primärfarbe -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Primärfarbe</label>
+                    <label class="block text-sm font-medium mb-2">Button & UI Farbe</label>
                     <div class="flex items-center gap-4">
                         <input type="color" id="primaryColor" name="primaryColor" 
                                value="{{ settings.get('primary_color', '#3B82F6') }}"
@@ -92,22 +92,9 @@
                     </div>
                 </div>
 
-                <!-- Akzentfarbe -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">Akzentfarbe</label>
-                    <div class="flex items-center gap-4">
-                        <input type="color" id="accentColor" name="accentColor"
-                               value="{{ settings.get('accent_color', '#10B981') }}"
-                               class="h-10 w-20">
-                        <span id="accentColorHex" class="text-sm font-mono">
-                            {{ settings.get('accent_color', '#10B981') }}
-                        </span>
-                    </div>
-                </div>
-
                 <div class="flex justify-end">
                     <button type="submit" class="btn btn-primary">
-                        Farben speichern
+                        Farbe speichern
                     </button>
                 </div>
             </form>
@@ -121,17 +108,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     const colorForm = document.getElementById('colorForm');
     const primaryColor = document.getElementById('primaryColor');
-    const accentColor = document.getElementById('accentColor');
     const primaryColorHex = document.getElementById('primaryColorHex');
-    const accentColorHex = document.getElementById('accentColorHex');
 
-    // Update Hex-Werte bei Änderung
+    // Update Hex-Wert bei Änderung
     primaryColor.addEventListener('input', function() {
         primaryColorHex.textContent = this.value.toUpperCase();
-    });
-
-    accentColor.addEventListener('input', function() {
-        accentColorHex.textContent = this.value.toUpperCase();
     });
 
     // Form Submit
@@ -139,24 +120,23 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         try {
-            const response = await fetch('/api/settings/colors', {
+            const response = await fetch('/admin/update_design', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    primary_color: primaryColor.value,
-                    accent_color: accentColor.value
+                    primary_color: primaryColor.value
                 })
             });
 
             if (response.ok) {
                 // Erfolg-Nachricht
-                alert('Farben wurden erfolgreich gespeichert');
+                alert('Design wurde aktualisiert');
                 // Seite neu laden um Änderungen zu sehen
                 window.location.reload();
             } else {
-                throw new Error('Fehler beim Speichern der Farben');
+                throw new Error('Fehler beim Speichern der Farbe');
             }
         } catch (error) {
             alert('Fehler: ' + error.message);

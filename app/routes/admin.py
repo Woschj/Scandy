@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from app.models.database import Database
 from app.utils.decorators import admin_required
 from werkzeug.utils import secure_filename
@@ -6,7 +6,7 @@ import os
 from flask import current_app
 from app.utils.db_schema import SchemaManager
 
-bp = Blueprint('admin', __name__)
+bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 def get_tools_stats(conn):
     """Hole Werkzeug-Statistiken"""
@@ -47,198 +47,79 @@ def get_current_lendings(conn):
         LIMIT 5
     ''').fetchall()
 
-@bp.route('/')
+@bp.route('/dashboard')
 @admin_required
 def dashboard():
     try:
         with Database.get_db() as conn:
-            # Statistiken abrufen
-            stats = {
-                'tools_count': conn.execute('''
-                    SELECT COUNT(*) FROM tools 
-                    WHERE deleted = 0
-                ''').fetchone()[0],
-                
-                'consumables_count': conn.execute('''
-                    SELECT COUNT(*) FROM consumables 
-                    WHERE deleted = 0
-                ''').fetchone()[0],
-                
-                'workers_count': conn.execute('''
-                    SELECT COUNT(*) FROM workers 
-                    WHERE deleted = 0
-                ''').fetchone()[0],
-                
-                'active_lendings': conn.execute('''
-                    SELECT COUNT(*) FROM lendings 
-                    WHERE returned_at IS NULL
-                ''').fetchone()[0]
+            # Statistiken sammeln
+            tools_stats = get_tools_stats(conn)
+            workers_stats = get_workers_stats(conn)
+            consumables_stats = get_consumables_stats(conn)
+            current_lendings = get_current_lendings(conn)
+            
+            # Settings aus der Datenbank holen
+            settings = dict(conn.execute('''
+                SELECT key, value FROM settings
+                WHERE key IN ('primary_color', 'accent_color')
+            ''').fetchall()) or {
+                'primary_color': '#3B82F6',  # Standardwerte
+                'accent_color': '#10B981'
             }
             
-            # Aktuelle Ausleihen für die Tabelle
-            current_lendings = conn.execute('''
-                SELECT 
-                    t.name as tool_name,
-                    w.firstname || ' ' || w.lastname as worker_name,
-                    l.lent_at
-                FROM lendings l
-                JOIN tools t ON l.tool_barcode = t.barcode
-                JOIN workers w ON l.worker_barcode = w.barcode
-                WHERE l.returned_at IS NULL
-                ORDER BY l.lent_at DESC
-                LIMIT 10
-            ''').fetchall()
+            stats = {
+                'tools_count': tools_stats['total'],
+                'tools_lent': tools_stats['lent'],
+                'workers_count': workers_stats['total'],
+                'consumables_count': consumables_stats['total'],
+                'consumables_low': consumables_stats['low_stock'],
+                'current_lendings': current_lendings
+            }
             
-            # Farbeinstellungen laden
-            settings = {}
-            for row in conn.execute('SELECT key, value FROM settings').fetchall():
-                settings[row['key']] = row['value']
+            # Korrekte Blueprint-Routen verwenden
+            urls = {
+                'tools': url_for('inventory.tools'),
+                'workers': url_for('inventory.workers'),
+                'consumables': url_for('inventory.consumables'),
+                'manual_lending': url_for('admin.manual_lending'),
+                'add_tool': url_for('inventory.add_tool'),        # Korrigiert zu inventory
+                'add_worker': url_for('inventory.add_worker'),    # Korrigiert zu inventory
+                'add_consumable': url_for('inventory.add_consumable')  # Korrigiert zu inventory
+            }
             
-            return render_template('admin/dashboard.html',
-                                 stats=stats,
-                                 current_lendings=current_lendings,
-                                 settings=settings)
-                                 
+            return render_template('admin/dashboard.html', 
+                                stats=stats,
+                                urls=urls,
+                                settings=settings)
+            
     except Exception as e:
-        print(f"Fehler im Admin-Dashboard: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        print(f"Fehler beim Laden des Dashboards: {str(e)}")
+        return f"Fehler beim Laden des Dashboards: {str(e)}", 500
 
 @bp.route('/update_design', methods=['POST'])
 @admin_required
 def update_design():
-    color_scheme = request.form.get('color_scheme', 'scandy')
-    schemes = {
-        'scandy': {
-            'primary': '#FF4D8D',      # Scandy Pink
-            'secondary': '#FF99B9',    # Helles Pink
-            'accent': '#FFFFFF',       # Weiß
-            'base-100': '#FFF5F8',     # Sehr helles Pink
-            'base-200': '#FFE6EE',     
-            'base-300': '#FFD6E6',     
-            'neutral': '#4A2B39',      # Dunkles Altrosa
-            'neutral-focus': '#2D1A23', 
-            'navbar-bg': '#FF4D8D',    
-            'navbar-text': '#FFFFFF',   
-            'sidebar-bg': '#FFF5F8',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#FF4D8D'     
-        },
-        'scandy-dark': {
-            'primary': '#FF4D8D',      
-            'secondary': '#FF99B9',    
-            'accent': '#FFFFFF',       
-            'base-100': '#2D1A23',     # Dunkles Altrosa
-            'base-200': '#4A2B39',     
-            'base-300': '#613647',     
-            'neutral': '#FFE6EE',      
-            'neutral-focus': '#FFFFFF', 
-            'navbar-bg': '#2D1A23',    
-            'navbar-text': '#FF4D8D',  
-            'sidebar-bg': '#4A2B39',   
-            'card-bg': '#4A2B39',      
-            'footer-bg': '#2D1A23'     
-        },
-        'btz': {
-            'primary': '#6B5CA5',      # BTZ Lila
-            'secondary': '#9ED167',    # BTZ Grün
-            'accent': '#FFFFFF',       # Weiß
-            'base-100': '#FFFFFF',     
-            'base-200': '#F8F9FA',     
-            'base-300': '#E9ECEF',     
-            'neutral': '#2A2A2A',      
-            'neutral-focus': '#1A1A1A', 
-            'navbar-bg': '#6B5CA5',    
-            'navbar-text': '#FFFFFF',   
-            'sidebar-bg': '#F8F9FA',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#6B5CA5'     
-        },
-        'btz-dark': {
-            'primary': '#8B7AB5',      
-            'secondary': '#AEE177',    
-            'accent': '#FFFFFF',       
-            'base-100': '#1F1B24',     
-            'base-200': '#2D2733',     
-            'base-300': '#3B3342',     
-            'neutral': '#E6E6E6',      
-            'neutral-focus': '#FFFFFF', 
-            'navbar-bg': '#2D2733',    
-            'navbar-text': '#E6E6E6',  
-            'sidebar-bg': '#1F1B24',   
-            'card-bg': '#2D2733',      
-            'footer-bg': '#2D2733'     
-        },
-        'ocean': {
-            'primary': '#0EA5E9',      # Hellblau
-            'secondary': '#22D3EE',    # Türkis
-            'accent': '#F0F9FF',       # Sehr helles Blau
-            'base-100': '#F0F9FF',     # Hellblauer Hintergrund
-            'base-200': '#E0F2FE',     
-            'base-300': '#BAE6FD',     
-            'neutral': '#0C4A6E',      # Dunkles Blau für Text
-            'neutral-focus': '#082F49', 
-            'navbar-bg': '#0369A1',    # Mittelblau
-            'navbar-text': '#F0F9FF',  
-            'sidebar-bg': '#E0F2FE',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#0EA5E9'     
-        },
-        'forest': {
-            'primary': '#059669',      # Smaragdgrün
-            'secondary': '#10B981',    # Mintgrün
-            'accent': '#ECFDF5',       # Sehr helles Grün
-            'base-100': '#F0FDF4',     # Hellgrüner Hintergrund
-            'base-200': '#DCFCE7',     
-            'base-300': '#BBF7D0',     
-            'neutral': '#064E3B',      # Dunkelgrün für Text
-            'neutral-focus': '#022C22', 
-            'navbar-bg': '#047857',    
-            'navbar-text': '#ECFDF5',  
-            'sidebar-bg': '#DCFCE7',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#059669'     
-        },
-        'sunset': {
-            'primary': '#EA580C',      # Orange
-            'secondary': '#FB923C',    # Helles Orange
-            'accent': '#FFF7ED',       # Cremeweiß
-            'base-100': '#FFF7ED',     # Warmer Hintergrund
-            'base-200': '#FFEDD5',     
-            'base-300': '#FED7AA',     
-            'neutral': '#7C2D12',      # Dunkelorange für Text
-            'neutral-focus': '#431407', 
-            'navbar-bg': '#C2410C',    
-            'navbar-text': '#FFF7ED',  
-            'sidebar-bg': '#FFEDD5',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#EA580C'     
-        },
-        'royal': {
-            'primary': '#7E22CE',      # Königslila
-            'secondary': '#A855F7',    # Helles Lila
-            'accent': '#FAF5FF',       # Sehr helles Lila
-            'base-100': '#FAF5FF',     # Lilafarbener Hintergrund
-            'base-200': '#F3E8FF',     
-            'base-300': '#E9D5FF',     
-            'neutral': '#581C87',      # Dunkles Lila für Text
-            'neutral-focus': '#3B0764', 
-            'navbar-bg': '#6B21A8',    
-            'navbar-text': '#FAF5FF',  
-            'sidebar-bg': '#F3E8FF',   
-            'card-bg': '#FFFFFF',      
-            'footer-bg': '#7E22CE'     
-        }
-    }
-    
-    colors = schemes.get(color_scheme, schemes['btz'])
-    with get_db_connection() as conn:
-        for key, value in colors.items():
-            conn.execute('UPDATE settings SET value = ? WHERE key = ?', 
-                        [value, f'{key}_color'])
-        conn.commit()
-
-    flash('Design-Einstellungen wurden aktualisiert', 'success')
-    return redirect(url_for('admin.dashboard'))
+    try:
+        data = request.get_json()
+        primary_color = data.get('primary_color')
+        
+        with Database.get_db() as conn:
+            # Prüfen ob Eintrag existiert
+            exists = conn.execute('SELECT 1 FROM settings WHERE key = ?', 
+                               ['primary_color']).fetchone()
+            
+            if exists:
+                conn.execute('UPDATE settings SET value = ? WHERE key = ?', 
+                           [primary_color, 'primary_color'])
+            else:
+                conn.execute('INSERT INTO settings (key, value) VALUES (?, ?)', 
+                           ['primary_color', primary_color])
+            
+            conn.commit()
+            
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/reset_design', methods=['POST'])
 @admin_required
@@ -492,3 +373,19 @@ def add_worker():
     
     return render_template('admin/add_worker.html',
                          departments=[dep[0] for dep in departments if dep[0]])
+
+@bp.before_app_request
+def load_settings():
+    """Lädt die Einstellungen vor jeder Anfrage"""
+    try:
+        with Database.get_db() as conn:
+            settings = dict(conn.execute('''
+                SELECT key, value FROM settings
+                WHERE key IN ('primary_color')
+            ''').fetchall()) or {
+                'primary_color': '#3B82F6'  # Standardwert
+            }
+            g.settings = settings
+    except Exception as e:
+        print(f"Fehler beim Laden der Einstellungen: {str(e)}")
+        g.settings = {'primary_color': '#3B82F6'}

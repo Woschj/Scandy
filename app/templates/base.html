@@ -73,7 +73,7 @@
         }
 
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
         }
         
         .link-primary {
@@ -94,7 +94,7 @@
         }
 
         :root {
-            --primary-color: {{ colors.primary|default('#5b69a7') }};
+            --primary-color: {{ g.settings.get('primary_color', '#3B82F6') }};
             --secondary-color: {{ colors.secondary|default('#4c5789') }};
             --accent-color: {{ colors.accent|default('#3d4675') }};
         }
@@ -104,8 +104,8 @@
             border-color: var(--primary-color) !important;
         }
         .btn-primary:hover {
-            background-color: var(--secondary-color) !important;
-            border-color: var(--secondary-color) !important;
+            background-color: color-mix(in srgb, var(--primary-color) 80%, black) !important;
+            border-color: color-mix(in srgb, var(--primary-color) 80%, black) !important;
         }
         
         .table-link {
@@ -130,7 +130,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
 </head>
 
-<body class="min-h-screen bg-base-200">
+<body class="min-h-[100dvh] bg-base-200">
     <div class="drawer">
         <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
         <div class="drawer-content flex flex-col">
@@ -139,7 +139,7 @@
                 <!-- Linke Seite -->
                 <div class="flex-1">
                     <!-- Logo -->
-                    <a href="{{ url_for(routes.TOOLS_INDEX) }}" class="flex items-center">
+                    <a href="{{ url_for('inventory.tools') }}" class="flex items-center">
                         <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
                              alt="Scandy Logo" 
                              class="h-12 w-auto"
@@ -148,25 +148,28 @@
                     
                     <!-- Hauptmenü (Desktop) -->
                     <div class="hidden lg:flex ml-4">
-                        <a href="{{ url_for('inventory.tools') }}" 
+                        <a href="{{ url_for(routes.TOOLS_INDEX) }}" 
                            class="btn btn-ghost {% if request.endpoint == routes.TOOLS_INDEX %}btn-active{% endif %}">
                             <i class="fas fa-tools mr-2"></i>Werkzeuge
                         </a>
-                        <a href="{{ url_for('inventory.consumables') }}" 
+                        <a href="{{ url_for(routes.CONSUMABLES_INDEX) }}" 
                            class="btn btn-ghost {% if request.endpoint == routes.CONSUMABLES_INDEX %}btn-active{% endif %}">
                             <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
                         </a>
-                        <a href="{{ url_for('inventory.workers') }}"
+                        {% if session.get('is_admin') %}
+                        <a href="{{ url_for(routes.WORKERS_INDEX) }}"
                            class="btn btn-ghost {% if request.endpoint == routes.WORKERS_INDEX %}btn-active{% endif %}">
                             <i class="fas fa-users mr-2"></i>Mitarbeiter
                         </a>
+                        {% endif %}
                     </div>
                 </div>
 
                 <!-- QuickScan Button (Mittig) -->
                 <button onclick="showQuickScan()" 
                         class="btn btn-circle btn-primary text-white"
-                        style="transform: translate(-50%, 0) scale(1.5);">
+                        style="transform: translate(-50%, 0) scale(1.5);"
+                        aria-label="QuickScan öffnen">
                     <i class="fas fa-barcode"></i>
                 </button>
 
@@ -209,38 +212,26 @@
             <div class="drawer-side z-30">
                 <label for="drawer-toggle" class="drawer-overlay"></label>
                 <ul class="menu p-4 w-80 h-full bg-base-200 gap-2">
-                    {% if session.get('is_admin') %}
                     <li>
-                        <a href="{{ url_for(routes.ADMIN_DASHBOARD) }}"
-                           class="{% if request.endpoint == routes.ADMIN_DASHBOARD %}active{% endif %}">
-                            <i class="fas fa-chart-line"></i>Dashboard
-                        </a>
-                    </li>
-                    {% endif %}
-                    <li>
-                        <a href="{{ url_for('index.index') }}" 
-                           class="{% if request.endpoint == routes.INDEX %}active{% endif %}">
-                            <i class="fas fa-home"></i>Start
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('inventory.tools') }}" 
+                        <a href="{{ url_for(routes.TOOLS_INDEX) }}" 
                            class="{% if request.endpoint == routes.TOOLS_INDEX %}active{% endif %}">
                             <i class="fas fa-tools"></i>Werkzeuge
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('inventory.consumables') }}" 
+                        <a href="{{ url_for(routes.CONSUMABLES_INDEX) }}" 
                            class="{% if request.endpoint == routes.CONSUMABLES_INDEX %}active{% endif %}">
                             <i class="fas fa-box-open"></i>Verbrauchsmaterial
                         </a>
                     </li>
+                    {% if session.get('is_admin') %}
                     <li>
-                        <a href="{{ url_for('inventory.workers') }}"
+                        <a href="{{ url_for(routes.WORKERS_INDEX) }}"
                            class="{% if request.endpoint == routes.WORKERS_INDEX %}active{% endif %}">
                             <i class="fas fa-users"></i>Mitarbeiter
                         </a>
                     </li>
+                    {% endif %}
                     {% if session.get('is_admin') %}
                     <li>
                         <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}"
@@ -363,49 +354,53 @@
     }
 
     function filterAndSearch() {
-        const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
-        const rows = document.querySelectorAll('tbody tr');
-        const path = window.location.pathname;
-        
-        // Performance-Optimierung: Cache DOM-Selektionen
-        const activeFilters = Array.from(document.querySelectorAll('select[name^="filter_"]'))
-            .filter(select => select.value)
-            .map(select => ({
-                type: select.name,
-                value: select.value.toLowerCase(),
-                columnIndex: getFilterColumnIndex(select.name)
-            }));
-
-        // Batch-Verarbeitung für bessere Performance
-        const updates = [];
-        
-        rows.forEach(row => {
-            if (!row || !row.cells) return;
+        try {
+            const searchText = document.getElementById('searchInput')?.value.toLowerCase() || '';
+            const rows = document.querySelectorAll('tbody tr');
+            const path = window.location.pathname;
             
-            // Suche
-            const matchesSearch = searchText === '' || row.textContent.toLowerCase().includes(searchText);
+            // Performance-Optimierung: Cache DOM-Selektionen
+            const activeFilters = Array.from(document.querySelectorAll('select[name^="filter_"]'))
+                .filter(select => select.value)
+                .map(select => ({
+                    type: select.name,
+                    value: select.value.toLowerCase(),
+                    columnIndex: getFilterColumnIndex(select.name)
+                }));
+
+            // Batch-Verarbeitung für bessere Performance
+            const updates = [];
             
-            // Filter
-            const matchesFilters = activeFilters.every(filter => {
-                if (filter.columnIndex === -1) return true;
-                const cell = row.cells[filter.columnIndex]; // Verwende cells statt children
-                if (!cell) return true;
-                return cell.textContent.trim().toLowerCase() === filter.value;
+            rows.forEach(row => {
+                if (!row || !row.cells) return;
+                
+                // Suche
+                const matchesSearch = searchText === '' || row.textContent.toLowerCase().includes(searchText);
+                
+                // Filter
+                const matchesFilters = activeFilters.every(filter => {
+                    if (filter.columnIndex === -1) return true;
+                    const cell = row.cells[filter.columnIndex]; // Verwende cells statt children
+                    if (!cell) return true;
+                    return cell.textContent.trim().toLowerCase() === filter.value;
+                });
+
+                // Sammle Updates
+                updates.push({
+                    element: row,
+                    display: matchesSearch && matchesFilters ? '' : 'none'
+                });
             });
 
-            // Sammle Updates
-            updates.push({
-                element: row,
-                display: matchesSearch && matchesFilters ? '' : 'none'
+            // Batch-Update des DOM
+            requestAnimationFrame(() => {
+                updates.forEach(update => {
+                    update.element.style.display = update.display;
+                });
             });
-        });
-
-        // Batch-Update des DOM
-        requestAnimationFrame(() => {
-            updates.forEach(update => {
-                update.element.style.display = update.display;
-            });
-        });
+        } catch (e) {
+            console.error('Fehler beim Filtern:', e);
+        }
     }
 
     function initializeFilters() {
@@ -450,54 +445,210 @@
     // Initialisierung nach dem Laden der Seite
     document.addEventListener('DOMContentLoaded', initializeFilters);
 
-    // QuickScan Funktionen
+    // Globale Variablen für den Scan-Status
+    let currentStep = 'tool';  // Mögliche Werte: 'tool', 'worker', 'confirm'
+    let scannedTool = null;
+    let scannedWorker = null;
+
     function showQuickScan() {
+        console.log('QuickScan Modal wird geöffnet...');
         const modal = document.getElementById('quickScanModal');
         if (modal) {
             modal.showModal();
-            // Fokus auf das versteckte Input-Feld setzen
-            setTimeout(() => {
-                const input = document.getElementById('main-scanner-input');
-                if (input) {
-                    input.focus();
-                }
-            }, 100);
+            resetScanState();
+            console.log('QuickScan Modal geöffnet, Status zurückgesetzt');
+            focusScanInput();
+        } else {
+            console.error('QuickScan Modal nicht gefunden!');
         }
     }
 
-    function resetQuickScan() {
-        const modal = document.getElementById('quickScanModal');
-        if (modal) {
-            modal.close();
-        }
-        // Reset der Scan-Schritte
-        document.querySelectorAll('.scan-step').forEach(step => {
-            if (step.id === 'step-tool') {
-                step.style.display = 'block';
-            } else {
-                step.style.display = 'none';
-            }
-        });
-        // Reset der Vorschau-Felder
-        document.querySelector('#tool-preview .text-xl').textContent = '---';
-        document.querySelector('#worker-preview .text-xl').textContent = '---';
+    function resetScanState() {
+        console.log('Setze Scan-Status zurück...');
+        currentStep = 'tool';
+        scannedTool = null;
+        scannedWorker = null;
+        updateUIState();
+        console.log('Scan-Status zurückgesetzt');
     }
 
-    // Event Listener für das Modal
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('quickScanModal');
+    function focusScanInput() {
+        console.log('Setze Fokus auf Scan-Input...');
         const input = document.getElementById('main-scanner-input');
-        
-        if (modal && input) {
-            // Automatischer Fokus beim Öffnen
-            modal.addEventListener('show', () => {
-                setTimeout(() => input.focus(), 100);
-            });
-            
-            // Fokus wiederherstellen, wenn er verloren geht
-            modal.addEventListener('click', () => {
+        if (input) {
+            setTimeout(() => {
+                input.value = '';  // Input leeren
                 input.focus();
+                console.log('Fokus auf Scan-Input gesetzt');
+            }, 100);
+        } else {
+            console.error('Scan-Input nicht gefunden!');
+        }
+    }
+
+    function updateUIState() {
+        console.log(`Aktualisiere UI für Schritt: ${currentStep}`);
+        document.querySelectorAll('.scan-step').forEach(step => {
+            step.style.display = step.id === `step-${currentStep}` ? 'block' : 'none';
+        });
+    }
+
+    // Handler für gescannte Barcodes
+    async function handleBarcodeScan(barcode) {
+        console.log(`Barcode gescannt: ${barcode}`);
+        
+        try {
+            if (currentStep === 'tool') {
+                console.log('Verarbeite Tool-Scan...');
+                const response = await fetch(`/api/tools/${barcode}`);
+                
+                // Debug-Ausgabe der Response
+                console.log('API Response Status:', response.status);
+                const responseText = await response.text();
+                console.log('API Response Text:', responseText);
+                
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                    console.log('API Response Data (parsed):', responseData);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    throw new Error('Ungültige Serverantwort');
+                }
+                
+                if (!response.ok) {
+                    throw new Error(responseData.error || 'Tool nicht gefunden');
+                }
+                
+                scannedTool = responseData;
+                currentStep = 'worker';
+                updateToolPreview(responseData);
+                updateUIState();
+                
+            } else if (currentStep === 'worker') {
+                console.log('Verarbeite Worker-Scan...');
+                const response = await fetch(`/api/workers/${barcode}`);
+                if (!response.ok) throw new Error('Mitarbeiter nicht gefunden');
+                
+                const workerData = await response.json();
+                console.log('Mitarbeiter-Daten empfangen:', workerData);
+                
+                scannedWorker = workerData;
+                currentStep = 'confirm';
+                updateWorkerPreview(workerData);
+                showConfirmation();
+            }
+        } catch (error) {
+            console.error('Scan-Fehler:', error);
+            showError(`Scan-Fehler: ${error.message}`);
+            resetScanState();
+        }
+    }
+
+    function updateToolPreview(toolData) {
+        console.log('Aktualisiere Tool-Vorschau:', toolData);
+        const preview = document.getElementById('tool-preview');
+        if (preview) {
+            preview.innerHTML = `
+                <div class="bg-base-200 rounded-xl p-6">
+                    <h3 class="font-bold text-xl mb-2">${toolData.name}</h3>
+                    <p class="text-sm opacity-70">${toolData.description || ''}</p>
+                    <div class="mt-2">
+                        <span class="badge badge-primary">${toolData.type || ''}</span>
+                        <span class="badge">${toolData.location || ''}</span>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function updateWorkerPreview(worker) {
+        console.log('Aktualisiere Worker-Vorschau');
+        const preview = document.getElementById('worker-preview');
+        if (preview) {
+            preview.innerHTML = `
+                <div class="text-center">
+                    <p class="font-bold text-xl">${worker.firstname} ${worker.lastname}</p>
+                    <p class="text-sm opacity-70">${worker.department || ''}</p>
+                </div>
+            `;
+        }
+    }
+
+    function showConfirmation() {
+        console.log('Zeige Bestätigung');
+        const confirmStep = document.getElementById('step-confirm');
+        if (!confirmStep) {
+            console.error('Bestätigungs-Step nicht gefunden!');
+            return;
+        }
+
+        confirmStep.innerHTML = `
+            <div class="text-center mb-6">
+                <i class="fas fa-check-circle text-5xl text-success mb-4"></i>
+                <h4 class="text-xl font-bold mb-2">Bestätigung</h4>
+                <p class="mb-4">
+                    Werkzeug: <strong>${scannedTool.name}</strong><br>
+                    Mitarbeiter: <strong>${scannedWorker.firstname} ${scannedWorker.lastname}</strong>
+                </p>
+                <div class="flex justify-center gap-4">
+                    <button onclick="processLending()" class="btn btn-success">
+                        <i class="fas fa-check mr-2"></i>Bestätigen
+                    </button>
+                    <button onclick="resetQuickScan()" class="btn btn-ghost">
+                        <i class="fas fa-times mr-2"></i>Abbrechen
+                    </button>
+                </div>
+            </div>
+        `;
+        updateUIState();
+    }
+
+    async function processLending() {
+        console.log('Verarbeite Ausleihe...');
+        try {
+            const response = await fetch('/api/lending/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tool_barcode: scannedTool.barcode,
+                    worker_barcode: scannedWorker.barcode
+                })
             });
+
+            if (!response.ok) throw new Error('Fehler beim Verarbeiten der Ausleihe');
+            
+            console.log('Ausleihe erfolgreich verarbeitet');
+            showSuccess('Ausleihe erfolgreich!');
+            setTimeout(resetQuickScan, 2000);
+            
+        } catch (error) {
+            console.error('Fehler bei der Ausleihe:', error);
+            showError(`Fehler bei der Ausleihe: ${error.message}`);
+        }
+    }
+
+    // Hilfsfunktionen für Benachrichtigungen
+    function showError(message) {
+        console.error(message);
+        alert(message);
+    }
+
+    function showSuccess(message) {
+        console.log(message);
+        alert(message);
+    }
+
+    // Event Listener für Barcode-Input
+    document.getElementById('main-scanner-input')?.addEventListener('input', function(e) {
+        const barcode = e.target.value.trim();
+        console.log('Barcode Input erkannt:', barcode);
+        
+        if (barcode.length > 0) {
+            handleBarcodeScan(barcode);
+            e.target.value = ''; // Input zurücksetzen
         }
     });
 
@@ -520,7 +671,11 @@
         document.querySelector('.theme-controller')?.addEventListener('change', function(e) {
             const newTheme = e.target.checked ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+            try {
+                localStorage.setItem('theme', newTheme);
+            } catch (e) {
+                console.error('Theme konnte nicht gespeichert werden:', e);
+            }
         });
     });
     </script>

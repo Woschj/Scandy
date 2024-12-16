@@ -1,37 +1,45 @@
 class Routes:
-    """Zentrale Route-Definitionen"""
-    # Hauptrouten
-    INDEX = 'inventory.tools'
+    """Zentrale Klasse für alle Routen-Konstanten"""
     
-    # Admin-Bereich
-    ADMIN_DASHBOARD = 'admin.dashboard'
-    ADMIN_LOGS = 'admin.logs'
-    ADMIN_MANUAL_LENDING = 'admin.manual_lending'
-    
-    # Auth
+    # Auth Routes
     LOGIN = 'auth.login'
     LOGOUT = 'auth.logout'
     
-    # Werkzeuge
-    TOOLS_INDEX = 'inventory.tools'
-    TOOLS_ADD = 'inventory.add_tool'
-    TOOLS_DETAILS = 'inventory.tool_details'
+    # Tool Routes
+    TOOLS_INDEX = 'tools.index'
+    ADD_TOOL = 'tools.add'
+    TOOL_DETAILS = 'tools.details'
+    EDIT_TOOL = 'tools.edit'
+    DELETE_TOOL = 'tools.delete'
     
-    # Verbrauchsmaterial
-    CONSUMABLES_INDEX = 'inventory.consumables'
-    CONSUMABLES_ADD = 'inventory.add_consumable'
-    CONSUMABLES_DETAILS = 'inventory.consumable_details'
+    # Worker Routes
+    WORKERS_INDEX = 'workers.index'
+    ADD_WORKER = 'workers.add'
+    WORKER_DETAILS = 'workers.details'
+    EDIT_WORKER = 'workers.edit'
+    DELETE_WORKER = 'workers.delete'
     
-    # Mitarbeiter
-    WORKERS_INDEX = 'inventory.workers'
-    WORKERS_ADD = 'inventory.add_worker'
-    WORKERS_DETAILS = 'inventory.worker_details'
+    # Consumable Routes
+    CONSUMABLES_INDEX = 'consumables.index'
+    ADD_CONSUMABLE = 'consumables.add'
+    CONSUMABLE_DETAILS = 'consumables.details'
+    EDIT_CONSUMABLE = 'consumables.edit'
+    DELETE_CONSUMABLE = 'consumables.delete'
     
-    # Quick Scan
-    QUICK_SCAN = 'quick_scan.index'
+    # Admin Routes
+    ADMIN_DASHBOARD = 'admin.dashboard'
+    ADMIN_MANUAL_LENDING = 'admin.manual_lending'
     
-    # API
-    API_SCAN = 'api.scan'
+    # Inventory Routes
+    INVENTORY_TOOLS = 'inventory.tools'
+    INVENTORY_WORKERS = 'inventory.workers'
+    INVENTORY_CONSUMABLES = 'inventory.consumables'
+    
+    # Quick Scan Route
+    QUICK_SCAN = 'quick_scan.quick_scan'
+    
+    # History Route
+    HISTORY = 'history.view_history'
     
     @classmethod
     def get_all_routes(cls):

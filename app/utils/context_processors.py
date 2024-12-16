@@ -1,35 +1,37 @@
+from flask import current_app
 from app.models.database import Database
-from .color_extractor import extract_dominant_color
-from app.utils.url_config import get_urls
+from app.utils.routes import Routes
+
+def get_colors():
+    """Holt die Farbeinstellungen aus der Datenbank"""
+    try:
+        db = Database.get_db()
+        cursor = db.cursor()
+        cursor.execute('SELECT key, value FROM settings WHERE key LIKE "color_%"')
+        colors = {}
+        for row in cursor.fetchall():
+            key = row['key'].replace('color_', '')
+            colors[key] = row['value']
+        return colors
+    except Exception as e:
+        current_app.logger.error(f"Fehler beim Laden der Farben: {str(e)}")
+        return {
+            'primary': '#2c3e50',
+            'secondary': '#4c5789',
+            'accent': '#e74c3c',
+            'background': '#ffffff',
+            'text': '#2c3e50'
+        }
 
 def inject_colors():
-    with Database.get_db() as conn:
-        # Erst versuchen, die Farben aus den Einstellungen zu laden
-        colors_query = conn.execute('''
-            SELECT key, value FROM settings 
-            WHERE key IN ('primary_color', 'secondary_color', 'accent_color')
-        ''').fetchall()
-        
-        if colors_query:
-            colors = {}
-            for key, value in colors_query:
-                color_key = key.replace('_color', '')
-                colors[color_key] = value
-        else:
-            # Wenn keine Farben in der DB, dann Standardfarben verwenden
-            colors = extract_dominant_color()
-        
-        return dict(colors=colors) 
+    """Fügt die Farbvariablen in den Template-Kontext ein"""
+    return {'colors': get_colors()}
 
-def inject_settings():
-    try:
-        with Database.get_db() as conn:
-            settings = {}
-            for row in conn.execute('SELECT key, value FROM settings').fetchall():
-                settings[row['key']] = row['value']
-            return {'settings': settings}
-    except Exception:
-        return {'settings': {}}
+def inject_routes():
+    """Fügt die Routen-Konstanten in den Template-Kontext ein"""
+    return {'routes': Routes}
 
-def inject_urls():
-    return {'urls': get_urls()}
+def register_context_processors(app):
+    """Registriert alle Context Processors"""
+    app.context_processor(inject_colors)
+    app.context_processor(inject_routes)

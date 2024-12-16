@@ -4,7 +4,7 @@ from app.models.tool import Tool
 from app.utils.decorators import admin_required
 import json
 
-bp = Blueprint('tools', __name__)
+bp = Blueprint('tools', __name__, url_prefix='/inventory/tools')
 
 @bp.route('/tools')
 def index():

@@ -1,7 +1,10 @@
-from flask import g
+from flask import g, current_app
 import sqlite3
 from datetime import datetime
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Database:
     DATABASE_PATH = os.path.join('database', 'inventory.db')
@@ -9,8 +12,12 @@ class Database:
     @staticmethod
     def get_db():
         if 'db' not in g:
-            g.db = sqlite3.connect(Database.DATABASE_PATH)
-            g.db.row_factory = sqlite3.Row
+            try:
+                g.db = sqlite3.connect(Database.DATABASE_PATH)
+                g.db.row_factory = sqlite3.Row
+            except Exception as e:
+                logger.error(f"Datenbankfehler: {str(e)}")
+                raise
         return g.db
 
     @staticmethod
@@ -19,6 +26,18 @@ class Database:
         conn = sqlite3.connect(Database.DATABASE_PATH)
         conn.row_factory = sqlite3.Row
         return conn
+
+    @staticmethod
+    def init_db():
+        logger.info("Initialisiere Datenbank...")
+        try:
+            db = Database.get_db()
+            with current_app.open_resource('schema.sql') as f:
+                db.executescript(f.read().decode('utf8'))
+            logger.info("Datenbankschema erfolgreich initialisiert")
+        except Exception as e:
+            logger.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
+            raise
 
     @staticmethod
     def close_db():
@@ -206,7 +225,17 @@ def show_db_structure():
     db.close()
     return structure
 
-__all__ = ['init_database', 'get_db', 'get_db_connection', 'close_db', 'show_db_structure', 'DBConfig']
+def get_db_connection():
+    return Database.get_db_connection()
+
+__all__ = [
+    'Database', 
+    'BaseModel',
+    'get_db_connection',
+    'init_database',
+    'close_db',
+    'show_db_structure'
+]
 
 class Tool:
     @staticmethod

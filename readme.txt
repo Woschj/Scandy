@@ -163,6 +163,217 @@ Bei Problemen oder Fragen:
 1. Dieses Handbuch konsultieren
 2. Logs prüfen (app.log)
 
+Route-Dokumentation
+1. admin.py
+Verwaltet den Admin-Bereich der Anwendung.
+Hauptrouten:
+/dashboard: Zeigt Systemübersicht und Statistiken
+/update_design: Aktualisiert UI-Farbschema
+/manual_lending: Manuelle Ausleihe-Verwaltung
+/process_lending: Verarbeitet Ausleihen
+/process_return: Verarbeitet Rückgaben
+Besonderheiten:
+Alle Routen mit @admin_required geschützt
+Integriertes Logging für Fehlerdiagnose
+Dashboard mit Live-Statistiken
+2. api.py
+REST-API-Endpunkte für externe Zugriffe.
+Hauptrouten:
+/api/workers: Liste aller Mitarbeiter
+/api/tools/<barcode>: Tool-Details
+/api/settings/colors: Farbschema-Verwaltung
+/api/lending/process: Ausleihe-Verarbeitung
+/api/lending/return: Rückgabe-Verarbeitung
+Features:
+Request/Response Logging
+Fehlerbehandlung mit detaillierten Responses
+JSON-basierte Kommunikation
+3. auth.py
+Authentifizierung und Autorisierung.
+Hauptrouten:
+/auth/login: Login-Formular und -Verarbeitung
+/auth/logout: Beendet Benutzersession
+Sicherheitsfeatures:
+Session-basierte Authentifizierung
+Admin-Rechte-Prüfung via Decorator
+Passwort-Validierung
+4. consumables.py
+Verwaltet Verbrauchsmaterialien.
+Hauptrouten:
+/: Übersicht aller Materialien
+/add: Neues Material hinzufügen
+/<barcode>: Material-Details
+/<barcode>/edit: Material bearbeiten
+/<barcode>/delete: Material löschen
+Funktionen:
+Bestandsverwaltung
+Mindestbestand-Überwachung
+Verbrauchshistorie
+5. inventory.py
+Zentrale Inventarverwaltung.
+Hauptfunktionen:
+Werkzeug-Statistiken
+Mitarbeiter-Statistiken
+Verbrauchsmaterial-Statistiken
+Aktuelle Ausleihen
+Wichtige Routen:
+/tools: Werkzeug-Übersicht
+/workers: Mitarbeiter-Übersicht
+/consumables: Material-Übersicht
+/manual-lending: Manuelle Ausleihe
+6. tools.py
+Werkzeugverwaltung.
+Hauptrouten:
+/tools: Werkzeug-Liste
+/tools/add: Neues Werkzeug
+/tools/<barcode>: Werkzeug-Details
+/tools/<barcode>/edit: Werkzeug bearbeiten
+/tools/search: Werkzeug-Suche
+Features:
+Barcode-basierte Identifikation
+Ausleih-Historie
+Soft-Delete Funktion
+7. workers.py
+Mitarbeiterverwaltung.
+Hauptrouten:
+/workers: Mitarbeiter-Liste
+/workers/add: Neuer Mitarbeiter
+/workers/<barcode>: Mitarbeiter-Details
+/workers/<barcode>/edit: Mitarbeiter bearbeiten
+/workers/search: Mitarbeiter-Suche
+Features:
+Abteilungszuordnung
+Ausleih-Historie pro Mitarbeiter
+E-Mail-Verwaltung
+8. quick_scan.py
+Schnellzugriff für Barcode-Scanning.
+Route:
+/quick_scan: Scanner-Interface
+9. history.py
+Systemweite Historie.
+Route:
+/history: Zeigt alle Ausleihen und Rückgaben
+10. index.py
+Startseite-Weiterleitung.
+Route:
+/: Redirect zur Werkzeug-Übersicht
+Jede Route-Datei ist Teil eines größeren Blueprints und trägt zur modularen Struktur der Anwendung bei. Die Routen sind durch verschiedene Decorator-Funktionen geschützt und implementieren spezifische Geschäftslogik für ihren Bereich.
 
-Version: 0.1
-Letzte Aktualisierung: 01.12.2024
+Utility-Module:
+1. db_schema.py
+Verwaltet das Datenbankschema
+Generiert und lädt Schema-Definitionen
+Erstellt dynamische SQL-Abfragen
+Bietet Debug-Funktionen für Schema-Analyse
+decorators.py
+@login_required: Prüft Login-Status
+@admin_required: Prüft Admin-Rechte
+@log_route: Protokolliert Route-Aufrufe
+@log_db_operation: Protokolliert Datenbankoperationen
+url_config.py
+Zentrale URL-Konfiguration
+Definiert alle Routen-Namen
+Verhindert hartcodierte URLs
+Ermöglicht einfache URL-Änderungen
+color_extractor.py
+Extrahiert Farben aus Logos/Bildern
+Generiert Farbschemata
+Berechnet passende Akzentfarben
+Fallback auf Standardfarben
+context_processors.py
+Injiziert globale Template-Variablen
+Lädt Farbeinstellungen
+Stellt URLs bereit
+Verwaltet Systemeinstellungen
+6. logger.py
+Konfiguriert verschiedene Logger
+Protokolliert Benutzeraktionen
+Erfasst Fehler
+Dokumentiert Datenbankzugriffe
+routes.py
+Definiert alle Routen-Konstanten
+Gruppiert Routen nach Funktionalität
+Bietet Hilfsmethoden für Routing
+Zentrale Route-Verwaltung
+structure_viewer.py
+Analysiert Projektstruktur
+Zeigt Datenbankstruktur
+Erstellt Statistiken
+Hilft bei der Dokumentation
+Hauptdateien:
+9. main.py
+Flask-Anwendungsinitialisierung
+Blueprint-Registrierung
+Datenbank-Setup
+Server-Konfiguration
+create_test_data.py
+Erstellt Testdaten
+Generiert Beispiel-Einträge
+Simuliert Verleihdaten
+Hilft beim Testen
+db_migration.py
+Verwaltet Datenbankmigrationen
+Aktualisiert Schema
+Fügt neue Spalten hinzu
+Sichert Datenintegrität
+12. files.py
+Verwaltet Dateisystem
+Zeigt Projektstruktur
+Analysiert Codedateien
+Hilft bei der Organisation
+routes.md
+Dokumentiert alle Routen
+Beschreibt API-Endpunkte
+Erklärt Zugriffsrechte
+Definiert URL-Parameter
+
+
+Admin Templates:
+1. add_consumable.html
+Route: /admin/add_consumable
+Funktion: Formular zum Hinzufügen neuer Verbrauchsmaterialien
+add_tool.html
+Route: /admin/add_tool
+Funktion: Formular zum Hinzufügen neuer Werkzeuge
+add_worker.html
+Route: /admin/add_worker
+Funktion: Formular zum Hinzufügen neuer Mitarbeiter
+4. dashboard.html
+Route: /admin/dashboard
+Funktion: Übersichtsseite für Administratoren mit Statistiken
+logs.html & system_logs.html
+Route: /admin/logs
+Funktion: Anzeige der Systemprotokolle
+manual_lending.html
+Route: /admin/manual_lending
+Funktion: Interface für manuelle Ausleihen/Rückgaben
+trash.html
+Route: /admin/trash
+Funktion: Papierkorb für gelöschte Einträge
+Haupttemplates:
+base.html
+Funktion: Basis-Template mit Layout/Navigation
+Wird von allen anderen Templates erweitert
+9. consumables.html & consumable_details.html
+Routes: /consumables, /consumables/<barcode>
+Funktion: Übersicht und Details von Verbrauchsmaterialien
+edit_consumable.html
+Route: /consumables/<barcode>/edit
+Funktion: Bearbeitung von Verbrauchsmaterialien
+quick_scan.html
+Route: /quick-scan
+Funktion: Schnellscan-Interface für Ausleihen/Rückgaben
+tools.html & tool_details.html
+Routes: /tools, /tools/<barcode>
+Funktion: Übersicht und Details von Werkzeugen
+workers.html & worker_details.html
+Routes: /workers, /workers/<barcode>
+Funktion: Übersicht und Details von Mitarbeitern
+Die Templates nutzen verschiedene gemeinsame Komponenten wie:
+Navigation
+Formulare
+Tabellen
+Modals
+Barcode-Scanner Integration
+Fehlerbehandlung
+Alle Templates sind responsiv gestaltet und nutzen Tailwind CSS mit DaisyUI für das Styling.

@@ -3,7 +3,7 @@ from app.models.database import Database
 from app.models.consumable import Consumable
 from app.utils.decorators import admin_required
 
-bp = Blueprint('consumables', __name__, url_prefix='/consumables')
+bp = Blueprint('consumables', __name__, url_prefix='/inventory/consumables')
 
 @bp.route('/')
 def index():

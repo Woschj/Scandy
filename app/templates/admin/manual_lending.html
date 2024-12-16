@@ -166,9 +166,7 @@
 <div class="card bg-base-100 shadow-xl mt-6">
     <div class="card-body">
         <div class="flex gap-4">
-            <!-- Platzhalter für Symmetrie -->
             <div class="w-[52px]"></div>
-
             <div class="flex-1">
                 <h2 class="card-title mb-4">Aktuelle Ausleihen</h2>
                 <div class="overflow-x-auto">
@@ -178,6 +176,7 @@
                                 <th>Artikel</th>
                                 <th>Mitarbeiter</th>
                                 <th>Ausgeliehen am</th>
+                                <th>Aktion</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -186,6 +185,13 @@
                                 <td>{{ lending.tool_name }}</td>
                                 <td>{{ lending.worker_name }}</td>
                                 <td>{{ lending.lent_at }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning"
+                                            onclick="returnTool('{{ lending.tool_barcode }}')">
+                                        <i class="fas fa-undo mr-2"></i>
+                                        Rückgabe
+                                    </button>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -320,6 +326,32 @@ function processLending() {
     .catch(error => {
         console.error('Fehler:', error);
         alert('Fehler bei der Ausleihe');
+    });
+}
+
+function returnTool(toolBarcode) {
+    if (!confirm('Möchten Sie die Rückgabe wirklich durchführen?')) return;
+    
+    fetch('/api/lending/return', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            tool_barcode: toolBarcode
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Fehler bei der Rückgabe');
+        }
+    })
+    .catch(error => {
+        console.error('Fehler:', error);
+        alert('Fehler bei der Rückgabe');
     });
 }
 
