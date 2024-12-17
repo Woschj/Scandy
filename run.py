@@ -1,9 +1,11 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from app.models.database import Database
 from app.utils.structure_viewer import print_database_structure, print_app_structure
 from app.utils.context_processors import register_context_processors
+from app.utils.db_schema import SchemaManager
 import logging
 import os
+from datetime import timedelta
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -20,32 +22,21 @@ def create_app():
     )
     
     # Secret Key setzen
-    app.config['SECRET_KEY'] = 'dev'
+    app.config.update(
+        SECRET_KEY='your-secret-key-here',
+        PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+        SESSION_COOKIE_SECURE=False,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_NAME='scandy_session'
+    )
     
-    # Context Processors registrieren
-    register_context_processors(app)
+    # Root Route hinzufügen
+    @app.route('/')
+    def index():
+        return redirect(url_for('tools.index'))
     
-    with app.app_context():
-        logger.info("Initialisiere Anwendung...")
-        
-        # Stelle sicher, dass der Datenbankordner existiert
-        if not os.path.exists('database'):
-            logger.info("Erstelle Datenbankverzeichnis...")
-            os.makedirs('database')
-            
-        # Initialisiere die Datenbank
-        Database.init_db()
-        logger.info("Datenbank initialisiert")
-        
-        # Zeige Datenbankstruktur
-        logger.info("Datenbankstruktur:")
-        print_database_structure()
-        
-        # Zeige Anwendungsstruktur
-        logger.info("Anwendungsstruktur:")
-        print_app_structure()
-
-    # Importiere die Blueprints und registriere sie
+    # Blueprints importieren und registrieren
     from app.routes import (
         auth, tools, workers, consumables, api, 
         admin, inventory, quick_scan, history
@@ -61,16 +52,28 @@ def create_app():
     app.register_blueprint(inventory.bp, url_prefix='/inventory')
     app.register_blueprint(quick_scan.bp)
     app.register_blueprint(history.bp)
-
-    # Debug-Ausgabe der registrierten Routen
-    logger.info("Registrierte Routen:")
-    for rule in app.url_map.iter_rules():
-        logger.info(f"{rule.endpoint}: {rule.rule} [{', '.join(rule.methods)}]")
-        
+    
+    # Context Processors registrieren
+    register_context_processors(app)
+    
     return app
 
 if __name__ == '__main__':
     app = create_app()
+    
+    # Application Context erstellen
+    with app.app_context():
+        # Farbeinstellungen initialisieren
+        logger.info("Initialisiere Farbeinstellungen...")
+        SchemaManager.init_settings()
+        
+        # Struktur-Informationen ausgeben
+        logger.info("Drucke Datenbank-Struktur...")
+        print_database_structure()
+        
+        logger.info("Drucke App-Struktur...")
+        print_app_structure()
+    
     logger.info("Starte Entwicklungsserver...")
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)  # use_reloader=False deaktiviert den Reloader
+    app.run(debug=True, host='0.0.0.0', port=5000)
   

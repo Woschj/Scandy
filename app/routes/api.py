@@ -28,38 +28,77 @@ def get_workers():
         'department': w['department']
     } for w in workers])
 
-@bp.route('/tools/<barcode>', methods=['GET'])
+@bp.route('/inventory/tools/<barcode>', methods=['GET'])
 def get_tool(barcode):
     try:
-        with Database.get_db() as conn:
-            # Debug-Log
-            print(f"Suche Tool mit Barcode: {barcode}")
+        # Debug-Logging
+        print(f"Suche Werkzeug mit Barcode: {barcode}")
+        
+        tool = Database.query('''
+            SELECT 
+                id,
+                barcode,
+                name,
+                description,
+                status,
+                category,
+                location
+            FROM tools 
+            WHERE barcode = ? 
+            AND deleted = 0
+        ''', [barcode], one=True)
+        
+        # Debug-Logging
+        print(f"Gefundenes Werkzeug: {tool}")
+        
+        if not tool:
+            print(f"Kein Werkzeug gefunden für Barcode: {barcode}")
+            return jsonify({'error': 'Werkzeug nicht gefunden'}), 404
             
-            tool = conn.execute('''
-                SELECT barcode, name, description, location, status, type
-                FROM tools 
-                WHERE barcode = ? AND deleted = 0
-            ''', (barcode,)).fetchone()
+        # Konvertiere Row-Objekt in Dictionary
+        tool_dict = dict(tool)
+        print(f"Konvertiertes Werkzeug: {tool_dict}")
             
-            if tool:
-                # Debug-Log
-                print(f"Tool gefunden: {tool}")
-                return jsonify({
-                    'barcode': tool['barcode'],
-                    'name': tool['name'],
-                    'description': tool['description'],
-                    'location': tool['location'],
-                    'status': tool['status'],
-                    'type': tool['type']
-                })
-            else:
-                # Debug-Log
-                print(f"Kein Tool mit Barcode {barcode} gefunden")
-                return jsonify({'error': 'Tool nicht gefunden'}), 404
-                
+        return jsonify(tool_dict)
+        
     except Exception as e:
-        # Error-Log
-        print(f"Fehler beim Abrufen des Tools: {str(e)}")
+        print(f"Fehler bei Werkzeugsuche: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/inventory/workers/<barcode>', methods=['GET'])
+def get_worker(barcode):
+    try:
+        # Debug-Logging
+        print(f"Suche Mitarbeiter mit Barcode: {barcode}")
+        
+        worker = Database.query('''
+            SELECT 
+                id,
+                barcode,
+                firstname,
+                lastname,
+                department,
+                email
+            FROM workers 
+            WHERE barcode = ? 
+            AND deleted = 0
+        ''', [barcode], one=True)
+        
+        # Debug-Logging
+        print(f"Gefundener Mitarbeiter: {worker}")
+        
+        if not worker:
+            print(f"Kein Mitarbeiter gefunden für Barcode: {barcode}")
+            return jsonify({'error': 'Mitarbeiter nicht gefunden'}), 404
+            
+        # Konvertiere Row-Objekt in Dictionary
+        worker_dict = dict(worker)
+        print(f"Konvertierter Mitarbeiter: {worker_dict}")
+            
+        return jsonify(worker_dict)
+        
+    except Exception as e:
+        print(f"Fehler bei Mitarbeitersuche: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/settings/colors', methods=['POST'])
@@ -135,93 +174,32 @@ def after_request(response):
     return response
 
 @bp.route('/lending/process', methods=['POST'])
-@admin_required
 def process_lending():
     try:
-        data = request.json
+        data = request.get_json()
+        print("Empfangene Daten:", data)  # Debug-Log
         
-        # Validierung der Eingabedaten
-        required_fields = ['item_type', 'item_barcode', 'worker_barcode']
-        if not all(field in data for field in required_fields):
-            return jsonify({'success': False, 'message': 'Fehlende Pflichtfelder'}), 400
+        if not data or 'tool_barcode' not in data or 'worker_barcode' not in data:
+            return jsonify({'error': 'Unvollständige Daten'}), 400
             
-        with Database.get_db() as conn:
-            # Prüfe ob Worker existiert
-            worker = conn.execute(
-                "SELECT id FROM workers WHERE barcode = ? AND deleted = 0",
-                (data['worker_barcode'],)
-            ).fetchone()
-            
-            if not worker:
-                return jsonify({'success': False, 'message': 'Mitarbeiter nicht gefunden'}), 404
-
-            if data['item_type'] == 'tool':
-                # Prüfe ob Tool verfügbar
-                tool = conn.execute(
-                    "SELECT id, status FROM tools WHERE barcode = ? AND deleted = 0",
-                    (data['item_barcode'],)
-                ).fetchone()
-                
-                if not tool:
-                    return jsonify({'success': False, 'message': 'Werkzeug nicht gefunden'}), 404
-                    
-                # Erstelle Ausleihe
-                conn.execute("""
-                    INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
-                    VALUES (?, ?, datetime('now'))
-                """, (data['item_barcode'], data['worker_barcode']))
-                
-                # Aktualisiere Tool-Status
-                conn.execute("""
-                    UPDATE tools 
-                    SET status = 'borrowed' 
-                    WHERE barcode = ?
-                """, (data['item_barcode'],))
-
-            elif data['item_type'] == 'consumable':
-                amount = int(data.get('amount', 1))
-                
-                # Prüfe ob genug Verbrauchsmaterial verfügbar
-                consumable = conn.execute("""
-                    SELECT id, quantity 
-                    FROM consumables 
-                    WHERE barcode = ? AND deleted = 0
-                """, (data['item_barcode'],)).fetchone()
-                
-                if not consumable:
-                    return jsonify({'success': False, 'message': 'Verbrauchsmaterial nicht gefunden'}), 404
-                    
-                if consumable['quantity'] < amount:
-                    return jsonify({'success': False, 'message': 'Nicht genügend Bestand verfügbar'}), 400
-                
-                # Reduziere Bestand
-                conn.execute("""
-                    UPDATE consumables 
-                    SET quantity = quantity - ? 
-                    WHERE barcode = ?
-                """, (amount, data['item_barcode']))
-                
-                # Logge Ausgabe
-                conn.execute("""
-                    INSERT INTO system_logs (timestamp, level, message, details)
-                    VALUES (
-                        datetime('now'),
-                        'INFO',
-                        'Verbrauchsmaterial ausgegeben',
-                        json_object(
-                            'barcode', ?,
-                            'worker_barcode', ?,
-                            'amount', ?
-                        )
-                    )
-                """, (data['item_barcode'], data['worker_barcode'], amount))
-
-            conn.commit()
-            return jsonify({'success': True})
-
+        # Ausleihe in DB speichern
+        Database.query('''
+            INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        ''', [data['tool_barcode'], data['worker_barcode']])
+        
+        # Tool-Status aktualisieren
+        Database.query('''
+            UPDATE tools 
+            SET status = 'Ausgeliehen'
+            WHERE barcode = ?
+        ''', [data['tool_barcode']])
+        
+        return jsonify({'success': True}), 200
+        
     except Exception as e:
-        print(f"Fehler bei der Ausleihe-Verarbeitung: {str(e)}")
-        return jsonify({'success': False, 'message': 'Interner Server-Fehler'}), 500
+        print("Fehler:", str(e))  # Debug-Log
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/lending/return', methods=['POST'])
 @admin_required

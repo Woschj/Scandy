@@ -7,7 +7,7 @@
     <div class="card-body">
         <h2 class="card-title mb-4">Neues Verbrauchsmaterial hinzufügen</h2>
         
-        <form method="POST" action="{{ url_for(urls.add_consumable) }}" class="max-w-lg">
+        <form method="POST" action="{{ url_for('consumables.add') }}" class="max-w-lg">
             <div class="form-control mb-4">
                 <label class="label">
                     <span class="label-text">Barcode</span>
@@ -80,7 +80,7 @@
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="{{ url_for(urls.consumables) }}" class="btn btn-ghost">Abbrechen</a>
+                <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">Abbrechen</a>
                 <button type="submit" class="btn btn-primary">Speichern</button>
             </div>
         </form>

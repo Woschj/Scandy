@@ -48,13 +48,17 @@ def add():
 def details(barcode):
     consumable = Consumable.get_by_barcode(barcode)
     if consumable:
-        history = Database.query('''
-            SELECT ch.*, w.firstname || ' ' || w.lastname as worker_name
-            FROM consumables_history ch
-            LEFT JOIN workers w ON ch.worker_barcode = w.barcode
-            WHERE ch.consumable_barcode = ?
-            ORDER BY ch.timestamp DESC
-        ''', [barcode])
+        try:
+            history = Database.query('''
+                SELECT ch.*, w.firstname || ' ' || w.lastname as worker_name
+                FROM consumables_history ch
+                LEFT JOIN workers w ON ch.worker_barcode = w.barcode
+                WHERE ch.consumable_barcode = ?
+                ORDER BY ch.timestamp DESC
+            ''', [barcode])
+        except:
+            history = []  # Falls die Tabelle noch nicht existiert oder leer ist
+            
         return render_template('consumable_details.html', 
                              consumable=consumable, 
                              history=history)
@@ -70,25 +74,32 @@ def edit(barcode):
         return redirect(url_for('consumables.index'))
     
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form.get('description', '')
-        quantity = int(request.form.get('quantity', 0))
-        min_quantity = int(request.form.get('min_quantity', 0))
-        
         try:
-            Database.query(
-                '''UPDATE consumables 
-                   SET name = ?, description = ?, 
-                       quantity = ?, min_quantity = ? 
-                   WHERE barcode = ?''',
-                [name, description, quantity, min_quantity, barcode]
-            )
+            Database.query('''
+                UPDATE consumables 
+                SET name = ?,
+                    description = ?,
+                    quantity = ?,
+                    min_quantity = ?,
+                    location = ?,
+                    category = ?
+                WHERE barcode = ?
+            ''', [
+                request.form['name'],
+                request.form.get('description', ''),
+                int(request.form.get('quantity', 0)),
+                int(request.form.get('min_quantity', 0)),
+                request.form.get('location', ''),
+                request.form.get('category', ''),
+                barcode
+            ])
+            
             flash('Verbrauchsmaterial erfolgreich aktualisiert', 'success')
             return redirect(url_for('consumables.details', barcode=barcode))
         except Exception as e:
             flash(f'Fehler beim Aktualisieren: {str(e)}', 'error')
     
-    return render_template('admin/edit_consumable.html', consumable=consumable)
+    return render_template('consumable_details.html', consumable=consumable)
 
 @bp.route('/<barcode>/delete', methods=['POST'])
 @admin_required

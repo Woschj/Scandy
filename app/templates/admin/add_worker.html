@@ -7,7 +7,7 @@
     <div class="card-body">
         <h2 class="card-title mb-4">Neuen Mitarbeiter hinzufügen</h2>
         
-        <form method="POST" action="{{ url_for(urls.add_worker) }}" class="max-w-lg">
+        <form method="POST" action="{{ url_for('workers.add') }}" class="max-w-lg">
             <div class="form-control mb-4">
                 <label class="label">
                     <span class="label-text">Barcode</span>
@@ -19,14 +19,14 @@
                 <label class="label">
                     <span class="label-text">Vorname</span>
                 </label>
-                <input type="text" name="first_name" class="input input-bordered" required>
+                <input type="text" name="firstname" class="input input-bordered" required>
             </div>
 
             <div class="form-control mb-4">
                 <label class="label">
                     <span class="label-text">Nachname</span>
                 </label>
-                <input type="text" name="last_name" class="input input-bordered" required>
+                <input type="text" name="lastname" class="input input-bordered" required>
             </div>
 
             <div class="form-control mb-4">
@@ -55,7 +55,7 @@
             </div>
 
             <div class="flex justify-end gap-2">
-                <a href="{{ url_for(urls.workers) }}" class="btn btn-ghost">Abbrechen</a>
+                <a href="{{ url_for('workers.index') }}" class="btn btn-ghost">Abbrechen</a>
                 <button type="submit" class="btn btn-primary">Speichern</button>
             </div>
         </form>

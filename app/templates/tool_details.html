@@ -17,40 +17,46 @@
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ tool.name }}</h2>
                 
-                <form action="{{ url_for('inventory.update_tool', barcode=tool.barcode) }}" method="POST" class="space-y-6">
+                <form action="{{ url_for('tools.edit', barcode=tool.barcode) }}" method="POST" class="space-y-6">
                     <!-- Barcode (nicht editierbar) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                        <label class="label">Barcode</label>
                         <input type="text" value="{{ tool.barcode }}" readonly
-                               class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50">
+                               class="input input-bordered w-full bg-base-200">
                     </div>
 
                     <!-- Name -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Bezeichnung</label>
+                        <label class="label">Bezeichnung</label>
                         <input type="text" name="name" value="{{ tool.name }}" required
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                               class="input input-bordered w-full">
                     </div>
 
-                    <!-- Typ (gespeichert in description) -->
+                    <!-- Beschreibung -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Typ</label>
-                        <input type="text" name="typ" value="{{ tool.description }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <label class="label">Beschreibung</label>
+                        <input type="text" name="description" value="{{ tool.description }}"
+                               class="input input-bordered w-full">
                     </div>
 
-                    <!-- Ort (gespeichert in location) -->
+                    <!-- Ort -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Ort</label>
-                        <input type="text" name="ort" value="{{ tool.location }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <label class="label">Ort</label>
+                        <input type="text" name="location" value="{{ tool.location }}"
+                               class="input input-bordered w-full">
+                    </div>
+
+                    <!-- Kategorie -->
+                    <div>
+                        <label class="label">Kategorie</label>
+                        <input type="text" name="category" value="{{ tool.category }}"
+                               class="input input-bordered w-full">
                     </div>
 
                     <!-- Status -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="status" 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <label class="label">Status</label>
+                        <select name="status" class="select select-bordered w-full">
                             <option value="Verfügbar" {% if tool.status == 'Verfügbar' %}selected{% endif %}>Verfügbar</option>
                             <option value="Ausgeliehen" {% if tool.status == 'Ausgeliehen' %}selected{% endif %} disabled>Ausgeliehen</option>
                             <option value="Defekt" {% if tool.status == 'Defekt' %}selected{% endif %}>Defekt</option>
@@ -58,12 +64,13 @@
                     </div>
 
                     <!-- Submit Button -->
+                    {% if session.get('is_admin') %}
                     <div class="flex justify-end">
-                        <button type="submit" 
-                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300">
-                            Änderungen speichern
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Speichern
                         </button>
                     </div>
+                    {% endif %}
                 </form>
             </div>
 

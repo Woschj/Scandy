@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app.models.database import Database
 from app.models.worker import Worker
-from app.utils.decorators import admin_required
+from app.routes.auth import admin_required
+from datetime import datetime
 
 bp = Blueprint('workers', __name__, url_prefix='/inventory/workers')
 
@@ -34,51 +35,79 @@ def add():
             
     return render_template('admin/add_worker.html')
 
-@bp.route('/workers/<barcode>')
+@bp.route('/<barcode>', methods=['GET'])
 def details(barcode):
-    worker = Worker.get_by_barcode(barcode)
-    if worker:
-        lending_history = Database.query('''
-            SELECT l.*, t.name as tool_name
-            FROM lendings l
-            JOIN tools t ON l.tool_barcode = t.barcode
-            WHERE l.worker_barcode = ?
-            ORDER BY l.lent_at DESC
-        ''', [barcode])
-        return render_template('worker_details.html', 
-                             worker=worker, 
-                             history=lending_history)
-    flash('Mitarbeiter nicht gefunden', 'error')
-    return redirect(url_for('workers.index'))
-
-@bp.route('/workers/<barcode>/edit', methods=['GET', 'POST'])
-@admin_required
-def edit(barcode):
-    worker = Worker.get_by_barcode(barcode)
+    worker = Database.query('SELECT * FROM workers WHERE barcode = ? AND deleted = 0', [barcode], one=True)
     if not worker:
         flash('Mitarbeiter nicht gefunden', 'error')
         return redirect(url_for('workers.index'))
+
+    # Aktuelle Ausleihen
+    current_lendings = Database.query('''
+        SELECT 
+            l.*,
+            COALESCE(t.name, c.name) as item_name,
+            CASE 
+                WHEN t.id IS NOT NULL THEN 'Werkzeug'
+                ELSE 'Verbrauchsmaterial'
+            END as item_type,
+            l.quantity as amount_display,
+            datetime(l.lent_at, 'localtime') as formatted_checkout_time
+        FROM lendings l
+        LEFT JOIN tools t ON l.tool_barcode = t.barcode
+        LEFT JOIN consumables c ON l.consumable_barcode = c.barcode
+        WHERE l.worker_barcode = ? 
+        AND l.returned_at IS NULL
+    ''', [barcode])
+
+    # Ausleihverlauf
+    lending_history = Database.query('''
+        SELECT 
+            l.*,
+            COALESCE(t.name, c.name) as item_name,
+            CASE 
+                WHEN t.id IS NOT NULL THEN 'Werkzeug'
+                ELSE 'Verbrauchsmaterial'
+            END as item_type,
+            l.quantity as amount_display,
+            datetime(l.lent_at, 'localtime') as formatted_checkout_time,
+            datetime(l.returned_at, 'localtime') as formatted_return_time
+        FROM lendings l
+        LEFT JOIN tools t ON l.tool_barcode = t.barcode
+        LEFT JOIN consumables c ON l.consumable_barcode = c.barcode
+        WHERE l.worker_barcode = ? 
+        AND l.returned_at IS NOT NULL
+        ORDER BY l.lent_at DESC
+    ''', [barcode])
+
+    return render_template('worker_details.html', 
+                         worker=worker,
+                         current_lendings=current_lendings,
+                         lending_history=lending_history)
+
+@bp.route('/<barcode>/edit', methods=['POST'])
+@admin_required
+def edit(barcode):
+    try:
+        Database.query('''
+            UPDATE workers 
+            SET firstname = ?,
+                lastname = ?,
+                email = ?,
+                department = ?
+            WHERE barcode = ?
+        ''', [
+            request.form['firstname'],
+            request.form['lastname'],
+            request.form.get('email', ''),
+            request.form.get('department', ''),
+            barcode
+        ])
+        flash('Mitarbeiter erfolgreich aktualisiert', 'success')
+    except Exception as e:
+        flash(f'Fehler beim Aktualisieren: {str(e)}', 'error')
     
-    if request.method == 'POST':
-        firstname = request.form['firstname']
-        lastname = request.form['lastname']
-        department = request.form.get('department', '')
-        email = request.form.get('email', '')
-        
-        try:
-            Database.query(
-                '''UPDATE workers 
-                   SET firstname = ?, lastname = ?, 
-                       department = ?, email = ? 
-                   WHERE barcode = ?''',
-                [firstname, lastname, department, email, barcode]
-            )
-            flash('Mitarbeiter erfolgreich aktualisiert', 'success')
-            return redirect(url_for('workers.details', barcode=barcode))
-        except Exception as e:
-            flash(f'Fehler beim Aktualisieren: {str(e)}', 'error')
-    
-    return render_template('admin/edit_worker.html', worker=worker)
+    return redirect(url_for('workers.details', barcode=barcode))
 
 @bp.route('/workers/<barcode>/delete', methods=['POST'])
 @admin_required

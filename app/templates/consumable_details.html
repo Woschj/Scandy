@@ -1,116 +1,108 @@
 {% extends "base.html" %}
 
-{% block title %}{{ consumable.bezeichnung }} - Details{% endblock %}
+{% block title %}{{ consumable.name }} - Details{% endblock %}
 
 {% block content %}
-<div class="bg-white shadow rounded-lg p-6">
-    <!-- Zurück-Button -->
-    <div class="mb-6">
-        <a href="{{ url_for(routes.CONSUMABLES_INDEX) }}" 
-           class="text-blue-600 hover:text-blue-800 flex items-center">
-            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Zurück zur Übersicht
-        </a>
-    </div>
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">{{ consumable.name }}</h2>
+            <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">
+                <i class="fas fa-arrow-left"></i> Zurück
+            </a>
+        </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Verbrauchsmaterial-Details -->
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ consumable.bezeichnung }}</h2>
-            
-            <form action="{{ url_for('inventory.update_consumable', barcode=consumable.barcode) }}" method="post" class="space-y-6">
-                <!-- Barcode (readonly) -->
+        <form action="{{ url_for('consumables.edit', barcode=consumable.barcode) }}" method="post" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Name -->
                 <div>
-                    <label class="block text-sm font-medium">Barcode</label>
-                    <input type="text" value="{{ consumable.barcode }}" readonly
-                           class="input input-bordered w-full bg-base-200">
+                    <label class="label">Name</label>
+                    <input type="text" name="name" value="{{ consumable.name }}" 
+                           class="input input-bordered w-full" required>
+                </div>
+                
+                <!-- Barcode -->
+                <div>
+                    <label class="label">Barcode</label>
+                    <input type="text" value="{{ consumable.barcode }}" 
+                           class="input input-bordered w-full" readonly>
                 </div>
 
-                <!-- Bezeichnung -->
+                <!-- Kategorie -->
                 <div>
-                    <label class="block text-sm font-medium">Bezeichnung</label>
-                    <input type="text" name="bezeichnung" value="{{ consumable.bezeichnung }}" required
-                           class="input input-bordered w-full">
-                </div>
-
-                <!-- Typ -->
-                <div>
-                    <label class="block text-sm font-medium">Typ</label>
-                    <input type="text" name="typ" value="{{ consumable.typ }}"
+                    <label class="label">Kategorie</label>
+                    <input type="text" name="category" value="{{ consumable.category }}" 
                            class="input input-bordered w-full">
                 </div>
 
                 <!-- Ort -->
                 <div>
-                    <label class="block text-sm font-medium">Ort</label>
-                    <input type="text" name="ort" value="{{ consumable.ort }}"
+                    <label class="label">Ort</label>
+                    <input type="text" name="location" value="{{ consumable.location }}" 
                            class="input input-bordered w-full">
                 </div>
 
-                <!-- Bestand -->
+                <!-- Aktueller Bestand -->
                 <div>
-                    <label class="block text-sm font-medium">Bestand</label>
-                    <input type="number" name="bestand" value="{{ consumable.bestand }}" required
-                           class="input input-bordered w-full">
+                    <label class="label">Aktueller Bestand</label>
+                    <input type="number" name="quantity" value="{{ consumable.quantity }}" 
+                           class="input input-bordered w-full" required>
                 </div>
 
                 <!-- Mindestbestand -->
                 <div>
-                    <label class="block text-sm font-medium">Mindestbestand</label>
-                    <input type="number" name="mindestbestand" value="{{ consumable.mindestbestand }}" required
-                           class="input input-bordered w-full">
+                    <label class="label">Mindestbestand</label>
+                    <input type="number" name="min_quantity" value="{{ consumable.min_quantity }}" 
+                           class="input input-bordered w-full" required>
                 </div>
 
-                <!-- Einheit -->
-                <div>
-                    <label class="block text-sm font-medium">Einheit</label>
-                    <input type="text" name="einheit" value="{{ consumable.einheit }}" required
-                           class="input input-bordered w-full">
+                <!-- Beschreibung -->
+                <div class="md:col-span-2">
+                    <label class="label">Beschreibung</label>
+                    <textarea name="description" class="textarea textarea-bordered w-full" 
+                              rows="3">{{ consumable.description }}</textarea>
                 </div>
+            </div>
 
-                <!-- Submit Button -->
-                <div class="flex justify-end">
-                    <button type="submit" class="btn bg-[#5b69a7] hover:bg-[#4c5789] text-white">
-                        Änderungen speichern
-                    </button>
-                </div>
-            </form>
-        </div>
+            {% if session.get('is_admin') %}
+            <div class="flex justify-end space-x-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Speichern
+                </button>
+            </div>
+            {% endif %}
+        </form>
 
         <!-- Verlauf -->
-        <div>
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Bestandsverlauf</h3>
+        {% if history %}
+        <div class="mt-8">
+            <h3 class="text-xl font-bold mb-4">Verlauf</h3>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                <table class="min-w-full divide-y divide-base-200">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geändert von</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Datum</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Mitarbeiter</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Änderung</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Neuer Bestand</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Notiz</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-base-100 divide-y divide-base-200">
                         {% for entry in history %}
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.timestamp }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ entry.action }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.quantity }} {{ consumable.einheit }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {% if entry.worker_name %}
-                                    {{ entry.worker_name }} {{ entry.worker_lastname }}
-                                {% else %}
-                                    System
-                                {% endif %}
-                            </td>
+                        <tr class="hover:bg-base-200">
+                            <td class="px-6 py-4">{{ entry.timestamp }}</td>
+                            <td class="px-6 py-4">{{ entry.worker_name or '-' }}</td>
+                            <td class="px-6 py-4">{{ entry.quantity_change }}</td>
+                            <td class="px-6 py-4">{{ entry.quantity_after }}</td>
+                            <td class="px-6 py-4">{{ entry.note or '-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %} 

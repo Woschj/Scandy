@@ -1,92 +1,74 @@
+from flask import current_app
 import os
-import sqlite3
-from pathlib import Path
 from datetime import datetime
+from ..models.database import Database
 
 def print_database_structure():
-    print("\nDatenbank-Struktur:")
-    print("===================\n")
-    
-    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'database', 'inventory.db')
-    print(f"📁 Datenbank: {db_path}")
-    
-    # Dateiinformationen anzeigen
-    if os.path.exists(db_path):
-        size = os.path.getsize(db_path) / (1024 * 1024)  # Größe in MB
-        modified = datetime.fromtimestamp(os.path.getmtime(db_path))
-        print(f"   └─ Größe: {size:.2f} MB")
-        print(f"   └─ Letzte Änderung: {modified}\n")
-    
+    """Gibt die Struktur der Datenbank aus"""
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        db_path = Database.DATABASE_PATH
+        db_size = os.path.getsize(db_path) / (1024 * 1024)  # Convert to MB
+        last_modified = datetime.fromtimestamp(os.path.getmtime(db_path))
         
-        # Datenbankstatistiken
-        cursor.execute("SELECT COUNT(*) FROM tools WHERE deleted = 0")
-        tools_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM workers WHERE deleted = 0")
-        workers_count = cursor.fetchone()[0]
+        print("\nDatenbank-Struktur:")
+        print("===================\n")
+        print(f"📁 Datenbank: {db_path}")
+        print(f"   └─ Größe: {db_size:.2f} MB")
+        print(f"   └─ Letzte Änderung: {last_modified}")
         
-        print(f"📊 Statistiken:")
-        print(f"   └─ Aktive Werkzeuge: {tools_count}")
-        print(f"   └─ Aktive Mitarbeiter: {workers_count}\n")
-        
-        # Tabellen und ihre Struktur
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-        tables = cursor.fetchall()
-        
-        for table in tables:
-            table_name = table[0]
-            print(f"  📋 Tabelle: {table_name}")
+        # Statistiken
+        with Database.get_db() as db:
+            cursor = db.cursor()
             
-            # Spalteninformationen
-            cursor.execute(f"PRAGMA table_info({table_name})")
-            columns = cursor.fetchall()
+            # Aktive Einträge zählen
+            tools = cursor.execute("SELECT COUNT(*) FROM tools WHERE deleted = 0").fetchone()[0]
+            workers = cursor.execute("SELECT COUNT(*) FROM workers WHERE deleted = 0").fetchone()[0]
             
-            for column in columns:
-                nullable = "NULL" if column[3] == 0 else "NOT NULL"
-                pk = "PRIMARY KEY" if column[5] == 1 else ""
-                print(f"    └─ {column[1]} ({column[2]}) {nullable} {pk}".strip())
+            print("\n📊 Statistiken:")
+            print(f"   └─ Aktive Werkzeuge: {tools}")
+            print(f"   └─ Aktive Mitarbeiter: {workers}\n")
             
-            # Anzahl der Einträge
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-            count = cursor.fetchone()[0]
-            print(f"    └─ Einträge: {count}\n")
+            # Tabellenstruktur ausgeben
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = cursor.fetchall()
             
+            for table in tables:
+                table_name = table[0]
+                print(f"  📋 Tabelle: {table_name}")
+                
+                # Spalteninformationen
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = cursor.fetchall()
+                for col in columns:
+                    nullable = "NULL" if col[3] == 0 else "NOT NULL"
+                    primary = "PRIMARY KEY" if col[5] == 1 else ""
+                    print(f"└─ {col[1]} ({col[2]}) {nullable} {primary}".strip())
+                
+                # Anzahl der Einträge
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+                count = cursor.fetchone()[0]
+                print(f"    └─ Einträge: {count}\n")
+                
     except Exception as e:
-        print(f"Fehler beim Lesen der Datenbankstruktur: {str(e)}")
-    finally:
-        conn.close()
+        print(f"Fehler beim Ausgeben der Datenbankstruktur: {e}")
 
 def print_app_structure():
+    """Gibt die Struktur der Flask-App aus"""
+    app = current_app._get_current_object()
+    
     print("\nApp-Struktur:")
     print("============\n")
     
-    app_path = os.path.dirname(os.path.dirname(__file__))
-    excluded_dirs = {'.git', '__pycache__', 'venv', 'env', 'node_modules'}
-    excluded_files = {'*.pyc', '*.pyo', '*.pyd', '.DS_Store'}
+    print("🔷 Registrierte Blueprints:")
+    for blueprint in app.blueprints.values():
+        print(f"   └─ {blueprint.name} (Prefix: {blueprint.url_prefix})")
     
-    def should_include(path):
-        return not any(excluded in path for excluded in excluded_dirs)
+    print("\n🔷 Verfügbare Routen:")
+    for rule in app.url_map.iter_rules():
+        print(f"   └─ {rule.endpoint}: {rule.rule} [{', '.join(rule.methods)}]")
     
-    for root, dirs, files in os.walk(app_path):
-        if not should_include(root):
-            continue
-            
-        level = root.replace(app_path, '').count(os.sep)
-        indent = '  ' * level
-        
-        folder_name = os.path.basename(root)
-        if level == 0:
-            print(f"📁 app/")
-        else:
-            print(f"{indent}📁 {folder_name}/")
-        
-        subindent = '  ' * (level + 1)
-        for file in sorted(files):
-            if file.endswith(('.py', '.html', '.css', '.js')):
-                print(f"{subindent}📄 {file}")
-
-if __name__ == "__main__":
-    print_database_structure()
-    print_app_structure() 
+    print("\n🔷 Template Ordner:")
+    print(f"   └─ {app.template_folder}")
+    
+    print("\n🔷 Static Ordner:")
+    print(f"   └─ {app.static_folder}") 

@@ -100,3 +100,68 @@ class SchemaManager:
             for column, details in info['columns'].items():
                 print(f"  - {column}: {details}")
         print("===============================\n")
+
+    @staticmethod
+    def update_schema(conn):
+        """Führt notwendige Schema-Updates durch"""
+        try:
+            # Prüfen ob location/category Spalten existieren
+            for table in ['consumables', 'tools']:
+                columns = conn.execute(f"PRAGMA table_info({table})").fetchall()
+                column_names = [col[1] for col in columns]
+                
+                if 'location' not in column_names:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN location TEXT")
+                if 'category' not in column_names:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN category TEXT")
+            
+            conn.commit()
+            print(f"Schema erfolgreich aktualisiert")
+            
+        except Exception as e:
+            print(f"Fehler beim Schema-Update: {str(e)}")
+            raise
+
+    @staticmethod
+    def create_tables(conn):
+        """Erstellt alle benötigten Tabellen"""
+        conn.executescript('''
+            -- ... bestehende Tabellen ...
+
+            -- Consumables History Tabelle
+            CREATE TABLE IF NOT EXISTS consumables_history (
+                id INTEGER PRIMARY KEY,
+                consumable_barcode TEXT NOT NULL,
+                worker_barcode TEXT,
+                quantity_change INTEGER NOT NULL,
+                quantity_after INTEGER NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                note TEXT,
+                FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+            );
+        ''')
+
+    @staticmethod
+    def init_settings():
+        """Initialisiert die Grundeinstellungen in der Datenbank"""
+        settings = [
+            ('color_primary', '259 94% 51%'),
+            ('color_primary_content', '0 0% 100%'),
+            ('color_secondary', '314 100% 47%'),
+            ('color_secondary_content', '0 0% 100%'),
+            ('color_accent', '174 60% 51%'),
+            ('color_accent_content', '0 0% 100%'),
+            ('color_neutral', '219 14% 28%'),
+            ('color_neutral_content', '0 0% 100%'),
+            ('color_base', '0 0% 100%'),
+            ('color_base_content', '219 14% 28%')
+        ]
+        
+        with Database.get_db() as db:
+            cursor = db.cursor()
+            cursor.executemany(
+                'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
+                settings
+            )
+            db.commit()

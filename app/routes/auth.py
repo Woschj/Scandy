@@ -7,27 +7,37 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not session.get('is_admin'):
+            session['next'] = request.url
+            flash('Bitte melden Sie sich als Administrator an.', 'warning')
             return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if session.get('is_admin'):
+        return redirect(url_for('tools.index'))
+
     if request.method == 'POST':
-        password = request.form.get('password')
-        
-        if password == '1234':  # Geändertes Passwort
+        if request.form.get('password') == 'admin123':
             session['is_admin'] = True
-            return redirect(url_for('admin.dashboard'))
+            session.permanent = True
             
-        flash('Ungültiges Passwort', 'error')
-    
+            next_page = session.get('next')
+            if next_page:
+                session.pop('next', None)
+                return redirect(next_page)
+            
+            return redirect(url_for('tools.index'))
+        
+        flash('Falsches Passwort', 'error')
     return render_template('auth/login.html')
 
 @bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('auth.login')) 
+    flash('Erfolgreich abgemeldet', 'success')
+    return redirect(url_for('tools.index'))
 
 @bp.route('/test')
 def test():
