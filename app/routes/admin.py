@@ -45,41 +45,33 @@ def get_current_lendings():
         cursor.execute("""
             SELECT 
                 l.id,
-                COALESCE(t.name, c.name) as item_name,
-                COALESCE(t.barcode, c.barcode) as item_barcode,
+                t.name as tool_name,
+                t.barcode as tool_barcode,
                 w.firstname || ' ' || w.lastname as worker_name,
                 w.barcode as worker_barcode,
-                COALESCE(l.lent_at, cu.used_at) as action_date,
+                w.department,
+                l.lent_at,
                 CASE 
-                    WHEN t.id IS NOT NULL THEN 'Werkzeug'
-                    ELSE 'Verbrauchsmaterial'
-                END as category,
-                CASE
-                    WHEN c.id IS NOT NULL THEN cu.quantity
-                    ELSE NULL
-                END as amount
-            FROM (
-                SELECT id, tool_barcode as barcode, worker_barcode, lent_at, NULL as used_at
-                FROM lendings WHERE returned_at IS NULL
-                UNION ALL
-                SELECT id, NULL, worker_barcode, NULL, used_at
-                FROM consumable_usage
-            ) l
-            LEFT JOIN tools t ON l.barcode = t.barcode
-            LEFT JOIN consumable_usage cu ON l.id = cu.id
-            LEFT JOIN consumables c ON cu.consumable_id = c.id
+                    WHEN julianday('now') - julianday(l.lent_at) > 7 
+                    THEN 1 ELSE 0 
+                END as overdue
+            FROM lendings l
+            JOIN tools t ON l.tool_barcode = t.barcode
             JOIN workers w ON l.worker_barcode = w.barcode
-            ORDER BY action_date DESC
+            WHERE l.returned_at IS NULL
+            ORDER BY l.lent_at DESC
         """)
         
         lendings = []
         for row in cursor.fetchall():
             lendings.append({
                 'tool_name': row[1],
-                'worker_name': row[2],
-                'department': row[3],
-                'lent_at': row[4],
-                'overdue': bool(row[5])
+                'tool_barcode': row[2],
+                'worker_name': row[3],
+                'worker_barcode': row[4],
+                'department': row[5],
+                'lent_at': row[6],
+                'overdue': bool(row[7])
             })
         return lendings
 
