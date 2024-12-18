@@ -96,19 +96,19 @@
                     <ul class="menu menu-horizontal px-1">
                         <li>
                             <a href="{{ url_for('inventory.tools') }}"
-                               class="{% if request.endpoint.startswith('tools.') %}active{% endif %}">
+                               class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-tools mr-2"></i>Werkzeuge
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('inventory.consumables') }}"
-                               class="{% if request.endpoint.startswith('consumables.') %}active{% endif %}">
+                               class="btn btn-ghost min-h-[3rem] flex items-center {% if 'consumables' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
                             </a>
                         </li>
                         <li>
                             <a href="{{ url_for('inventory.workers') }}"
-                               class="{% if request.endpoint.startswith('workers.') %}active{% endif %}">
+                               class="btn btn-ghost min-h-[3rem] flex items-center {% if 'workers' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-users mr-2"></i>Mitarbeiter
                             </a>
                         </li>
@@ -117,8 +117,8 @@
 
                 <!-- QuickScan Button (Mittig) -->
                 <button onclick="showQuickScan()" 
-                        class="btn btn-circle btn-primary text-white"
-                        style="transform: translate(-50%, 0) scale(1.5);"
+                        class="btn btn-circle btn-primary text-white absolute left-1/2 -translate-x-1/2"
+                        style="transform: translate(-50%, 0) scale(2);"
                         aria-label="QuickScan öffnen">
                     <i class="fas fa-barcode"></i>
                 </button>
@@ -128,11 +128,11 @@
                     <div class="hidden lg:flex items-center gap-4">
                         {% if session.get('is_admin') %}
                         <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}" 
-                           class="btn btn-ghost {% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}btn-active{% endif %}">
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}btn-active{% endif %}">
                             <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
                         </a>
                         <a href="{{ url_for(routes.ADMIN_DASHBOARD) }}" 
-                           class="btn btn-ghost {% if request.endpoint == routes.ADMIN_DASHBOARD %}btn-active{% endif %}">
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == routes.ADMIN_DASHBOARD %}btn-active{% endif %}">
                             <i class="fas fa-chart-line mr-2"></i>Dashboard
                         </a>
                         {% endif %}

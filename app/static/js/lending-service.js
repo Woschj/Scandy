@@ -243,17 +243,110 @@
     console.log('=== LENDING SERVICE INITIALIZATION COMPLETE ===');
 })(); 
 
-function switchType(type) {
-    // Toggle active state of buttons
-    document.querySelectorAll('[data-tab]').forEach(btn => {
-        btn.classList.toggle('btn-active', btn.dataset.tab === type);
-    });
-    
-    // Show/hide corresponding lists
-    document.getElementById('toolsList').classList.toggle('hidden', type !== 'tools');
-    document.getElementById('consumablesList').classList.toggle('hidden', type !== 'consumables');
-    
-    // Reset search and selection
-    document.getElementById('itemSearch').value = '';
-    document.getElementById('itemDetails').classList.add('hidden');
-} 
+// Manual Lending Namespace
+window.ManualLending = {
+    selectedItem: null,
+    selectedWorker: null,
+
+    updateConfirmButton() {
+        const confirmButton = document.getElementById('confirmButton');
+        if (confirmButton) {
+            confirmButton.disabled = !(this.selectedItem && this.selectedWorker);
+        }
+    },
+
+    switchType(type) {
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.classList.toggle('btn-active', btn.dataset.tab === type);
+        });
+        
+        document.getElementById('toolsList').classList.toggle('hidden', type !== 'tools');
+        document.getElementById('consumablesList').classList.toggle('hidden', type !== 'consumables');
+        
+        const amountField = document.getElementById('amountField');
+        if (type === 'consumables') {
+            amountField.classList.remove('hidden');
+        } else {
+            amountField.classList.add('hidden');
+        }
+        
+        document.getElementById('itemSearch').value = '';
+        document.getElementById('itemDetails').classList.add('hidden');
+        document.getElementById('previewItem').textContent = 'Kein Artikel ausgewählt';
+        this.selectedItem = null;
+        this.updateConfirmButton();
+    },
+
+    selectItem(value) {
+        const [type, id, barcode, name] = value.split(':');
+        this.selectedItem = { type, id, barcode, name };
+        document.getElementById('previewItem').textContent = `${name} (${barcode})`;
+        
+        const amountField = document.getElementById('amountField');
+        if (type === 'consumable') {
+            amountField.classList.remove('hidden');
+        } else {
+            amountField.classList.add('hidden');
+        }
+        this.updateConfirmButton();
+    },
+
+    selectWorker(value) {
+        const [type, id, barcode, name] = value.split(':');
+        this.selectedWorker = { 
+            id, 
+            barcode: barcode.replace('worker:', ''),  // "worker:" Prefix entfernen falls vorhanden
+            name 
+        };
+        document.getElementById('previewWorker').textContent = `${name} (${barcode})`;
+        this.updateConfirmButton();
+    },
+
+    async processLending() {
+        try {
+            if (!this.selectedItem || !this.selectedWorker) {
+                console.error('No item or worker selected');
+                return;
+            }
+
+            console.log('Selected Worker:', this.selectedWorker);  // Debug-Ausgabe
+            console.log('Selected Item:', this.selectedItem);      // Debug-Ausgabe
+
+            const itemData = {
+                type: this.selectedItem.type,
+                barcode: this.selectedItem.barcode,
+                amount: this.selectedItem.type === 'consumable' 
+                        ? parseInt(document.getElementById('amount').value) || 1 
+                        : 1
+            };
+
+            const workerData = {
+                barcode: this.selectedWorker.barcode.replace('worker:', '')  // Sicherstellen, dass kein Prefix vorhanden ist
+            };
+
+            const result = await window.LendingService.processLending(itemData, workerData);
+
+            if (result.success) {
+                // Toast oder Alert für Feedback
+                const message = this.selectedItem.type === 'consumable' 
+                    ? `${this.selectedItem.name} wurde erfolgreich an ${this.selectedWorker.name} ausgegeben`
+                    : `${this.selectedItem.name} wurde erfolgreich an ${this.selectedWorker.name} ausgeliehen`;
+                
+                // Toast anzeigen (falls vorhanden)
+                if (window.toast) {
+                    window.toast.success(message);
+                } else {
+                    alert(message);
+                }
+                
+                location.reload();
+            } else {
+                alert(result.message || 'Fehler bei der Ausleihe');
+            }
+
+        } catch (error) {
+            console.error('Error in processLending:', error);
+            alert('Fehler bei der Ausleihe: ' + error.message);
+        }
+    }
+}; 

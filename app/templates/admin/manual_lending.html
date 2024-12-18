@@ -2,6 +2,11 @@
 
 {% block title %}Manuelle Ausleihe{% endblock %}
 
+{% block head %}
+<!-- Table Functions Script -->
+<script src="{{ url_for('static', filename='js/table-functions.js') }}" defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Linke Spalte: Item-Auswahl -->
@@ -163,23 +168,23 @@
                         <!-- Item Vorschau -->
                         <div class="mb-4">
                             <p class="text-sm font-medium text-gray-500">Artikel</p>
-                            <p id="previewItem" class="font-medium">-</p>
+                            <div id="previewItem">Kein Artikel ausgewählt</div>
                         </div>
-
-                        <!-- Mitarbeiter Vorschau -->
-                        <div class="mb-4">
-                            <p class="text-sm font-medium text-gray-500">Mitarbeiter</p>
-                            <p id="previewWorker" class="font-medium">-</p>
-                        </div>
-
-                        <!-- Menge (nur für Verbrauchsmaterial) -->
-                        <div id="amountContainer" class="mb-4 hidden">
-                            <p class="text-sm font-medium text-gray-500">Menge</p>
+                        
+                        <!-- Mengenfeld (nur für Verbrauchsmaterial) -->
+                        <div id="amountField" class="mb-4 hidden">
+                            <label class="text-sm font-medium text-gray-500">Menge</label>
                             <input type="number" 
-                                   id="amountInput" 
+                                   id="amount" 
                                    class="input input-bordered w-full" 
                                    value="1" 
                                    min="1">
+                        </div>
+                        
+                        <!-- Worker Vorschau -->
+                        <div class="mb-4">
+                            <p class="text-sm font-medium text-gray-500">Mitarbeiter</p>
+                            <div id="previewWorker">Kein Mitarbeiter ausgewählt</div>
                         </div>
                     </div>
 
@@ -199,34 +204,72 @@
 <!-- Ersetzen Sie den Bereich für aktuelle Ausleihen mit dieser Version -->
 <div class="mt-8">
     <h2 class="text-xl font-semibold mb-4">Aktuelle Ausleihen</h2>
+    <!-- Filter Controls -->
+    <div class="flex gap-4 mb-4">
+        <select id="categoryFilter" class="select select-bordered">
+            <option value="">Alle Kategorien</option>
+            <option value="Werkzeug">Werkzeuge</option>
+            <option value="Verbrauchsmaterial">Verbrauchsmaterial</option>
+        </select>
+        <input type="text" 
+               id="searchInput" 
+               placeholder="Suchen..." 
+               class="input input-bordered">
+    </div>
+    
     {% if current_lendings %}
     <div class="overflow-x-auto">
-        <table class="min-w-full table-auto">
+        <table class="min-w-full table-auto" id="lendingsTable">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-2 text-left">Werkzeug</th>
+                    <th class="px-4 py-2 text-left cursor-pointer" data-sort="item">
+                        Artikel
+                        <i class="fas fa-sort ml-1"></i>
+                    </th>
                     <th class="px-4 py-2 text-left">Barcode</th>
-                    <th class="px-4 py-2 text-left">Ausgeliehen an</th>
+                    <th class="px-4 py-2 text-left cursor-pointer" data-sort="worker">
+                        Ausgeliehen/Ausgegeben an
+                        <i class="fas fa-sort ml-1"></i>
+                    </th>
                     <th class="px-4 py-2 text-left">Mitarbeiter-Barcode</th>
-                    <th class="px-4 py-2 text-left">Ausgeliehen seit</th>
+                    <th class="px-4 py-2 text-left cursor-pointer" data-sort="date">
+                        Datum
+                        <i class="fas fa-sort ml-1"></i>
+                    </th>
                     <th class="px-4 py-2 text-left">Kategorie</th>
+                    <th class="px-4 py-2 text-left">Menge</th>
                     <th class="px-4 py-2 text-left">Aktionen</th>
                 </tr>
             </thead>
             <tbody>
                 {% for lending in current_lendings %}
                 <tr class="border-t">
-                    <td class="px-4 py-2">{{ lending.tool_name }}</td>
-                    <td class="px-4 py-2">{{ lending.tool_barcode }}</td>
+                    <td class="px-4 py-2">{{ lending.item_name }}</td>
+                    <td class="px-4 py-2">{{ lending.item_barcode }}</td>
                     <td class="px-4 py-2">{{ lending.worker_name }}</td>
                     <td class="px-4 py-2">{{ lending.worker_barcode }}</td>
-                    <td class="px-4 py-2">{{ lending.lent_at }}</td>
+                    <td class="px-4 py-2">
+                        {% if lending.category == 'Werkzeug' %}
+                            Ausgeliehen am {{ lending.action_date }}
+                        {% else %}
+                            Ausgegeben am {{ lending.action_date }}
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-2">{{ lending.category }}</td>
                     <td class="px-4 py-2">
-                        <button onclick="returnTool('{{ lending.tool_barcode }}')"
+                        {% if lending.category == 'Verbrauchsmaterial' %}
+                            {{ lending.amount }} Stk
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">
+                        {% if lending.category == 'Werkzeug' %}
+                        <button onclick="returnTool('{{ lending.item_barcode }}')"
                                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded">
                             Rückgabe
                         </button>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

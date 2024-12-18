@@ -45,19 +45,31 @@ def get_current_lendings():
         cursor.execute("""
             SELECT 
                 l.id,
-                t.name as tool_name,
+                COALESCE(t.name, c.name) as item_name,
+                COALESCE(t.barcode, c.barcode) as item_barcode,
                 w.firstname || ' ' || w.lastname as worker_name,
-                w.department,
-                l.lent_at,
+                w.barcode as worker_barcode,
+                COALESCE(l.lent_at, cu.used_at) as action_date,
                 CASE 
-                    WHEN julianday('now') - julianday(l.lent_at) > 7 
-                    THEN 1 ELSE 0 
-                END as overdue
-            FROM lendings l
-            JOIN tools t ON l.tool_barcode = t.barcode
+                    WHEN t.id IS NOT NULL THEN 'Werkzeug'
+                    ELSE 'Verbrauchsmaterial'
+                END as category,
+                CASE
+                    WHEN c.id IS NOT NULL THEN cu.quantity
+                    ELSE NULL
+                END as amount
+            FROM (
+                SELECT id, tool_barcode as barcode, worker_barcode, lent_at, NULL as used_at
+                FROM lendings WHERE returned_at IS NULL
+                UNION ALL
+                SELECT id, NULL, worker_barcode, NULL, used_at
+                FROM consumable_usage
+            ) l
+            LEFT JOIN tools t ON l.barcode = t.barcode
+            LEFT JOIN consumable_usage cu ON l.id = cu.id
+            LEFT JOIN consumables c ON cu.consumable_id = c.id
             JOIN workers w ON l.worker_barcode = w.barcode
-            WHERE l.returned_at IS NULL
-            ORDER BY l.lent_at DESC
+            ORDER BY action_date DESC
         """)
         
         lendings = []
@@ -347,9 +359,8 @@ def manual_lending():
                     formatted_date = ''
 
                 current_lendings.append({
-                    'id': row[0],
-                    'tool_name': row[1],
-                    'tool_barcode': row[2],
+                    'item_name': row[1],
+                    'item_barcode': row[2],
                     'worker_name': row[3],
                     'worker_barcode': row[4],
                     'lent_at': formatted_date,
@@ -431,7 +442,13 @@ def process_lending():
                     SELECT id FROM workers
                     WHERE barcode = ?
                 """, (data['worker_barcode'],))
-                worker_id = cursor.fetchone()[0]
+                worker_result = cursor.fetchone()
+                if not worker_result:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Mitarbeiter nicht gefunden'
+                    }), 404
+                worker_id = worker_result[0]
                 
                 # Dann in consumable_usage einfügen
                 cursor.execute("""
@@ -464,14 +481,23 @@ def process_lending():
                         'message': 'Werkzeug ist nicht verfügbar'
                     }), 400
 
-                # Extrahiere den Barcode aus dem worker-String
-                worker_barcode = data['worker_barcode'].split(':')[2]
+                # Prüfe ob der Worker existiert
+                cursor.execute("""
+                    SELECT id FROM workers
+                    WHERE barcode = ?
+                """, (data['worker_barcode'],))
+                worker_result = cursor.fetchone()
+                if not worker_result:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Mitarbeiter nicht gefunden'
+                    }), 404
 
                 cursor.execute("""
                     INSERT INTO lendings 
                     (tool_barcode, worker_barcode, lent_at)
                     VALUES (?, ?, datetime('now'))
-                """, (data['item_barcode'], worker_barcode))
+                """, (data['item_barcode'], data['worker_barcode']))
 
                 cursor.execute("""
                     UPDATE tools 
