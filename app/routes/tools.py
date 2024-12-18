@@ -6,12 +6,53 @@ bp = Blueprint('tools', __name__, url_prefix='/inventory/tools')
 
 @bp.route('/', methods=['GET'])
 def index():
-    tools = Database.query('''
-        SELECT * FROM tools 
-        WHERE deleted = 0 
-        ORDER BY name
-    ''')
-    return render_template('tools.html', tools=tools)
+    with Database.get_db() as conn:
+        cursor = conn.cursor()
+        # Status-Filter aus URL
+        status = request.args.get('status')
+        
+        # Basis-Query
+        query = """
+            SELECT 
+                t.*,
+                CASE 
+                    WHEN l.id IS NOT NULL THEN 'verliehen'
+                    WHEN t.status = 'defekt' THEN 'defekt'
+                    ELSE 'verfügbar'
+                END as status,
+                l.lent_at as status_since,
+                w.firstname || ' ' || w.lastname as current_borrower,
+                w.department as borrower_department
+            FROM tools t
+            LEFT JOIN (
+                SELECT tool_barcode, MAX(id) as latest_id
+                FROM lendings 
+                WHERE returned_at IS NULL
+                GROUP BY tool_barcode
+            ) latest ON t.barcode = latest.tool_barcode
+            LEFT JOIN lendings l ON latest.latest_id = l.id
+            LEFT JOIN workers w ON l.worker_barcode = w.barcode
+            WHERE t.deleted = 0
+        """
+        
+        params = []
+        if status:
+            query += " AND LOWER(t.status) = LOWER(?)"
+            params.append(status)
+            
+        query += " ORDER BY t.name"
+        
+        cursor.execute(query, params)
+        tools = cursor.fetchall()
+        
+        # Hole alle unique Orte für Filter
+        cursor.execute("SELECT DISTINCT location FROM tools WHERE location IS NOT NULL AND deleted = 0")
+        locations = [row[0] for row in cursor.fetchall()]
+        
+        return render_template('tools.html', 
+                             tools=tools, 
+                             orte=locations,
+                             selected_status=status)
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required

@@ -11,6 +11,8 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Custom Styles -->
     <style>
@@ -38,6 +40,17 @@
                 --b3: {{ colors.base }};      /* base-300 */
                 --bc: {{ colors.base_content }}; /* base content */
             {% endif %}
+        }
+        
+        /* Globale Typografie */
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Verbesserte Tabellen-Header */
+        thead th {
+            font-family: 'Inter';
+            letter-spacing: 0.05em;
         }
         
         /* Button-Styles */

@@ -47,10 +47,18 @@
                     </div>
                     
                     <!-- Bereich -->
-                    <div>
-                        <label class="label">Bereich</label>
-                        <input type="text" name="department" value="{{ worker.department or '' }}"
-                               class="input input-bordered w-full">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Abteilung</span>
+                        </label>
+                        <select name="department" class="select select-bordered w-full">
+                            {% for department in departments %}
+                                <option value="{{ department }}" 
+                                        {% if department == worker.department %}selected{% endif %}>
+                                    {{ department }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
 
                     <!-- Speichern Button -->

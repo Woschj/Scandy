@@ -28,9 +28,12 @@
                 <label class="block text-sm font-medium mb-1">Bereich</label>
                 <select id="filterBereich" class="select select-bordered w-full">
                     <option value="">Alle Bereiche</option>
-                    {% for bereich in bereiche %}
-                        <option value="{{ bereich }}">{{ bereich }}</option>
-                    {% endfor %}
+                    <option value="Medien und Digitales">Medien und Digitales</option>
+                    <option value="Technik">Technik</option>
+                    <option value="Kaufmännisches">Kaufmännisches</option>
+                    <option value="Service">Service</option>
+                    <option value="APE">APE</option>
+                    <option value="Mitarbeiter">Mitarbeiter</option>
                 </select>
             </div>
         </div>
@@ -43,7 +46,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bereich</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Email</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Barcode</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
                         {% endif %}
@@ -53,16 +56,44 @@
                     {% for worker in workers %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for(routes.WORKER_DETAILS, barcode=worker.barcode) }}"
-                               class="link-primary">
-                                {{ worker.firstname }} {{ worker.lastname }}
-                            </a>
+                            <div class="flex flex-col">
+                                <a href="{{ url_for(routes.WORKER_DETAILS, barcode=worker.barcode) }}"
+                                   class="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 inline-block
+                                        font-inter font-semibold tracking-tight hover:scale-[1.02] transform transition-all">
+                                    <span class="font-normal text-sm text-gray-600">{{ worker.firstname }}</span>
+                                    <span class="ml-1">{{ worker.lastname }}</span>
+                                </a>
+                            </div>
                         </td>
-                        <td class="px-6 py-4">{{ worker.department or '-' }}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1.5 rounded-lg font-medium inline-block font-inter tracking-tight
+                                {% if worker.department == 'Medien und Digitales' %}
+                                    bg-purple-100 text-purple-800
+                                {% elif worker.department == 'Technik' %}
+                                    bg-blue-100 text-blue-800
+                                {% elif worker.department == 'Kaufmännisches' %}
+                                    bg-indigo-100 text-indigo-800
+                                {% elif worker.department == 'Service' %}
+                                    bg-pink-100 text-pink-800
+                                {% elif worker.department == 'APE' %}
+                                    bg-cyan-100 text-cyan-800
+                                {% else %}
+                                    bg-gray-100 text-gray-800
+                                {% endif %}">
+                                <i class="fas fa-{% if worker.department == 'Medien und Digitales' %}laptop
+                                            {% elif worker.department == 'Technik' %}wrench
+                                            {% elif worker.department == 'Kaufmännisches' %}chart-line
+                                            {% elif worker.department == 'Service' %}concierge-bell
+                                            {% elif worker.department == 'APE' %}graduation-cap
+                                            {% else %}user
+                                            {% endif %} mr-2"></i>
+                                {{ worker.department or 'Mitarbeiter' }}
+                            </span>
+                        </td>
                         <td class="px-6 py-4">{{ worker.email or '-' }}</td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4 text-center w-40">
                             <button onclick="showBarcodeModal('{{ worker.barcode }}')" 
-                                    class="inline-flex items-center">
+                                    class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-300 inline-flex justify-center">
                                 <svg class="barcode h-8" 
                                      jsbarcode-value="{{ worker.barcode }}"
                                      jsbarcode-width="1"

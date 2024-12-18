@@ -8,7 +8,7 @@
 <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">Werkzeuge</h2>
+            <h2 class="text-2xl font-bold font-inter tracking-tight">Werkzeuge</h2>
             <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Neues Werkzeug
             </a>
@@ -53,7 +53,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Seit</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Ausgeliehen an</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Barcode</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
                         {% endif %}
@@ -63,28 +63,62 @@
                     {% for tool in tools %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for('tools.details', barcode=tool.barcode) }}" class="link-primary">
+                            <a href="{{ url_for('tools.details', barcode=tool.barcode) }}"
+                               class="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 inline-block
+                                    font-inter font-semibold tracking-tight hover:scale-[1.02] transform transition-all">
                                 {{ tool.name }}
                             </a>
                         </td>
-                        <td class="px-6 py-4">{{ tool.location or '-' }}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                            <span class="px-3 py-1.5 rounded-lg bg-base-200 inline-block font-inter">
+                                <i class="fas fa-map-marker-alt text-gray-400 mr-2"></i>
+                                {{ tool.location or '-' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1.5 rounded-lg font-medium inline-block
+                                font-inter tracking-tight
                                 {% if tool.status == 'Verfügbar' %}
-                                    bg-green-100 text-green-800
+                                    bg-success/20 text-success
                                 {% elif tool.status == 'Defekt' %}
-                                    bg-red-100 text-red-800
+                                    bg-error/20 text-error
                                 {% elif tool.status == 'Ausgeliehen' %}
-                                    bg-yellow-100 text-yellow-800
+                                    bg-warning/20 text-warning
                                 {% endif %}">
+                                <i class="fas fa-{% if tool.status == 'Verfügbar' %}check
+                                            {% elif tool.status == 'Defekt' %}exclamation-triangle
+                                            {% elif tool.status == 'Ausgeliehen' %}exchange-alt
+                                            {% endif %} mr-2"></i>
                                 {{ tool.status }}
                             </span>
                         </td>
-                        <td class="px-6 py-4">{{ tool.status_since or '-' }}</td>
-                        <td class="px-6 py-4">{{ tool.current_borrower or '-' }}</td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1.5 rounded-lg bg-base-200 inline-block">
+                                <i class="fas fa-clock text-gray-400 mr-2"></i>
+                                {{ tool.status_since or '-' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if tool.current_borrower %}
+                            <div class="flex flex-col gap-1">
+                                <span class="px-3 py-1.5 rounded-lg bg-base-200 inline-block">
+                                    <i class="fas fa-user text-gray-400 mr-2"></i>
+                                    {{ tool.current_borrower }}
+                                </span>
+                                {% if tool.borrower_department %}
+                                <span class="px-3 py-1 rounded-lg bg-base-200/50 text-sm text-gray-500 inline-block">
+                                    <i class="fas fa-building text-gray-400 mr-2"></i>
+                                    {{ tool.borrower_department }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="px-3 py-1.5 rounded-lg bg-base-200 inline-block">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center w-40">
                             <button onclick="showBarcodeModal('{{ tool.barcode }}')" 
-                                    class="inline-flex items-center">
+                                    class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-300 inline-flex justify-center">
                                 <svg class="barcode h-8" 
                                      jsbarcode-value="{{ tool.barcode }}"
                                      jsbarcode-width="1"
@@ -95,7 +129,8 @@
                         </td>
                         {% if session.get('is_admin') %}
                         <td class="px-6 py-4 text-right">
-                            <button class="btn btn-error btn-sm" onclick="deleteTool('{{ tool.id }}')">
+                            <button onclick="deleteTool('{{ tool.id }}')"
+                                    class="px-3 py-1.5 rounded-lg bg-error/10 text-error hover:bg-error/20">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -211,5 +246,48 @@ function closeBarcodeModal() {
 window.onload = function() {
     JsBarcode(".barcode").init();
 }
+
+// Filter-Handling
+document.getElementById('filterStatus').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('filterOrt').addEventListener('change', function() {
+    applyFilters();
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+    applyFilters();
+});
+
+function applyFilters() {
+    const status = document.getElementById('filterStatus').value;
+    const ort = document.getElementById('filterOrt').value;
+    const search = document.getElementById('searchInput').value;
+    
+    let url = new URL(window.location);
+    if (status) url.searchParams.set('status', status);
+    else url.searchParams.delete('status');
+    
+    if (ort) url.searchParams.set('location', ort);
+    else url.searchParams.delete('location');
+    
+    if (search) url.searchParams.set('search', search);
+    else url.searchParams.delete('search');
+    
+    window.location = url;
+}
+
+// Setze Filter-Werte aus URL
+window.addEventListener('load', function() {
+    const url = new URL(window.location);
+    const status = url.searchParams.get('status');
+    const ort = url.searchParams.get('location');
+    const search = url.searchParams.get('search');
+    
+    if (status) document.getElementById('filterStatus').value = status;
+    if (ort) document.getElementById('filterOrt').value = ort;
+    if (search) document.getElementById('searchInput').value = search;
+});
 </script>
 {% endblock %}

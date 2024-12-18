@@ -47,6 +47,7 @@
                     <option value="">Alle Status</option>
                     <option value="verfügbar">Verfügbar</option>
                     <option value="nachbestellen">Nachbestellen</option>
+                    <option value="kritisch">Kritisch</option>
                     <option value="leer">Leer</option>
                 </select>
             </div>
@@ -63,7 +64,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bestand</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Mindestbestand</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Barcode</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
                         {% endif %}
@@ -73,30 +74,46 @@
                     {% for item in consumables %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="{{ url_for('consumables.details', barcode=item.barcode) }}" class="link-primary">
+                            <a href="{{ url_for('consumables.details', barcode=item.barcode) }}"
+                               class="px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 inline-block
+                                    font-inter font-semibold tracking-tight hover:scale-[1.02] transform transition-all">
                                 {{ item.name or '-' }}
                             </a>
                         </td>
                         <td class="px-6 py-4">{{ item.category or '-' }}</td>
                         <td class="px-6 py-4">{{ item.location or '-' }}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {% if item.stock_status == 'Nachbestellen' %}
-                                    bg-red-100 text-red-800
+                            <span class="px-3 py-1.5 rounded-lg font-medium inline-block font-inter tracking-tight
+                                {% if item.quantity == 0 %}
+                                    bg-error/20 text-error
+                                {% elif item.quantity <= item.min_quantity * 0.5 %}
+                                    bg-error/20 text-error
+                                {% elif item.quantity <= item.min_quantity %}
+                                    bg-warning/20 text-warning
                                 {% else %}
-                                    bg-green-100 text-green-800
+                                    bg-success/20 text-success
                                 {% endif %}">
-                                {{ item.stock_status }}
-                                {% if item.stock_status == 'Nachbestellen' %}
-                                    (Min: {{ item.min_quantity }})
+                                <i class="fas fa-{% if item.quantity == 0 %}times
+                                            {% elif item.quantity <= item.min_quantity * 0.5 %}exclamation-triangle
+                                            {% elif item.quantity <= item.min_quantity %}exclamation
+                                            {% else %}check
+                                            {% endif %} mr-2"></i>
+                                {% if item.quantity == 0 %}
+                                    Leer
+                                {% elif item.quantity <= item.min_quantity * 0.5 %}
+                                    Kritisch
+                                {% elif item.quantity <= item.min_quantity %}
+                                    Nachbestellen
+                                {% else %}
+                                    Verfügbar
                                 {% endif %}
                             </span>
                         </td>
                         <td class="px-6 py-4">{{ item.quantity or '0' }}</td>
                         <td class="px-6 py-4">{{ item.min_quantity or '0' }}</td>
-                        <td class="px-6 py-4 text-right">
+                        <td class="px-6 py-4 text-center w-40">
                             <button onclick="showBarcodeModal('{{ item.barcode }}')" 
-                                    class="inline-flex items-center">
+                                    class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-300 inline-flex justify-center">
                                 <svg class="barcode h-8" 
                                      jsbarcode-value="{{ item.barcode }}"
                                      jsbarcode-width="1"

@@ -8,11 +8,35 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="card-title">Werkzeuge</h2>
-            <p>{{ stats.tools_count }} aktive Werkzeuge</p>
-            <div class="card-actions justify-end">
-                <a href="{{ url_for('admin.add_tool') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Neues Werkzeug
-                </a>
+            <div class="stats stats-vertical shadow">
+                <div class="stat">
+                    <div class="stat-title">Gesamt</div>
+                    <div class="stat-value text-primary">{{ stats.tools_count }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Status</div>
+                    <a href="{{ url_for('inventory.tools') }}?status=verfügbar" 
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-success flex items-center gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ stats.tools.available }} verfügbar
+                        </span>
+                    </a>
+                    <a href="{{ url_for('inventory.tools') }}?status=verliehen"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-warning flex items-center gap-2">
+                            <i class="fas fa-exchange-alt"></i>
+                            {{ stats.tools.lent }} verliehen
+                        </span>
+                    </a>
+                    <a href="{{ url_for('inventory.tools') }}?status=defekt"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-error flex items-center gap-2">
+                            <i class="fas fa-times"></i>
+                            {{ stats.tools.defect }} defekt
+                        </span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -21,11 +45,35 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="card-title">Verbrauchsmaterial</h2>
-            <p>{{ stats.consumables_count }} aktive Materialien</p>
-            <div class="card-actions justify-end">
-                <a href="{{ url_for('admin.add_consumable') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Neues Material
-                </a>
+            <div class="stats stats-vertical shadow">
+                <div class="stat">
+                    <div class="stat-title">Gesamt</div>
+                    <div class="stat-value text-primary">{{ stats.consumables_count }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Bestand</div>
+                    <a href="{{ url_for('inventory.consumables') }}?stock=sufficient"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-success flex items-center gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ stats.consumables.sufficient }} ausreichend
+                        </span>
+                    </a>
+                    <a href="{{ url_for('inventory.consumables') }}?stock=low"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-warning flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ stats.consumables.low }} nachbestellen
+                        </span>
+                    </a>
+                    <a href="{{ url_for('inventory.consumables') }}?stock=empty"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="text-error flex items-center gap-2">
+                            <i class="fas fa-times"></i>
+                            {{ stats.consumables.empty }} leer
+                        </span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -34,11 +82,24 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <h2 class="card-title">Mitarbeiter</h2>
-            <p>{{ stats.workers_count }} aktive Mitarbeiter</p>
-            <div class="card-actions justify-end">
-                <a href="{{ url_for('admin.add_worker') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Neuer Mitarbeiter
-                </a>
+            <div class="stats stats-vertical shadow">
+                <div class="stat">
+                    <div class="stat-title">Gesamt</div>
+                    <div class="stat-value text-primary">{{ stats.workers_count }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Nach Abteilung</div>
+                    {% for dept in stats.workers.departments %}
+                    <a href="{{ url_for('inventory.workers') }}?department={{ dept.name|urlencode }}"
+                       class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
+                        <span class="flex items-center gap-2">
+                            <i class="fas fa-users"></i>
+                            {{ dept.name }}
+                        </span>
+                        <span class="badge">{{ dept.count }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -55,7 +116,9 @@
                         <tr>
                             <th>Werkzeug</th>
                             <th>Mitarbeiter</th>
+                            <th>Abteilung</th>
                             <th>Ausgeliehen am</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,7 +126,15 @@
                         <tr>
                             <td>{{ lending.tool_name }}</td>
                             <td>{{ lending.worker_name }}</td>
+                            <td>{{ lending.department }}</td>
                             <td>{{ lending.lent_at }}</td>
+                            <td>
+                                {% if lending.overdue %}
+                                <span class="badge badge-error">überfällig</span>
+                                {% else %}
+                                <span class="badge badge-success">aktiv</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

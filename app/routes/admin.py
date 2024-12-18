@@ -8,6 +8,7 @@ from app.utils.db_schema import SchemaManager
 import colorsys
 import logging
 from datetime import datetime
+from app.models.models import Tool, Consumable, Worker
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -37,20 +38,38 @@ def get_consumables_stats(conn):
     ''').fetchone()[0]
     return {'total': total, 'low_stock': low_stock}
 
-def get_current_lendings(conn):
-    """Hole aktuelle Ausleihen"""
-    return conn.execute('''
-        SELECT 
-            t.name as tool_name,
-            w.firstname || ' ' || w.lastname as worker_name,
-            l.lent_at
-        FROM lendings l
-        JOIN tools t ON t.barcode = l.tool_barcode
-        JOIN workers w ON w.barcode = l.worker_barcode
-        WHERE l.returned_at IS NULL
-        ORDER BY l.lent_at DESC
-        LIMIT 5
-    ''').fetchall()
+def get_current_lendings():
+    """Holt aktuelle Ausleihen mit zusätzlichen Informationen"""
+    with Database.get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT 
+                l.id,
+                t.name as tool_name,
+                w.firstname || ' ' || w.lastname as worker_name,
+                w.department,
+                l.lent_at,
+                CASE 
+                    WHEN julianday('now') - julianday(l.lent_at) > 7 
+                    THEN 1 ELSE 0 
+                END as overdue
+            FROM lendings l
+            JOIN tools t ON l.tool_barcode = t.barcode
+            JOIN workers w ON l.worker_barcode = w.barcode
+            WHERE l.returned_at IS NULL
+            ORDER BY l.lent_at DESC
+        """)
+        
+        lendings = []
+        for row in cursor.fetchall():
+            lendings.append({
+                'tool_name': row[1],
+                'worker_name': row[2],
+                'department': row[3],
+                'lent_at': row[4],
+                'overdue': bool(row[5])
+            })
+        return lendings
 
 def hsl_to_hex(hsl_str):
     """Konvertiert HSL-String zu Hex-Farbe"""
@@ -67,21 +86,15 @@ def hsl_to_hex(hsl_str):
         print(f"HSL String war: {hsl_str}")
         return '#3B82F6'
 
-@bp.route('/dashboard')
-@admin_required
-def dashboard():
-    with Database.get_db() as db:
-        cursor = db.cursor()
-        
-        # Lade die primäre Farbe
+def get_color_settings():
+    """Holt die Farbeinstellungen aus der Datenbank"""
+    with Database.get_db() as conn:
+        cursor = conn.cursor()
         cursor.execute("SELECT value FROM settings WHERE key = 'color_primary'")
         row = cursor.fetchone()
         
-        colors = {}
-        if row and row['value']:
-            hsl_value = row['value']
-            print(f"Loaded HSL from DB: {hsl_value}")
-            
+        if row and row[0]:
+            hsl_value = row[0]
             try:
                 # Konvertiere HSL zu HEX
                 h, s, l = map(float, hsl_value.replace('%', '').split())
@@ -92,65 +105,48 @@ def dashboard():
                 r, g, b = colorsys.hls_to_rgb(h, l, s)
                 hex_color = f'#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}'
                 
-                print(f"Converted HSL {hsl_value} to HEX {hex_color}")  # Debug
-                
-                colors = {
+                return {
                     'primary': hsl_value,
                     'primary_hex': hex_color.upper()  # Uppercase für Konsistenz
                 }
             except Exception as e:
-                print(f"Error converting HSL to HEX: {e}")
-                colors = {
-                    'primary': '259 94% 51%',
-                    'primary_hex': '#3B82F6'
-                }
-        else:
-            colors = {
-                'primary': '259 94% 51%',
-                'primary_hex': '#3B82F6'
-            }
+                logger.error(f"Error converting HSL to HEX: {e}")
         
-        print(f"Final colors for template: {colors}")  # Debug
-        
-        # Statistiken sammeln
-        tools_stats = get_tools_stats(db)
-        workers_stats = get_workers_stats(db)
-        consumables_stats = get_consumables_stats(db)
-        current_lendings = get_current_lendings(db)
-        
-        # Settings aus der Datenbank holen
-        settings = dict(db.execute('''
-            SELECT key, value FROM settings
-            WHERE key IN ('primary_color', 'accent_color')
-        ''').fetchall()) or {
-            'primary_color': '#3B82F6',  # Standardwerte
-            'accent_color': '#10B981'
+        # Standardwerte zurückgeben, wenn keine Einstellungen gefunden wurden
+        return {
+            'primary': '259 94% 51%',
+            'primary_hex': '#3B82F6'
         }
-        
-        stats = {
-            'tools_count': tools_stats['total'],
-            'tools_lent': tools_stats['lent'],
-            'workers_count': workers_stats['total'],
-            'consumables_count': consumables_stats['total'],
-            'consumables_low': consumables_stats['low_stock'],
-            'current_lendings': current_lendings
+
+@bp.route('/dashboard')
+@admin_required
+def dashboard():
+    stats = {
+        'tools_count': Tool.count_active(),
+        'tools': {
+            'available': Tool.count_by_status('verfügbar'),
+            'lent': Tool.count_by_status('verliehen'),
+            'defect': Tool.count_by_status('defekt')
+        },
+        'consumables_count': Consumable.count_active(),
+        'consumables': {
+            'sufficient': Consumable.count_by_stock_status('sufficient'),
+            'low': Consumable.count_by_stock_status('low'),
+            'empty': Consumable.count_by_stock_status('empty')
+        },
+        'workers_count': Worker.count_active(),
+        'workers': {
+            'departments': Worker.count_by_department()
         }
-        
-        # Korrekte Blueprint-Routen verwenden
-        urls = {
-            'tools': url_for('inventory.tools'),
-            'workers': url_for('inventory.workers'),
-            'consumables': url_for('inventory.consumables'),
-            'manual_lending': url_for('admin.manual_lending'),
-            'add_tool': url_for('inventory.add_tool'),        # Korrigiert zu inventory
-            'add_worker': url_for('inventory.add_worker'),    # Korrigiert zu inventory
-            'add_consumable': url_for('inventory.add_consumable')  # Korrigiert zu inventory
-        }
-        
-        return render_template('admin/dashboard.html', 
-                             colors=colors,
-                             stats=stats,
-                             current_lendings=current_lendings)
+    }
+    
+    current_lendings = get_current_lendings()
+    colors = get_color_settings()
+    
+    return render_template('admin/dashboard.html',
+                         stats=stats,
+                         current_lendings=current_lendings,
+                         colors=colors)
 
 @bp.route('/update_design', methods=['POST'])
 @admin_required

@@ -29,22 +29,15 @@
                 <input type="text" name="lastname" class="input input-bordered" required>
             </div>
 
-            <div class="form-control mb-4">
+            <div class="form-control">
                 <label class="label">
-                    <span class="label-text">Bereich</span>
+                    <span class="label-text">Abteilung</span>
                 </label>
-                <input 
-                    type="text" 
-                    name="department" 
-                    list="department-list" 
-                    class="input input-bordered" 
-                    required
-                >
-                <datalist id="department-list">
+                <select name="department" class="select select-bordered w-full">
                     {% for department in departments %}
-                        <option value="{{ department }}">
+                        <option value="{{ department }}">{{ department }}</option>
                     {% endfor %}
-                </datalist>
+                </select>
             </div>
 
             <div class="form-control mb-4">

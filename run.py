@@ -65,7 +65,9 @@ if __name__ == '__main__':
     with app.app_context():
         # Farbeinstellungen initialisieren
         logger.info("Initialisiere Farbeinstellungen...")
-        SchemaManager.init_settings()
+        db = Database()  # Database-Instanz erstellen
+        schema_manager = SchemaManager(db)
+        schema_manager.init_settings()
         
         # Struktur-Informationen ausgeben
         logger.info("Drucke Datenbank-Struktur...")

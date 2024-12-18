@@ -14,12 +14,25 @@ def index():
 @bp.route('/workers/add', methods=['GET', 'POST'])
 @admin_required
 def add():
+    departments = [
+        'Medien und Digitales',
+        'Technik',
+        'Kaufmännisches',
+        'Service',
+        'APE',
+        'Mitarbeiter'
+    ]
+    
     if request.method == 'POST':
         barcode = request.form['barcode']
         firstname = request.form['firstname']
         lastname = request.form['lastname']
         department = request.form.get('department', '')
         email = request.form.get('email', '')
+        
+        if department not in departments:
+            flash('Ungültige Abteilung ausgewählt', 'error')
+            return render_template('admin/add_worker.html', departments=departments)
         
         try:
             Database.query(
@@ -33,49 +46,47 @@ def add():
         except Exception as e:
             flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
             
-    return render_template('admin/add_worker.html')
+    return render_template('admin/add_worker.html', departments=departments)
 
 @bp.route('/<barcode>', methods=['GET'])
 def details(barcode):
+    departments = [
+        'Medien und Digitales',
+        'Technik',
+        'Kaufmännisches',
+        'Service',
+        'APE',
+        'Mitarbeiter'
+    ]
+    
     worker = Database.query('SELECT * FROM workers WHERE barcode = ? AND deleted = 0', [barcode], one=True)
     if not worker:
         flash('Mitarbeiter nicht gefunden', 'error')
         return redirect(url_for('workers.index'))
 
-    # Aktuelle Ausleihen
+    # Hole aktuelle Ausleihen
     current_lendings = Database.query('''
         SELECT 
-            l.*,
-            COALESCE(t.name, c.name) as item_name,
-            CASE 
-                WHEN t.id IS NOT NULL THEN 'Werkzeug'
-                ELSE 'Verbrauchsmaterial'
-            END as item_type,
-            l.quantity as amount_display,
-            datetime(l.lent_at, 'localtime') as formatted_checkout_time
+            t.name as tool_name,
+            t.barcode as tool_barcode,
+            datetime(l.lent_at, 'localtime') as lent_at
         FROM lendings l
-        LEFT JOIN tools t ON l.tool_barcode = t.barcode
-        LEFT JOIN consumables c ON l.consumable_barcode = c.barcode
+        JOIN tools t ON l.tool_barcode = t.barcode
         WHERE l.worker_barcode = ? 
         AND l.returned_at IS NULL
+        ORDER BY l.lent_at DESC
     ''', [barcode])
 
-    # Ausleihverlauf
+    # Hole Ausleihhistorie
     lending_history = Database.query('''
         SELECT 
-            l.*,
-            COALESCE(t.name, c.name) as item_name,
-            CASE 
-                WHEN t.id IS NOT NULL THEN 'Werkzeug'
-                ELSE 'Verbrauchsmaterial'
-            END as item_type,
-            l.quantity as amount_display,
-            datetime(l.lent_at, 'localtime') as formatted_checkout_time,
-            datetime(l.returned_at, 'localtime') as formatted_return_time
+            t.name as tool_name,
+            t.barcode as tool_barcode,
+            datetime(l.lent_at, 'localtime') as lent_at,
+            datetime(l.returned_at, 'localtime') as returned_at
         FROM lendings l
-        LEFT JOIN tools t ON l.tool_barcode = t.barcode
-        LEFT JOIN consumables c ON l.consumable_barcode = c.barcode
-        WHERE l.worker_barcode = ? 
+        JOIN tools t ON l.tool_barcode = t.barcode
+        WHERE l.worker_barcode = ?
         AND l.returned_at IS NOT NULL
         ORDER BY l.lent_at DESC
     ''', [barcode])
@@ -83,7 +94,8 @@ def details(barcode):
     return render_template('worker_details.html', 
                          worker=worker,
                          current_lendings=current_lendings,
-                         lending_history=lending_history)
+                         lending_history=lending_history,
+                         departments=departments)
 
 @bp.route('/<barcode>/edit', methods=['POST'])
 @admin_required
