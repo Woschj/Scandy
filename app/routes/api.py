@@ -173,33 +173,8 @@ def after_request(response):
     print('============================\n')
     return response
 
-@bp.route('/lending/process', methods=['POST'])
-def process_lending():
-    try:
-        data = request.get_json()
-        print("Empfangene Daten:", data)  # Debug-Log
-        
-        if not data or 'tool_barcode' not in data or 'worker_barcode' not in data:
-            return jsonify({'error': 'Unvollständige Daten'}), 400
-            
-        # Ausleihe in DB speichern
-        Database.query('''
-            INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-        ''', [data['tool_barcode'], data['worker_barcode']])
-        
-        # Tool-Status aktualisieren
-        Database.query('''
-            UPDATE tools 
-            SET status = 'Ausgeliehen'
-            WHERE barcode = ?
-        ''', [data['tool_barcode']])
-        
-        return jsonify({'success': True}), 200
-        
-    except Exception as e:
-        print("Fehler:", str(e))  # Debug-Log
-        return jsonify({'error': str(e)}), 500
+# Falls es hier eine alte Version der Route gibt, 
+# kommentieren Sie diese aus oder löschen Sie sie
 
 @bp.route('/lending/return', methods=['POST'])
 @admin_required

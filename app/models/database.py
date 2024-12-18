@@ -142,6 +142,220 @@ class Database:
         conn.commit()
         conn.close()
 
+    def create_lending(self, tool_barcode, worker_barcode):
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfen ob das Tool bereits ausgeliehen ist
+                cursor.execute("""
+                    SELECT id FROM lendings 
+                    WHERE tool_barcode = ? 
+                    AND returned_at IS NULL
+                """, (tool_barcode,))
+                
+                if cursor.fetchone():
+                    return {
+                        'success': False,
+                        'message': 'Werkzeug ist bereits ausgeliehen'
+                    }
+                
+                # Neue Ausleihe eintragen
+                cursor.execute("""
+                    INSERT INTO lendings (
+                        tool_barcode, 
+                        worker_barcode, 
+                        lent_at
+                    ) VALUES (?, ?, datetime('now'))
+                """, (tool_barcode, worker_barcode))
+                
+                lending_id = cursor.lastrowid
+                conn.commit()
+                
+                return {
+                    'success': True,
+                    'lending_id': lending_id,
+                    'message': 'Ausleihe erfolgreich eingetragen'
+                }
+                
+        except Exception as e:
+            logger.error(f"Error creating lending: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
+
+    def update_tool_status(self, barcode, status):
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE tools 
+                    SET status = ? 
+                    WHERE barcode = ?
+                """, (status, barcode))
+                
+                if cursor.rowcount == 0:
+                    return {
+                        'success': False,
+                        'message': 'Werkzeug nicht gefunden'
+                    }
+                    
+                conn.commit()
+                return {
+                    'success': True,
+                    'message': 'Status erfolgreich aktualisiert'
+                }
+                
+        except Exception as e:
+            logger.error(f"Error updating tool status: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
+
+    def get_tool_by_barcode(self, barcode):
+        """Werkzeug anhand des Barcodes abrufen"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, barcode, name, description, status, 
+                           created_at, deleted, location, category
+                    FROM tools 
+                    WHERE barcode = ? AND deleted = 0
+                """, (barcode,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'barcode': row[1],
+                        'name': row[2],
+                        'description': row[3],
+                        'status': row[4],
+                        'created_at': row[5],
+                        'deleted': row[6],
+                        'location': row[7],
+                        'category': row[8]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting tool: {str(e)}", exc_info=True)
+            return None
+
+    def get_worker_by_barcode(self, barcode):
+        """Mitarbeiter anhand des Barcodes abrufen"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT id, barcode, firstname, lastname, 
+                           department, email, created_at, deleted
+                    FROM workers 
+                    WHERE barcode = ? AND deleted = 0
+                """, (barcode,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'barcode': row[1],
+                        'firstname': row[2],
+                        'lastname': row[3],
+                        'department': row[4],
+                        'email': row[5],
+                        'created_at': row[6],
+                        'deleted': row[7]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting worker: {str(e)}", exc_info=True)
+            return None
+
+    def delete_lending(self, lending_id):
+        """Ausleihe löschen (für Rollback)"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM lendings 
+                    WHERE id = ?
+                """, (lending_id,))
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.error(f"Error deleting lending: {str(e)}", exc_info=True)
+            return False
+
+    def get_active_lending(self, tool_barcode):
+        """Aktive Ausleihe für ein Werkzeug abrufen"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        l.id,
+                        l.tool_barcode,
+                        l.worker_barcode,
+                        l.lent_at,
+                        w.firstname || ' ' || w.lastname as worker_name
+                    FROM lendings l
+                    JOIN workers w ON l.worker_barcode = w.barcode
+                    WHERE l.tool_barcode = ? 
+                    AND l.returned_at IS NULL
+                """, (tool_barcode,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row[0],
+                        'tool_barcode': row[1],
+                        'worker_barcode': row[2],
+                        'lent_at': row[3],
+                        'worker_name': row[4]
+                    }
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting active lending: {str(e)}", exc_info=True)
+            return None
+
+    def return_tool(self, tool_barcode):
+        """Werkzeug zurückgeben"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Aktive Ausleihe aktualisieren
+                cursor.execute("""
+                    UPDATE lendings 
+                    SET returned_at = datetime('now')
+                    WHERE tool_barcode = ? 
+                    AND returned_at IS NULL
+                """, (tool_barcode,))
+                
+                if cursor.rowcount == 0:
+                    return {
+                        'success': False,
+                        'message': 'Keine aktive Ausleihe gefunden'
+                    }
+                    
+                conn.commit()
+                return {
+                    'success': True,
+                    'message': 'Rückgabe erfolgreich eingetragen'
+                }
+                
+        except Exception as e:
+            logger.error(f"Error returning tool: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
+
 def init_db():
     with Database.get_db() as conn:
         # Prüfe existierende Spalten in tools

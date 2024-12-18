@@ -1,0 +1,33 @@
+<!-- ... bestehender Code ... -->
+<table class="min-w-full">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Barcode</th>
+            <th>Status</th>
+            <th>Standort</th>
+            <th>Kategorie</th>
+            <th>Ausgeliehen an</th>
+            <th>Ausgeliehen seit</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tool in tools %}
+        <tr>
+            <td>{{ tool.name }}</td>
+            <td>{{ tool.barcode }}</td>
+            <td>{{ tool.status }}</td>
+            <td>{{ tool.location }}</td>
+            <td>{{ tool.category }}</td>
+            <td>{{ tool.lent_to or '-' }}</td>
+            <td>{{ tool.lent_at|format_datetime if tool.lent_at else '-' }}</td>
+            <td>
+                <a href="{{ url_for('inventory.tool_details', barcode=tool.barcode) }}" 
+                   class="btn btn-sm">Details</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<!-- ... bestehender Code ... -->

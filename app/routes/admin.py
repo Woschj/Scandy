@@ -6,8 +6,12 @@ import os
 from flask import current_app
 from app.utils.db_schema import SchemaManager
 import colorsys
+import logging
+from datetime import datetime
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+logger = logging.getLogger(__name__)
 
 def get_tools_stats(conn):
     """Hole Werkzeug-Statistiken"""
@@ -200,87 +204,355 @@ def reset_design():
 
     return jsonify({'success': True})
 
-@bp.route('/manual_lending', methods=['GET'])
+@bp.route('/manual_lending')
 @admin_required
 def manual_lending():
-    tools = Database.query('''
-        SELECT id, barcode, name, status 
-        FROM tools 
-        WHERE deleted = 0
-    ''')
-    
-    workers = Database.query('''
-        SELECT id, barcode, firstname, lastname, department 
-        FROM workers 
-        WHERE deleted = 0
-    ''')
-    
-    consumables = Database.query('''
-        SELECT id, barcode, name, quantity, min_quantity 
-        FROM consumables 
-        WHERE deleted = 0
-    ''')
-    
-    return render_template('admin/manual_lending.html', 
-                         tools=tools,
-                         workers=workers,
-                         consumables=consumables)
+    logger.info("=== Starting manual_lending route ===")
+    db = Database()
+    try:
+        with db.get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Werkzeuge laden
+            logger.debug("Executing tools query...")
+            tools_query = """
+                SELECT 
+                    t.id,
+                    t.barcode,
+                    t.name,
+                    t.status
+                FROM tools t
+                WHERE t.deleted = 0
+                ORDER BY t.name
+            """
+            logger.debug(f"Tools SQL: {tools_query}")
+            cursor.execute(tools_query)
+            
+            tools_raw = cursor.fetchall()
+            logger.debug(f"Raw tools data: {tools_raw}")
+            
+            tools = [
+                {
+                    'id': row[0],
+                    'barcode': row[1],
+                    'name': row[2],
+                    'status': row[3]
+                }
+                for row in tools_raw
+            ]
+            logger.info(f"Loaded {len(tools)} tools")
+            logger.debug(f"Processed tools: {tools}")
+
+            # Verbrauchsmaterial laden
+            logger.debug("Executing consumables query...")
+            consumables_query = """
+                SELECT 
+                    c.id,
+                    c.barcode,
+                    c.name,
+                    c.quantity
+                FROM consumables c
+                WHERE c.deleted = 0
+                ORDER BY c.name
+            """
+            logger.debug(f"Consumables SQL: {consumables_query}")
+            cursor.execute(consumables_query)
+            
+            consumables_raw = cursor.fetchall()
+            logger.debug(f"Raw consumables data: {consumables_raw}")
+            
+            consumables = [
+                {
+                    'id': row[0],
+                    'barcode': row[1],
+                    'name': row[2],
+                    'quantity': row[3]
+                }
+                for row in consumables_raw
+            ]
+            logger.info(f"Loaded {len(consumables)} consumables")
+            logger.debug(f"Processed consumables: {consumables}")
+
+            # Mitarbeiter laden
+            logger.debug("Executing workers query...")
+            workers_query = """
+                SELECT 
+                    w.id,
+                    w.barcode,
+                    w.firstname,
+                    w.lastname,
+                    w.department
+                FROM workers w
+                WHERE w.deleted = 0
+                ORDER BY w.lastname, w.firstname
+            """
+            logger.debug(f"Workers SQL: {workers_query}")
+            cursor.execute(workers_query)
+            
+            workers_raw = cursor.fetchall()
+            logger.debug(f"Raw workers data: {workers_raw}")
+            
+            workers = [
+                {
+                    'id': row[0],
+                    'barcode': row[1],
+                    'firstname': row[2],
+                    'lastname': row[3],
+                    'department': row[4]
+                }
+                for row in workers_raw
+            ]
+            logger.info(f"Loaded {len(workers)} workers")
+            logger.debug(f"Processed workers: {workers}")
+
+            # Aktuelle Ausleihen laden
+            logger.debug("Executing lendings query...")
+            lendings_query = """
+                SELECT 
+                    l.id,
+                    t.name as tool_name,
+                    t.barcode as tool_barcode,
+                    w.firstname || ' ' || w.lastname as worker_name,
+                    w.barcode as worker_barcode,
+                    l.lent_at,
+                    CASE 
+                        WHEN EXISTS (
+                            SELECT 1 FROM consumables c 
+                            WHERE c.barcode = t.barcode
+                        ) THEN 'Verbrauchsmaterial'
+                        ELSE 'Werkzeug'
+                    END as category
+                FROM lendings l
+                JOIN tools t ON l.tool_barcode = t.barcode
+                JOIN workers w ON l.worker_barcode = w.barcode
+                WHERE l.returned_at IS NULL
+                ORDER BY l.lent_at DESC
+            """
+            logger.debug(f"Lendings SQL: {lendings_query}")
+            cursor.execute(lendings_query)
+            
+            lendings_raw = cursor.fetchall()
+            logger.debug(f"Raw lendings data: {lendings_raw}")
+            
+            current_lendings = []
+            for row in lendings_raw:
+                lent_at = row[5]
+                if lent_at:
+                    try:
+                        if isinstance(lent_at, str):
+                            dt = datetime.strptime(lent_at, '%Y-%m-%d %H:%M:%S')
+                        else:
+                            dt = lent_at
+                        formatted_date = dt.strftime('%d.%m.%Y %H:%M')
+                    except (ValueError, TypeError) as e:
+                        logger.error(f"Date formatting error: {e}")
+                        formatted_date = lent_at
+                else:
+                    formatted_date = ''
+
+                current_lendings.append({
+                    'id': row[0],
+                    'tool_name': row[1],
+                    'tool_barcode': row[2],
+                    'worker_name': row[3],
+                    'worker_barcode': row[4],
+                    'lent_at': formatted_date,
+                    'category': row[6]
+                })
+            
+            logger.info(f"Found {len(current_lendings)} active lendings")
+            logger.debug(f"Processed lendings: {current_lendings}")
+
+            logger.debug("Rendering template with data:")
+            logger.debug(f"Tools count: {len(tools)}")
+            logger.debug(f"Consumables count: {len(consumables)}")
+            logger.debug(f"Workers count: {len(workers)}")
+            logger.debug(f"Lendings count: {len(current_lendings)}")
+
+            return render_template(
+                'admin/manual_lending.html',
+                tools=tools,
+                consumables=consumables,
+                workers=workers,
+                current_lendings=current_lendings
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in manual_lending route: {str(e)}", exc_info=True)
+        flash(f'Fehler beim Laden der Daten: {str(e)}', 'error')
+        return render_template(
+            'admin/manual_lending.html',
+            tools=[],
+            consumables=[],
+            workers=[],
+            current_lendings=[],
+            error=str(e)
+        )
 
 @bp.route('/process_lending', methods=['POST'])
 @admin_required
 def process_lending():
-    """Verarbeite manuelle Ausleihe"""
-    tool_barcode = request.form.get('tool_barcode')
-    worker_barcode = request.form.get('worker_barcode')
-    
-    with get_db_connection() as conn:
-        # Prüfe ob Werkzeug bereits ausgeliehen
-        existing = conn.execute('''
-            SELECT * FROM lendings 
-            WHERE tool_barcode = ? AND returned_at IS NULL
-        ''', [tool_barcode]).fetchone()
+    logger.info("=== Starting process_lending ===")
+    try:
+        data = request.get_json()
+        logger.info(f"Received lending data: {data}")
         
-        if existing:
-            flash('Werkzeug ist bereits ausgeliehen!', 'error')
-            return redirect(url_for('admin.manual_lending'))
-        
-        # Führe Ausleihe durch
-        conn.execute('''
-            INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-        ''', [tool_barcode, worker_barcode])
-        conn.commit()
-        
-        flash('Ausleihe erfolgreich registriert', 'success')
-    return redirect(url_for('admin.manual_lending'))
+        if not data or 'item_barcode' not in data or 'worker_barcode' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Unvollständige Daten'
+            }), 400
+
+        item_type = data.get('item_type', 'tool')
+        amount = data.get('amount', 1)
+
+        with Database.get_db() as db:
+            cursor = db.cursor()
+            
+            if item_type == 'consumable':
+                logger.info(f"Processing consumable: {data['item_barcode']}")
+                # Verbrauchsmaterial-Logik
+                cursor.execute("""
+                    SELECT id, name, quantity 
+                    FROM consumables 
+                    WHERE barcode = ? AND deleted = 0
+                """, (data['item_barcode'],))
+                item = cursor.fetchone()
+                
+                if not item:
+                    logger.warning(f"Consumable not found: {data['item_barcode']}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Verbrauchsmaterial nicht gefunden'
+                    }), 404
+
+                if item['quantity'] < amount:
+                    logger.warning(f"Insufficient quantity. Requested: {amount}, Available: {item['quantity']}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Nicht genügend Verbrauchsmaterial verfügbar'
+                    }), 400
+
+                # Reduziere die Menge
+                cursor.execute("""
+                    UPDATE consumables 
+                    SET quantity = quantity - ? 
+                    WHERE barcode = ?
+                """, (amount, data['item_barcode']))
+
+                # Erstelle einen Verbrauchseintrag
+                cursor.execute("""
+                    INSERT INTO consumable_usage 
+                    (consumable_barcode, worker_barcode, amount, used_at)
+                    VALUES (?, ?, ?, datetime('now'))
+                """, (data['item_barcode'], data['worker_barcode'], amount))
+
+                logger.info(f"Consumable usage recorded. Amount: {amount}")
+
+            else:
+                # Werkzeug-Logik (unverändert)
+                logger.info(f"Processing tool: {data['item_barcode']}")
+                cursor.execute("""
+                    SELECT id, name, status 
+                    FROM tools 
+                    WHERE barcode = ? AND deleted = 0
+                """, (data['item_barcode'],))
+                tool = cursor.fetchone()
+                
+                if not tool:
+                    logger.warning(f"Tool not found: {data['item_barcode']}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Werkzeug nicht gefunden'
+                    }), 404
+
+                if tool['status'] != 'available':
+                    logger.warning(f"Tool not available: {data['item_barcode']}")
+                    return jsonify({
+                        'success': False,
+                        'message': 'Werkzeug ist nicht verfügbar'
+                    }), 400
+
+                cursor.execute("""
+                    INSERT INTO lendings 
+                    (tool_barcode, worker_barcode, lent_at)
+                    VALUES (?, ?, datetime('now'))
+                """, (data['item_barcode'], data['worker_barcode']))
+
+                cursor.execute("""
+                    UPDATE tools 
+                    SET status = 'lent' 
+                    WHERE barcode = ?
+                """, (data['item_barcode'],))
+
+                logger.info(f"Tool lending recorded")
+
+            db.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Vorgang erfolgreich durchgeführt'
+            })
+
+    except Exception as e:
+        logger.error(f"Error in process_lending: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Verarbeitung: {str(e)}'
+        }), 500
 
 @bp.route('/process_return', methods=['POST'])
 @admin_required
 def process_return():
-    """Verarbeite manuelle Rückgabe"""
-    tool_barcode = request.form.get('tool_barcode')
+    logger.info("=== Starting process_return ===")
     
-    with get_db_connection() as conn:
-        # Prüfe ob Werkzeug ausgeliehen ist
-        lending = conn.execute('''
-            SELECT * FROM lendings 
-            WHERE tool_barcode = ? AND returned_at IS NULL
-        ''', [tool_barcode]).fetchone()
+    try:
+        data = request.get_json()
+        logger.info(f"Received return data: {data}")
+        
+        if not data or 'item_barcode' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Kein Barcode übermittelt'
+            }), 400
+
+        db = Database()
+        
+        # Aktuelle Ausleihe finden
+        lending = db.get_active_lending(data['item_barcode'])
+        logger.info(f"Found lending: {lending}")
         
         if not lending:
-            flash('Werkzeug ist nicht ausgeliehen!', 'error')
-            return redirect(url_for('admin.manual_lending'))
+            return jsonify({
+                'success': False,
+                'message': 'Keine aktive Ausleihe gefunden'
+            }), 404
+
+        # Rückgabe durchführen
+        return_result = db.return_tool(data['item_barcode'])
+        logger.info(f"Return result: {return_result}")
         
-        # Führe Rückgabe durch
-        conn.execute('''
-            UPDATE lendings 
-            SET returned_at = CURRENT_TIMESTAMP
-            WHERE tool_barcode = ? AND returned_at IS NULL
-        ''', [tool_barcode])
-        conn.commit()
-        
-        flash('Rückgabe erfolgreich registriert', 'success')
-    return redirect(url_for('admin.manual_lending'))
+        if not return_result.get('success'):
+            return jsonify(return_result), 400
+
+        # Tool-Status aktualisieren
+        update_result = db.update_tool_status(
+            barcode=data['item_barcode'],
+            status='available'
+        )
+        logger.info(f"Tool status update result: {update_result}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Rückgabe erfolgreich durchgeführt'
+        })
+
+    except Exception as e:
+        logger.error(f"Error in process_return: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Rückgabe: {str(e)}'
+        }), 500
 
 @bp.route('/add_tool', methods=['GET', 'POST'])
 @admin_required
@@ -394,3 +666,6 @@ def load_settings():
     except Exception as e:
         print(f"Fehler beim Laden der Einstellungen: {str(e)}")
         g.settings = {'primary_color': '#3B82F6'}
+
+def init_app(app):
+    app.register_blueprint(bp)
