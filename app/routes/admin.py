@@ -125,6 +125,31 @@ def get_color_settings():
 @bp.route('/dashboard')
 @admin_required
 def dashboard():
+    def get_consumable_usages():
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    c.name as consumable_name,
+                    cu.quantity,
+                    w.firstname || ' ' || w.lastname as worker_name,
+                    cu.used_at
+                FROM consumable_usage cu
+                    JOIN consumables c ON cu.consumable_id = c.id
+                    JOIN workers w ON cu.worker_id = w.id
+                ORDER BY cu.used_at DESC
+                LIMIT 50
+            """)
+            return [
+                {
+                    'consumable_name': row[0],
+                    'quantity': row[1],
+                    'worker_name': row[2],
+                    'used_at': row[3]
+                }
+                for row in cursor.fetchall()
+            ]
+
     stats = {
         'tools_count': Tool.count_active(),
         'tools': {
@@ -145,11 +170,13 @@ def dashboard():
     }
     
     current_lendings = get_current_lendings()
+    consumable_usages = get_consumable_usages()
     colors = get_color_settings()
     
     return render_template('admin/dashboard.html',
                          stats=stats,
                          current_lendings=current_lendings,
+                         consumable_usages=consumable_usages,
                          colors=colors)
 
 @bp.route('/update_design', methods=['POST'])

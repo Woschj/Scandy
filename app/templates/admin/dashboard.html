@@ -106,40 +106,61 @@
 </div>
 
 <!-- Aktuelle Ausleihen -->
-<div class="mt-8">
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <h2 class="card-title">Aktuelle Ausleihen</h2>
-            <div class="overflow-x-auto">
-                <table class="table w-full">
-                    <thead>
-                        <tr>
-                            <th>Werkzeug</th>
-                            <th>Mitarbeiter</th>
-                            <th>Abteilung</th>
-                            <th>Ausgeliehen am</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lending in current_lendings %}
-                        <tr>
-                            <td>{{ lending.tool_name }}</td>
-                            <td>{{ lending.worker_name }}</td>
-                            <td>{{ lending.department }}</td>
-                            <td>{{ lending.lent_at }}</td>
-                            <td>
-                                {% if lending.overdue %}
-                                <span class="badge badge-error">überfällig</span>
-                                {% else %}
-                                <span class="badge badge-success">aktiv</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+<div class="grid grid-cols-2 gap-8 mt-8">
+    <!-- Verbrauchsmaterial Ausgaben -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Aktuelle Materialausgaben</h2>
+        <div class="overflow-y-auto max-h-96">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Material</th>
+                        <th>Menge</th>
+                        <th>Mitarbeiter</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usage in consumable_usages %}
+                    <tr>
+                        <td>{{ usage.consumable_name }}</td>
+                        <td>{{ usage.quantity }} Stk</td>
+                        <td>{{ usage.worker_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Werkzeug Ausleihen -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Aktuelle Werkzeugausleihen</h2>
+        <div class="overflow-y-auto max-h-96">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Werkzeug</th>
+                        <th>Mitarbeiter</th>
+                        <th>Ausgeliehen seit</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lending in current_lendings %}
+                    <tr class="{% if lending.overdue %}text-red-600{% endif %}">
+                        <td>{{ lending.tool_name }}</td>
+                        <td>{{ lending.worker_name }}</td>
+                        <td>{{ lending.lent_at }}</td>
+                        <td>
+                            <button onclick="returnTool('{{ lending.tool_barcode }}')"
+                                    class="btn btn-sm btn-primary">
+                                Rückgabe
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

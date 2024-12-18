@@ -14,13 +14,15 @@ def index():
         # Basis-Query
         query = """
             SELECT 
-                t.*,
+                t.barcode,
+                t.name,
+                t.location,
                 CASE 
-                    WHEN l.id IS NOT NULL THEN 'verliehen'
-                    WHEN t.status = 'defekt' THEN 'defekt'
-                    ELSE 'verfügbar'
+                    WHEN t.status = 'Defekt' THEN 'Defekt'
+                    WHEN l.id IS NOT NULL THEN 'Ausgeliehen'
+                    ELSE 'Verfügbar'
                 END as status,
-                l.lent_at as status_since,
+                strftime('%d.%m.%Y %H:%M', l.lent_at) as status_since,
                 w.firstname || ' ' || w.lastname as current_borrower,
                 w.department as borrower_department
             FROM tools t
@@ -37,7 +39,11 @@ def index():
         
         params = []
         if status:
-            query += " AND LOWER(t.status) = LOWER(?)"
+            query += " AND LOWER(CASE 
+                        WHEN t.status = 'Defekt' THEN 'Defekt'
+                        WHEN l.id IS NOT NULL THEN 'Ausgeliehen'
+                        ELSE 'Verfügbar'
+                    END) = LOWER(?)"
             params.append(status)
             
         query += " ORDER BY t.name"
