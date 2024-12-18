@@ -44,32 +44,50 @@
                                class="input input-bordered mb-4">
 
                         <!-- Werkzeug-Liste -->
-                        <select id="toolsList" 
-                                size="10" 
-                                class="select select-bordered w-full h-[400px] overflow-y-auto">
-                            <option disabled selected>Werkzeuge</option>
-                            {% for tool in tools %}
-                                {% if tool.status == 'available' %}
-                                <option value="tool:{{ tool.id }}:{{ tool.barcode }}:{{ tool.name }}"
-                                        class="p-2 hover:bg-base-200">
-                                    {{ tool.name }} ({{ tool.barcode }})
-                                </option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
+                        <div id="toolsList" class="h-96 overflow-hidden bg-white rounded-lg shadow">
+                            <div class="p-4 border-b">
+                                <h3 class="font-semibold">Werkzeuge</h3>
+                            </div>
+                            <select size="10" 
+                                    id="toolSelect"
+                                    onchange="window.ManualLending.selectItem(this.value)"
+                                    class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
+                                {% for tool in tools %}
+                                    {% if tool.status == 'Verfügbar' %}
+                                    <option value="tool:{{ tool.id }}:{{ tool.barcode }}:{{ tool.name }}"
+                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                                        <div class="flex justify-between w-full">
+                                            <span>{{ tool.name }}</span>
+                                            <span class="text-gray-500">#{{ tool.barcode }}</span>
+                                        </div>
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
 
                         <!-- Verbrauchsmaterial-Liste -->
-                        <select id="consumablesList" 
-                                size="10" 
-                                class="select select-bordered w-full h-[400px] overflow-y-auto hidden">
-                            <option disabled selected>Verbrauchsmaterial</option>
-                            {% for consumable in consumables %}
-                            <option value="consumable:{{ consumable.id }}:{{ consumable.barcode }}:{{ consumable.name }}"
-                                    class="p-2 hover:bg-base-200">
-                                {{ consumable.name }} (Bestand: {{ consumable.quantity }})
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <div id="consumablesList" class="h-96 overflow-hidden bg-white rounded-lg shadow hidden">
+                            <div class="p-4 border-b">
+                                <h3 class="font-semibold">Verbrauchsmaterial</h3>
+                            </div>
+                            <select size="10" 
+                                    id="consumableSelect"
+                                    onchange="window.ManualLending.selectItem(this.value)"
+                                    class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
+                                {% for consumable in consumables %}
+                                    {% if consumable.quantity > 0 %}
+                                    <option value="consumable:{{ consumable.id }}:{{ consumable.barcode }}:{{ consumable.name }}"
+                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                                        <div class="flex justify-between w-full">
+                                            <span>{{ consumable.name }}</span>
+                                            <span class="text-gray-500">{{ consumable.quantity }} Stk</span>
+                                        </div>
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -96,23 +114,32 @@
                     </div>
 
                     <!-- Mitarbeiter-Suche -->
-                    <div class="form-control mb-4">
+                    <div class="form-control">
                         <input type="text" 
                                id="workerSearch" 
                                placeholder="Mitarbeiter suchen..." 
-                               class="input input-bordered">
-                    </div>
+                               class="input input-bordered mb-4">
 
-                    <!-- Mitarbeiter Liste -->
-                    <div class="form-control">
-                        <select id="workerSelect" size="10" class="select select-bordered w-full h-[400px] overflow-y-auto">
-                            {% for worker in workers %}
-                            <option value="{{ worker.barcode }}"
-                                    class="p-2 hover:bg-base-200">
-                                {{ worker.firstname }} {{ worker.lastname }} ({{ worker.department }})
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <!-- Mitarbeiter-Liste -->
+                        <div class="h-96 overflow-hidden bg-white rounded-lg shadow">
+                            <div class="p-4 border-b">
+                                <h3 class="font-semibold">Mitarbeiter</h3>
+                            </div>
+                            <select size="10" 
+                                    id="workerSelect"
+                                    onchange="window.ManualLending.selectWorker(this.value)"
+                                    class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
+                                {% for worker in workers %}
+                                    <option value="worker:{{ worker.id }}:{{ worker.barcode }}:{{ worker.firstname }} {{ worker.lastname }}"
+                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                                        <div class="flex justify-between w-full">
+                                            <span>{{ worker.firstname }} {{ worker.lastname }}</span>
+                                            <span class="text-gray-500">{{ worker.department }}</span>
+                                        </div>
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>

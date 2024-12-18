@@ -48,14 +48,24 @@
             <table class="min-w-full divide-y divide-base-200">
                 <thead class="bg-base-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Ort</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Seit</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Ausgeliehen an</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Name <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Ort <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Status <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Seit <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Ausgeliehen an <i class="fas fa-sort ml-1"></i>
+                        </th>
                         <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider no-sort">Aktionen</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -247,47 +257,78 @@ window.onload = function() {
     JsBarcode(".barcode").init();
 }
 
-// Filter-Handling
-document.getElementById('filterStatus').addEventListener('change', function() {
-    applyFilters();
-});
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterStatus = document.getElementById('filterStatus');
+    const filterOrt = document.getElementById('filterOrt');
+    const toolsTable = document.querySelector('table tbody');
+    let tools = Array.from(toolsTable.querySelectorAll('tr'));
+    let sortDirection = {};
 
-document.getElementById('filterOrt').addEventListener('change', function() {
-    applyFilters();
-});
+    // Filter-Funktion
+    function filterTools() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedStatus = filterStatus.value.toLowerCase();
+        const selectedOrt = filterOrt.value.toLowerCase();
 
-document.getElementById('searchInput').addEventListener('input', function() {
-    applyFilters();
-});
+        tools.forEach(row => {
+            const nameCell = row.querySelector('td:nth-child(1) a');
+            const name = nameCell.textContent.trim().toLowerCase();
+            
+            const ortCell = row.querySelector('td:nth-child(2) span');
+            const ort = ortCell.textContent.trim().toLowerCase();
 
-function applyFilters() {
-    const status = document.getElementById('filterStatus').value;
-    const ort = document.getElementById('filterOrt').value;
-    const search = document.getElementById('searchInput').value;
-    
-    let url = new URL(window.location);
-    if (status) url.searchParams.set('status', status);
-    else url.searchParams.delete('status');
-    
-    if (ort) url.searchParams.set('location', ort);
-    else url.searchParams.delete('location');
-    
-    if (search) url.searchParams.set('search', search);
-    else url.searchParams.delete('search');
-    
-    window.location = url;
-}
+            const statusCell = row.querySelector('td:nth-child(3) span');
+            const status = statusCell.textContent.trim().toLowerCase();
 
-// Setze Filter-Werte aus URL
-window.addEventListener('load', function() {
-    const url = new URL(window.location);
-    const status = url.searchParams.get('status');
-    const ort = url.searchParams.get('location');
-    const search = url.searchParams.get('search');
-    
-    if (status) document.getElementById('filterStatus').value = status;
-    if (ort) document.getElementById('filterOrt').value = ort;
-    if (search) document.getElementById('searchInput').value = search;
+            const barcodeBtn = row.querySelector('td:nth-child(6) button');
+            const barcode = barcodeBtn.getAttribute('onclick').split("'")[1].toLowerCase();
+
+            const matchesSearch = name.includes(searchTerm) || 
+                                ort.includes(searchTerm) || 
+                                barcode.includes(searchTerm);
+            const matchesStatus = !selectedStatus || status === selectedStatus;
+            const matchesOrt = !selectedOrt || ort.includes(selectedOrt);
+
+            row.style.display = matchesSearch && matchesStatus && matchesOrt ? '' : 'none';
+        });
+    }
+
+    // Sortier-Funktion
+    function sortTable(columnIndex, type = 'text') {
+        const direction = sortDirection[columnIndex] = !sortDirection[columnIndex];
+
+        tools.sort((a, b) => {
+            let aValue = a.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
+            let bValue = b.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
+
+            if (type === 'number') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+
+            if (direction) {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        tools.forEach(row => toolsTable.appendChild(row));
+    }
+
+    // Event Listener
+    searchInput.addEventListener('input', filterTools);
+    filterStatus.addEventListener('change', filterTools);
+    filterOrt.addEventListener('change', filterTools);
+
+    // Sortier-Header
+    document.querySelectorAll('th').forEach((th, index) => {
+        if (!th.classList.contains('no-sort')) {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => sortTable(index));
+        }
+    });
 });
 </script>
 {% endblock %}

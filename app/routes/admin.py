@@ -388,65 +388,60 @@ def manual_lending():
 @bp.route('/process_lending', methods=['POST'])
 @admin_required
 def process_lending():
-    logger.info("=== Starting process_lending ===")
+    """Verarbeitet eine neue Ausleihe"""
     try:
         data = request.get_json()
+        logger.info("=== Starting process_lending ===")
         logger.info(f"Received lending data: {data}")
         
-        if not data or 'item_barcode' not in data or 'worker_barcode' not in data:
-            return jsonify({
-                'success': False,
-                'message': 'Unvollständige Daten'
-            }), 400
-
-        item_type = data.get('item_type', 'tool')
-        amount = data.get('amount', 1)
-
-        with Database.get_db() as db:
-            cursor = db.cursor()
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
             
-            if item_type == 'consumable':
+            if data['item_type'] == 'consumable':
                 logger.info(f"Processing consumable: {data['item_barcode']}")
-                # Verbrauchsmaterial-Logik
+                
+                # Prüfe verfügbare Menge
                 cursor.execute("""
-                    SELECT id, name, quantity 
+                    SELECT id, quantity 
                     FROM consumables 
                     WHERE barcode = ? AND deleted = 0
                 """, (data['item_barcode'],))
-                item = cursor.fetchone()
+                consumable = cursor.fetchone()
                 
-                if not item:
-                    logger.warning(f"Consumable not found: {data['item_barcode']}")
+                if not consumable:
                     return jsonify({
                         'success': False,
                         'message': 'Verbrauchsmaterial nicht gefunden'
                     }), 404
-
-                if item['quantity'] < amount:
-                    logger.warning(f"Insufficient quantity. Requested: {amount}, Available: {item['quantity']}")
+                
+                if consumable['quantity'] < data['amount']:
                     return jsonify({
                         'success': False,
-                        'message': 'Nicht genügend Verbrauchsmaterial verfügbar'
+                        'message': 'Nicht genügend Material verfügbar'
                     }), 400
-
+                
                 # Reduziere die Menge
                 cursor.execute("""
                     UPDATE consumables 
                     SET quantity = quantity - ? 
+                    WHERE id = ?
+                """, (data['amount'], consumable['id']))
+                  
+                cursor.execute("""
+                    SELECT id FROM workers
                     WHERE barcode = ?
-                """, (amount, data['item_barcode']))
-
-                # Erstelle einen Verbrauchseintrag
+                """, (data['worker_barcode'],))
+                worker_id = cursor.fetchone()[0]
+                
+                # Dann in consumable_usage einfügen
                 cursor.execute("""
                     INSERT INTO consumable_usage 
-                    (consumable_barcode, worker_barcode, amount, used_at)
-                    VALUES (?, ?, ?, datetime('now'))
-                """, (data['item_barcode'], data['worker_barcode'], amount))
-
-                logger.info(f"Consumable usage recorded. Amount: {amount}")
+                    (consumable_id, worker_id, quantity) 
+                    VALUES (?, ?, ?)
+                """, (consumable['id'], worker_id, data['amount']))
 
             else:
-                # Werkzeug-Logik (unverändert)
+                # Werkzeug-Logik
                 logger.info(f"Processing tool: {data['item_barcode']}")
                 cursor.execute("""
                     SELECT id, name, status 
@@ -462,28 +457,31 @@ def process_lending():
                         'message': 'Werkzeug nicht gefunden'
                     }), 404
 
-                if tool['status'] != 'available':
+                if tool['status'] != 'Verfügbar':
                     logger.warning(f"Tool not available: {data['item_barcode']}")
                     return jsonify({
                         'success': False,
                         'message': 'Werkzeug ist nicht verfügbar'
                     }), 400
 
+                # Extrahiere den Barcode aus dem worker-String
+                worker_barcode = data['worker_barcode'].split(':')[2]
+
                 cursor.execute("""
                     INSERT INTO lendings 
                     (tool_barcode, worker_barcode, lent_at)
                     VALUES (?, ?, datetime('now'))
-                """, (data['item_barcode'], data['worker_barcode']))
+                """, (data['item_barcode'], worker_barcode))
 
                 cursor.execute("""
                     UPDATE tools 
-                    SET status = 'lent' 
+                    SET status = 'Ausgeliehen' 
                     WHERE barcode = ?
                 """, (data['item_barcode'],))
 
                 logger.info(f"Tool lending recorded")
 
-            db.commit()
+            conn.commit()
             
             return jsonify({
                 'success': True,

@@ -24,6 +24,20 @@ class SchemaManager:
                     value TEXT NOT NULL
                 )
             """)
+            
+            # Consumable Usage Tabelle hinzufügen
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS consumable_usage (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    consumable_id INTEGER NOT NULL,
+                    worker_id INTEGER NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (consumable_id) REFERENCES consumables(id),
+                    FOREIGN KEY (worker_id) REFERENCES workers(id)
+                )
+            """)
+            
             conn.commit()
             
         except Exception as e:
@@ -82,3 +96,24 @@ class SchemaManager:
             conn.rollback()
         finally:
             conn.close()
+        
+    def init_tables(self):
+        """Initialisiert alle Tabellen"""
+        self.db.execute('''
+            CREATE TABLE IF NOT EXISTS tools (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ...
+            )
+        ''')
+        
+        self.db.execute('''
+            CREATE TABLE IF NOT EXISTS consumable_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                consumable_id INTEGER NOT NULL,
+                worker_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (consumable_id) REFERENCES consumables(id),
+                FOREIGN KEY (worker_id) REFERENCES workers(id)
+            )
+        ''')

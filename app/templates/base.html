@@ -6,7 +6,7 @@
     <title>{% block title %}{% endblock %} - Scandy</title>
     
     <!-- Tailwind und DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.css" rel="stylesheet" type="text/css" />
     
     <!-- Font Awesome -->
@@ -92,23 +92,27 @@
                              class="h-12 w-auto">
                     </a>
                     
-                    <!-- Hauptmenü (Desktop) -->
-                    <div class="hidden lg:flex ml-4">
-                        <a href="{{ url_for(routes.TOOLS_INDEX) }}" 
-                           class="btn btn-ghost {% if request.endpoint == routes.TOOLS_INDEX %}btn-active{% endif %}">
-                            <i class="fas fa-tools mr-2"></i>Werkzeuge
-                        </a>
-                        <a href="{{ url_for(routes.CONSUMABLES_INDEX) }}" 
-                           class="btn btn-ghost {% if request.endpoint == routes.CONSUMABLES_INDEX %}btn-active{% endif %}">
-                            <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
-                        </a>
-                        {% if session.get('is_admin') %}
-                        <a href="{{ url_for(routes.WORKERS_INDEX) }}"
-                           class="btn btn-ghost {% if request.endpoint == routes.WORKERS_INDEX %}btn-active{% endif %}">
-                            <i class="fas fa-users mr-2"></i>Mitarbeiter
-                        </a>
-                        {% endif %}
-                    </div>
+                    <!-- Hauptnavigation -->
+                    <ul class="menu menu-horizontal px-1">
+                        <li>
+                            <a href="{{ url_for('inventory.tools') }}"
+                               class="{% if request.endpoint.startswith('tools.') %}active{% endif %}">
+                                <i class="fas fa-tools mr-2"></i>Werkzeuge
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.consumables') }}"
+                               class="{% if request.endpoint.startswith('consumables.') %}active{% endif %}">
+                                <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('inventory.workers') }}"
+                               class="{% if request.endpoint.startswith('workers.') %}active{% endif %}">
+                                <i class="fas fa-users mr-2"></i>Mitarbeiter
+                            </a>
+                        </li>
+                    </ul>
                 </div>
 
                 <!-- QuickScan Button (Mittig) -->
@@ -161,21 +165,21 @@
                 <label for="drawer-toggle" class="drawer-overlay"></label>
                 <ul class="menu p-4 w-80 h-full bg-base-200 gap-2">
                     <li>
-                        <a href="{{ url_for(routes.TOOLS_INDEX) }}" 
-                           class="{% if request.endpoint == routes.TOOLS_INDEX %}active{% endif %}">
+                        <a href="{{ url_for('inventory.tools') }}" 
+                           class="{% if request.endpoint.startswith('tools.') %}active{% endif %}">
                             <i class="fas fa-tools"></i>Werkzeuge
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for(routes.CONSUMABLES_INDEX) }}" 
-                           class="{% if request.endpoint == routes.CONSUMABLES_INDEX %}active{% endif %}">
+                        <a href="{{ url_for('inventory.consumables') }}" 
+                           class="{% if request.endpoint.startswith('consumables.') %}active{% endif %}">
                             <i class="fas fa-box-open"></i>Verbrauchsmaterial
                         </a>
                     </li>
                     {% if session.get('is_admin') %}
                     <li>
-                        <a href="{{ url_for(routes.WORKERS_INDEX) }}"
-                           class="{% if request.endpoint == routes.WORKERS_INDEX %}active{% endif %}">
+                        <a href="{{ url_for('inventory.workers') }}"
+                           class="{% if request.endpoint.startswith('workers.') %}active{% endif %}">
                             <i class="fas fa-users"></i>Mitarbeiter
                         </a>
                     </li>
@@ -272,8 +276,8 @@
     <!-- Externe Bibliotheken -->
     <script src="https://unpkg.com/@zxing/library@latest" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode.js@1.0.0/qrcode.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/daisyui@latest/dist/full.bundle.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css"></script>
 
     <!-- Eigene Services -->
     <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>

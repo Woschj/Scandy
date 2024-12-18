@@ -1,4 +1,22 @@
 from .database import BaseModel, Database
+from datetime import datetime
+
+def get_consumables():
+    """Holt alle aktiven Verbrauchsmaterialien aus der Datenbank"""
+    results = Database.query('''
+        SELECT c.*, 
+               c.quantity as current_stock,
+               CASE 
+                   WHEN c.quantity = 0 THEN 'Leer'
+                   WHEN c.quantity <= c.min_quantity * 0.5 THEN 'Kritisch'
+                   WHEN c.quantity <= c.min_quantity THEN 'Nachbestellen'
+                   ELSE 'Verfügbar'
+               END as stock_status
+        FROM consumables c
+        WHERE c.deleted = 0
+        ORDER BY c.name
+    ''')
+    return results if results else []
 
 class Consumable(BaseModel):
     TABLE_NAME = 'consumables'
@@ -34,3 +52,6 @@ class Consumable(BaseModel):
         with Database.get_db() as conn:
             result = conn.execute(sql, [barcode]).fetchone()
             return result
+
+    def __init__(self, data):
+        self.id = data.get('id')

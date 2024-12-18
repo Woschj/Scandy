@@ -25,25 +25,29 @@
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Typ</label>
-                <select id="filterTyp" class="select select-bordered w-full">
+                <select id="filterTyp" name="filter_typ" class="select select-bordered w-full">
                     <option value="">Alle Typen</option>
-                    {% for typ in typen %}
-                        <option value="{{ typ }}">{{ typ }}</option>
-                    {% endfor %}
+                    {% if typen %}
+                        {% for typ in typen %}
+                            <option value="{{ typ }}">{{ typ }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Ort</label>
-                <select id="filterOrt" class="select select-bordered w-full">
+                <select id="filterOrt" name="filter_ort" class="select select-bordered w-full">
                     <option value="">Alle Orte</option>
-                    {% for ort in orte %}
-                        <option value="{{ ort }}">{{ ort }}</option>
-                    {% endfor %}
+                    {% if orte %}
+                        {% for ort in orte %}
+                            <option value="{{ ort }}">{{ ort }}</option>
+                        {% endfor %}
+                    {% endif %}
                 </select>
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Status</label>
-                <select id="filterStatus" class="select select-bordered w-full">
+                <select id="filterStatus" name="filter_status" class="select select-bordered w-full">
                     <option value="">Alle Status</option>
                     <option value="verfügbar">Verfügbar</option>
                     <option value="nachbestellen">Nachbestellen</option>
@@ -58,15 +62,27 @@
             <table class="min-w-full divide-y divide-base-200">
                 <thead class="bg-base-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Kategorie</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Ort</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bestand</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Mindestbestand</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Name <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Kategorie <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Ort <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Status <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Bestand <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Mindestbestand <i class="fas fa-sort ml-1"></i>
+                        </th>
                         <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider no-sort">Aktionen</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -241,5 +257,86 @@ function closeBarcodeModal() {
 window.onload = function() {
     JsBarcode(".barcode").init();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterTyp = document.getElementById('filterTyp');
+    const filterOrt = document.getElementById('filterOrt');
+    const filterStatus = document.getElementById('filterStatus');
+    const consumablesTable = document.querySelector('table tbody');
+    let consumables = Array.from(consumablesTable.querySelectorAll('tr'));
+    let sortDirection = {};
+
+    // Filter-Funktion
+    function filterConsumables() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedTyp = filterTyp.value.toLowerCase();
+        const selectedOrt = filterOrt.value.toLowerCase();
+        const selectedStatus = filterStatus.value.toLowerCase();
+
+        consumables.forEach(row => {
+            const nameCell = row.querySelector('td:nth-child(1) a');
+            const name = nameCell?.textContent.trim().toLowerCase() || '';
+            
+            const typCell = row.querySelector('td:nth-child(2)');
+            const typ = typCell?.textContent.trim().toLowerCase() || '';
+
+            const locationCell = row.querySelector('td:nth-child(3)');
+            const location = locationCell?.textContent.trim().toLowerCase() || '';
+
+            const statusCell = row.querySelector('td:nth-child(4) span');
+            const status = statusCell?.textContent.trim().toLowerCase() || '';
+
+            const barcodeBtn = row.querySelector('td:nth-child(7) button');
+            const barcode = barcodeBtn?.getAttribute('onclick')?.split("'")[1]?.toLowerCase() || '';
+
+            const matchesSearch = name.includes(searchTerm) || 
+                                location.includes(searchTerm) || 
+                                barcode.includes(searchTerm);
+            const matchesTyp = !selectedTyp || typ.includes(selectedTyp);
+            const matchesOrt = !selectedOrt || location.includes(selectedOrt);
+            const matchesStatus = !selectedStatus || status.includes(selectedStatus);
+
+            row.style.display = matchesSearch && matchesTyp && matchesOrt && matchesStatus ? '' : 'none';
+        });
+    }
+
+    // Sortier-Funktion
+    function sortTable(columnIndex, type = 'text') {
+        const direction = sortDirection[columnIndex] = !sortDirection[columnIndex];
+
+        consumables.sort((a, b) => {
+            let aValue = a.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
+            let bValue = b.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
+
+            if (type === 'number') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+
+            if (direction) {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        consumables.forEach(row => consumablesTable.appendChild(row));
+    }
+
+    // Event Listener
+    searchInput.addEventListener('input', filterConsumables);
+    filterTyp.addEventListener('change', filterConsumables);
+    filterOrt.addEventListener('change', filterConsumables);
+    filterStatus.addEventListener('change', filterConsumables);
+
+    // Sortier-Header
+    document.querySelectorAll('th').forEach((th, index) => {
+        if (!th.classList.contains('no-sort')) {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => sortTable(index));
+        }
+    });
+});
 </script>
 {% endblock %}

@@ -38,20 +38,20 @@ def create_app():
     
     # Blueprints importieren und registrieren
     from app.routes import (
-        auth, tools, workers, consumables, api, 
-        admin, inventory, quick_scan, history
+        auth_bp, tools_bp, workers_bp, consumables_bp,
+        api_bp, admin_bp, inventory_bp, quick_scan_bp, history_bp
     )
 
     logger.info("Registriere Blueprints...")
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(tools.bp)
-    app.register_blueprint(workers.bp)
-    app.register_blueprint(consumables.bp)
-    app.register_blueprint(api.bp, url_prefix='/api')
-    app.register_blueprint(admin.bp, url_prefix='/admin')
-    app.register_blueprint(inventory.bp, url_prefix='/inventory')
-    app.register_blueprint(quick_scan.bp)
-    app.register_blueprint(history.bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(tools_bp)
+    app.register_blueprint(workers_bp)
+    app.register_blueprint(consumables_bp)
+    app.register_blueprint(api_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(inventory_bp)
+    app.register_blueprint(quick_scan_bp)
+    app.register_blueprint(history_bp)
     
     # Context Processors registrieren
     register_context_processors(app)

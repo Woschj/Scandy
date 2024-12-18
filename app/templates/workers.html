@@ -43,12 +43,18 @@
             <table class="min-w-full divide-y divide-base-200">
                 <thead class="bg-base-200">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bereich</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Name <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Bereich <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
+                            Email <i class="fas fa-sort ml-1"></i>
+                        </th>
                         <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
-                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Aktionen</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider no-sort">Aktionen</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -224,5 +230,78 @@ function closeBarcodeModal() {
 window.onload = function() {
     JsBarcode(".barcode").init();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const filterBereich = document.getElementById('filterBereich');
+    const workersTable = document.querySelector('table tbody');
+    let workers = Array.from(workersTable.querySelectorAll('tr'));
+    let sortDirection = {};
+
+    // Filter-Funktion
+    function filterWorkers() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedBereich = filterBereich.value.toLowerCase();
+
+        workers.forEach(row => {
+            // Name aus den verschachtelten Spans holen
+            const firstNameSpan = row.querySelector('td:nth-child(1) span:first-child');
+            const lastNameSpan = row.querySelector('td:nth-child(1) span:last-child');
+            const name = `${firstNameSpan.textContent} ${lastNameSpan.textContent}`.toLowerCase();
+            
+            // Bereich aus dem Text nach dem Icon extrahieren
+            const bereichCell = row.querySelector('td:nth-child(2)');
+            const bereich = bereichCell.textContent.trim().toLowerCase();
+
+            const email = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+            // Barcode aus dem Button-Attribut holen
+            const barcodeBtn = row.querySelector('td:nth-child(4) button');
+            const barcode = barcodeBtn.getAttribute('onclick').split("'")[1].toLowerCase();
+
+            const matchesSearch = name.includes(searchTerm) || 
+                                email.includes(searchTerm) || 
+                                barcode.includes(searchTerm);
+            const matchesBereich = !selectedBereich || bereich.includes(selectedBereich);
+
+            row.style.display = matchesSearch && matchesBereich ? '' : 'none';
+        });
+    }
+
+    // Sortier-Funktion
+    function sortTable(columnIndex, type = 'text') {
+        const direction = sortDirection[columnIndex] = !sortDirection[columnIndex];
+
+        workers.sort((a, b) => {
+            let aValue = a.querySelector(`td:nth-child(${columnIndex + 1})`).textContent;
+            let bValue = b.querySelector(`td:nth-child(${columnIndex + 1})`).textContent;
+
+            if (type === 'number') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+
+            if (direction) {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        // Tabelle neu aufbauen
+        workers.forEach(row => workersTable.appendChild(row));
+    }
+
+    // Event Listener
+    searchInput.addEventListener('input', filterWorkers);
+    filterBereich.addEventListener('change', filterWorkers);
+
+    // Sortier-Header hinzufügen
+    document.querySelectorAll('th').forEach((th, index) => {
+        if (!th.classList.contains('no-sort')) {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => sortTable(index));
+        }
+    });
+});
 </script>
 {% endblock %}

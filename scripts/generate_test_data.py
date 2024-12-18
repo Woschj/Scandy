@@ -196,3 +196,41 @@ conn.commit()
 conn.close()
 
 print("Testdaten erfolgreich generiert!")
+
+def create_tables():
+    """Erstellt die benötigten Tabellen"""
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS workers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT UNIQUE NOT NULL,
+            firstname TEXT NOT NULL,
+            lastname TEXT NOT NULL,
+            department TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS consumable_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            consumable_id INTEGER NOT NULL,
+            worker_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL,
+            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (consumable_id) REFERENCES consumables(id),
+            FOREIGN KEY (worker_id) REFERENCES workers(id)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            barcode TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'available',
+            location TEXT,
+            category TEXT,
+            deleted INTEGER DEFAULT 0
+        )
+    ''')

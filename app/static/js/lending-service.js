@@ -242,3 +242,18 @@
 
     console.log('=== LENDING SERVICE INITIALIZATION COMPLETE ===');
 })(); 
+
+function switchType(type) {
+    // Toggle active state of buttons
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.classList.toggle('btn-active', btn.dataset.tab === type);
+    });
+    
+    // Show/hide corresponding lists
+    document.getElementById('toolsList').classList.toggle('hidden', type !== 'tools');
+    document.getElementById('consumablesList').classList.toggle('hidden', type !== 'consumables');
+    
+    // Reset search and selection
+    document.getElementById('itemSearch').value = '';
+    document.getElementById('itemDetails').classList.add('hidden');
+} 
