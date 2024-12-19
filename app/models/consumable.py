@@ -16,7 +16,7 @@ def get_consumables():
         WHERE c.deleted = 0
         ORDER BY c.name
     ''')
-    return results if results else []
+    return [dict(row) for row in results] if results else []
 
 class Consumable(BaseModel):
     TABLE_NAME = 'consumables'

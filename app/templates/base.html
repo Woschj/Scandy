@@ -95,23 +95,25 @@
                     <!-- Hauptnavigation -->
                     <ul class="menu menu-horizontal px-1">
                         <li>
-                            <a href="{{ url_for('inventory.tools') }}"
+                            <a href="{{ url_for('tools.index') }}"
                                class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-tools mr-2"></i>Werkzeuge
                             </a>
                         </li>
                         <li>
-                            <a href="{{ url_for('inventory.consumables') }}"
+                            <a href="{{ url_for('consumables.index') }}"
                                class="btn btn-ghost min-h-[3rem] flex items-center {% if 'consumables' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
                             </a>
                         </li>
+                        {% if session.get('is_admin') %}
                         <li>
-                            <a href="{{ url_for('inventory.workers') }}"
+                            <a href="{{ url_for('workers.index') }}"
                                class="btn btn-ghost min-h-[3rem] flex items-center {% if 'workers' in request.endpoint %}btn-active{% endif %}">
                                 <i class="fas fa-users mr-2"></i>Mitarbeiter
                             </a>
                         </li>
+                        {% endif %}
                     </ul>
                 </div>
 
@@ -127,12 +129,12 @@
                 <div class="flex-none">
                     <div class="hidden lg:flex items-center gap-4">
                         {% if session.get('is_admin') %}
-                        <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}" 
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}btn-active{% endif %}">
+                        <a href="{{ url_for('admin.manual_lending') }}" 
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'admin.manual_lending' %}btn-active{% endif %}">
                             <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
                         </a>
-                        <a href="{{ url_for(routes.ADMIN_DASHBOARD) }}" 
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == routes.ADMIN_DASHBOARD %}btn-active{% endif %}">
+                        <a href="{{ url_for('admin.dashboard') }}" 
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'admin.dashboard' %}btn-active{% endif %}">
                             <i class="fas fa-chart-line mr-2"></i>Dashboard
                         </a>
                         {% endif %}
@@ -165,20 +167,20 @@
                 <label for="drawer-toggle" class="drawer-overlay"></label>
                 <ul class="menu p-4 w-80 h-full bg-base-200 gap-2">
                     <li>
-                        <a href="{{ url_for('inventory.tools') }}" 
+                        <a href="{{ url_for('tools.index') }}" 
                            class="{% if request.endpoint.startswith('tools.') %}active{% endif %}">
                             <i class="fas fa-tools"></i>Werkzeuge
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('inventory.consumables') }}" 
+                        <a href="{{ url_for('consumables.index') }}" 
                            class="{% if request.endpoint.startswith('consumables.') %}active{% endif %}">
                             <i class="fas fa-box-open"></i>Verbrauchsmaterial
                         </a>
                     </li>
                     {% if session.get('is_admin') %}
                     <li>
-                        <a href="{{ url_for('inventory.workers') }}"
+                        <a href="{{ url_for('workers.index') }}"
                            class="{% if request.endpoint.startswith('workers.') %}active{% endif %}">
                             <i class="fas fa-users"></i>Mitarbeiter
                         </a>
@@ -186,8 +188,8 @@
                     {% endif %}
                     {% if session.get('is_admin') %}
                     <li>
-                        <a href="{{ url_for(routes.ADMIN_MANUAL_LENDING) }}"
-                           class="{% if request.endpoint == routes.ADMIN_MANUAL_LENDING %}active{% endif %}">
+                        <a href="{{ url_for('admin.manual_lending') }}"
+                           class="{% if request.endpoint == 'admin.manual_lending' %}active{% endif %}">
                             <i class="fas fa-hand-holding"></i>Manuelle Ausleihe
                         </a>
                     </li>

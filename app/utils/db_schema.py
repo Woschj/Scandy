@@ -8,34 +8,19 @@ class SchemaManager:
             conn = self.db.get_db_connection()
             cursor = conn.cursor()
             
-            # Hier können Sie Ihre Tabellendefinitionen hinzufügen
+            # Admin-Tabelle hinzufügen
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
+                CREATE TABLE IF NOT EXISTS admin (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL
+                    password TEXT NOT NULL
                 )
             """)
             
-            # Settings Tabelle hinzufügen
+            # Admin-Account erstellen falls nicht vorhanden
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT NOT NULL
-                )
-            """)
-            
-            # Consumable Usage Tabelle hinzufügen
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS consumable_usage (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    consumable_id INTEGER NOT NULL,
-                    worker_id INTEGER NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (consumable_id) REFERENCES consumables(id),
-                    FOREIGN KEY (worker_id) REFERENCES workers(id)
-                )
+                INSERT OR IGNORE INTO admin (username, password)
+                VALUES ('admin', 'admin')
             """)
             
             conn.commit()

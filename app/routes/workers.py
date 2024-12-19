@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app.models.database import Database
 from app.models.worker import Worker
-from app.routes.auth import admin_required
+from app.utils.decorators import login_required, admin_required
 from datetime import datetime
 
-bp = Blueprint('workers', __name__, url_prefix='/inventory/workers')
+bp = Blueprint('workers', __name__, url_prefix='/workers')
 
-@bp.route('/workers')
+@bp.route('/')
+@admin_required
 def index():
     workers = Worker.get_all_with_lendings()
     return render_template('workers.html', workers=workers)

@@ -10,9 +10,11 @@
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold">Mitarbeiter</h2>
+            {% if session.get('is_admin') %}
             <a href="{{ url_for(routes.ADD_WORKER) }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Neuer Mitarbeiter
             </a>
+            {% endif %}
         </div>
 
         <!-- Filter-Bereich -->
@@ -71,32 +73,10 @@
                                 </a>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
-                            <span class="px-3 py-1.5 rounded-lg font-medium inline-block font-inter tracking-tight
-                                {% if worker.department == 'Medien und Digitales' %}
-                                    bg-purple-100 text-purple-800
-                                {% elif worker.department == 'Technik' %}
-                                    bg-yellow-100 text-yellow-800
-                                {% elif worker.department == 'Kaufmännisches' %}
-                                    bg-blue-100 text-blue-800
-                                {% elif worker.department == 'Service' %}
-                                    bg-pink-100 text-pink-800
-                                {% elif worker.department == 'APE' %}
-                                    bg-green-100 text-green-800
-                                {% else %}
-                                    bg-gray-100 text-gray-800
-                                {% endif %}">
-                                <i class="fas fa-{% if worker.department == 'Medien und Digitales' %}laptop
-                                            {% elif worker.department == 'Technik' %}wrench
-                                            {% elif worker.department == 'Kaufmännisches' %}chart-line
-                                            {% elif worker.department == 'Service' %}concierge-bell
-                                            {% elif worker.department == 'APE' %}seedling
-                                            {% else %}user
-                                            {% endif %} mr-2"></i>
-                                {{ worker.department or 'Mitarbeiter' }}
-                            </span>
-                        </td>
+                        <td class="px-6 py-4">{{ worker.department }}</td>
+                        {% if session.get('is_admin') %}
                         <td class="px-6 py-4">{{ worker.email or '-' }}</td>
+                        {% endif %}
                         <td class="px-6 py-4 text-center w-40">
                             <button onclick="showBarcodeModal('{{ worker.barcode }}')" 
                                     class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-300 inline-flex justify-center">
@@ -112,10 +92,7 @@
                         <td class="px-6 py-4 text-right">
                             <button onclick="showDeleteModal('{{ worker.barcode }}')"
                                     class="text-red-600 hover:text-red-900">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                </svg>
+                                <i class="fas fa-trash"></i>
                             </button>
                         </td>
                         {% endif %}

@@ -9,9 +9,11 @@
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold font-inter tracking-tight">Werkzeuge</h2>
+            {% if session.get('is_admin') %}
             <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
                 <i class="fas fa-plus"></i> Neues Werkzeug
             </a>
+            {% endif %}
         </div>
 
         <!-- Filter-Bereich -->
@@ -60,9 +62,11 @@
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
                             Seit <i class="fas fa-sort ml-1"></i>
                         </th>
+                        {% if session.get('is_admin') %}
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
                             Ausgeliehen an <i class="fas fa-sort ml-1"></i>
                         </th>
+                        {% endif %}
                         <th class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-40">Barcode</th>
                         {% if session.get('is_admin') %}
                         <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider no-sort">Aktionen</th>
@@ -85,7 +89,7 @@
                                 {{ tool.location or '-' }}
                             </span>
                         </td>
-                        <td class="px-4 py-2">
+                        <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 <span class="inline-flex items-center px-2 py-1 rounded-lg text-sm
                                     {% if tool.status == 'Verfügbar' %}
@@ -101,14 +105,6 @@
                                         {% endif %} mr-2"></i>
                                     {{ tool.status }}
                                 </span>
-                                {% if tool.status == 'Ausgeliehen' %}
-                                <div class="text-sm text-gray-600 flex justify-between items-baseline">
-                                    <span>{{ tool.lent_to }}</span>
-                                    {% if tool.lent_at %}
-                                    <span class="tabular-nums ml-4">{{ tool.lent_at|format_datetime }}</span>
-                                    {% endif %}
-                                </div>
-                                {% endif %}
                             </div>
                         </td>
                         <td class="px-6 py-4">
@@ -117,6 +113,7 @@
                                 {{ tool.status_since or '-' }}
                             </span>
                         </td>
+                        {% if session.get('is_admin') %}
                         <td class="px-6 py-4">
                             {% if tool.current_borrower %}
                             <div class="flex flex-col gap-1">
@@ -135,6 +132,7 @@
                             <span class="px-3 py-1.5 rounded-lg bg-base-200 inline-block">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td class="px-6 py-4 text-center w-40">
                             <button onclick="showBarcodeModal('{{ tool.barcode }}')" 
                                     class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-300 inline-flex justify-center">
@@ -148,10 +146,12 @@
                         </td>
                         {% if session.get('is_admin') %}
                         <td class="px-6 py-4 text-right">
-                            <button onclick="deleteTool('{{ tool.id }}')"
-                                    class="px-3 py-1.5 rounded-lg bg-error/10 text-error hover:bg-error/20">
-                                <i class="fas fa-trash"></i>
+                            {% if tool.status == 'Ausgeliehen' %}
+                            <button onclick="returnTool('{{ tool.barcode }}')"
+                                    class="btn btn-sm btn-primary">
+                                Rückgabe
                             </button>
+                            {% endif %}
                         </td>
                         {% endif %}
                     </tr>
@@ -180,70 +180,8 @@
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-red-600">Werkzeug löschen</h3>
-            <button onclick="closeDeleteModal()" class="text-gray-500 hover:text-gray-700">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
-        </div>
-        <p class="mb-4">Sind Sie sicher, dass Sie dieses Werkzeug löschen möchten?</p>
-        <div class="flex justify-end space-x-4">
-            <button onclick="closeDeleteModal()" 
-                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
-                Abbrechen
-            </button>
-            <button onclick="confirmDelete()" 
-                    class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
-                Löschen
-            </button>
-        </div>
-        <input type="hidden" id="deleteBarcode" value="">
-    </div>
-</div>
-
 <script>
-let currentDeleteBarcode = null;
-
-function showDeleteModal(barcode) {
-    currentDeleteBarcode = barcode;
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
-    currentDeleteBarcode = null;
-}
-
-function confirmDelete() {
-    if (!currentDeleteBarcode) return;
-    
-    fetch(`/api/inventory/tools/${currentDeleteBarcode}`, {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Fehler beim Löschen: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Fehler beim Löschen: ' + error);
-    })
-    .finally(() => {
-        closeDeleteModal();
-    });
-}
-
+// Barcode Modal Funktionen
 function showBarcodeModal(barcode) {
     const modal = document.getElementById('barcodeModal');
     const modalBarcode = document.getElementById('modalBarcode');
@@ -266,6 +204,7 @@ window.onload = function() {
     JsBarcode(".barcode").init();
 }
 
+// Filter und Sortierung
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const filterStatus = document.getElementById('filterStatus');
@@ -301,29 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             row.style.display = matchesSearch && matchesStatus && matchesOrt ? '' : 'none';
         });
-    }
-
-    // Sortier-Funktion
-    function sortTable(columnIndex, type = 'text') {
-        const direction = sortDirection[columnIndex] = !sortDirection[columnIndex];
-
-        tools.sort((a, b) => {
-            let aValue = a.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
-            let bValue = b.querySelector(`td:nth-child(${columnIndex + 1})`).textContent.trim();
-
-            if (type === 'number') {
-                aValue = parseFloat(aValue) || 0;
-                bValue = parseFloat(bValue) || 0;
-            }
-
-            if (direction) {
-                return aValue > bValue ? 1 : -1;
-            } else {
-                return aValue < bValue ? 1 : -1;
-            }
-        });
-
-        tools.forEach(row => toolsTable.appendChild(row));
     }
 
     // Event Listener

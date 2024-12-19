@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.models.database import Database
 from app.models.consumable import Consumable
-from app.utils.decorators import admin_required, login_required
+from app.utils.decorators import login_required, admin_required
 from app.utils import routes
 from app.models.consumable import get_consumables
 
@@ -9,23 +9,21 @@ bp = Blueprint('consumables', __name__, url_prefix='/inventory/consumables')
 print(f"Blueprint URL-Prefix: {bp.url_prefix}")
 
 @bp.route('/')
-@login_required
 def index():
     print("Verbrauchsmaterial Route wurde aufgerufen")
     consumables = get_consumables()
     print(f"Gefundene Verbrauchsmaterialien: {len(consumables)}")
     
     # Sammle alle einzigartigen Orte und Typen für die Filter
-    orte = sorted(set(item['location'] for item in consumables if item.get('location')))
-    typen = sorted(set(item['category'] for item in consumables if item.get('category')))
+    orte = sorted(set(item['location'] for item in consumables if item['location']))
+    typen = sorted(set(item['category'] for item in consumables if item['category']))
     print(f"Gefundene Orte: {orte}")
     print(f"Gefundene Typen: {typen}")
     
     return render_template('consumables.html', 
                          consumables=consumables,
                          orte=orte,
-                         typen=typen,
-                         routes=routes)
+                         typen=typen)
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required

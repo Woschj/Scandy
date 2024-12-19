@@ -34,13 +34,10 @@ def create_app(test_config=None):
             return ""
         if isinstance(value, str):
             try:
-                # Entferne Sekunden falls vorhanden
-                if '.' in value:
-                    value = value.split('.')[0]
                 value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
             except ValueError:
                 return value
-        return value.strftime('%d.%m.%Y %H:%M')  # Vollständiges Jahr und keine Sekunden
+        return value.strftime('%d.%m.%Y %H:%M')
     
     # Globale Template-Variablen
     @app.context_processor

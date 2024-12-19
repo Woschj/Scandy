@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from app.models.database import Database
-from app.utils.decorators import admin_required
+from app.utils.decorators import login_required, admin_required
 
 bp = Blueprint('tools', __name__, url_prefix='/inventory/tools')
 
@@ -23,8 +23,8 @@ def index():
                     ELSE 'Verfügbar'
                 END as status,
                 strftime('%d.%m.%Y %H:%M', l.lent_at) as status_since,
-                w.firstname || ' ' || w.lastname as current_borrower,
-                w.department as borrower_department
+                CASE WHEN ? THEN w.firstname || ' ' || w.lastname ELSE NULL END as current_borrower,
+                CASE WHEN ? THEN w.department ELSE NULL END as borrower_department
             FROM tools t
             LEFT JOIN (
                 SELECT tool_barcode, MAX(id) as latest_id
@@ -37,13 +37,13 @@ def index():
             WHERE t.deleted = 0
         """
         
-        params = []
+        params = [session.get('is_admin', False), session.get('is_admin', False)]
         if status:
-            query += " AND LOWER(CASE 
+            query += """ AND LOWER(CASE 
                         WHEN t.status = 'Defekt' THEN 'Defekt'
                         WHEN l.id IS NOT NULL THEN 'Ausgeliehen'
                         ELSE 'Verfügbar'
-                    END) = LOWER(?)"
+                    END) = LOWER(?)"""
             params.append(status)
             
         query += " ORDER BY t.name"
