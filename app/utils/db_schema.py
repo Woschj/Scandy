@@ -95,10 +95,10 @@ class SchemaManager:
             CREATE TABLE IF NOT EXISTS consumable_usage (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 consumable_id INTEGER NOT NULL,
-                worker_id INTEGER NOT NULL,
+                worker_barcode TEXT NOT NULL,
                 quantity INTEGER NOT NULL,
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (consumable_id) REFERENCES consumables(id),
-                FOREIGN KEY (worker_id) REFERENCES workers(id)
+                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
             )
         ''')

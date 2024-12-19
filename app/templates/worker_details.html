@@ -92,9 +92,15 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             {% for lending in current_lendings %}
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.formatted_checkout_time }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.item_name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.item_type }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.lent_at }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.tool_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <span class="px-2 py-1 rounded-full text-xs
+                                        {% if lending.item_type == 'Werkzeug' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ lending.item_type }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.amount_display }}</td>
                             </tr>
                             {% endfor %}
@@ -112,7 +118,6 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rückgabe</th>
                             </tr>
                         </thead>
@@ -120,11 +125,16 @@
                             {% if lending_history %}
                                 {% for lending in lending_history %}
                                 <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.formatted_checkout_time }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.item_name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.item_type }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.amount_display }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.formatted_return_time }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.lent_at }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ lending.tool_name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <span class="px-2 py-1 rounded-full text-xs
+                                            {% if lending.item_type == 'Werkzeug' %}bg-blue-100 text-blue-800
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                            {{ lending.item_type }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.returned_at }}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}

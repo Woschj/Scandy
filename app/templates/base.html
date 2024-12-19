@@ -273,13 +273,6 @@
     <!-- QuickScan Modal -->
     <dialog id="quickScanModal">
         <div class="modal-box">
-            <!-- Verstecktes Input-Feld für Barcode-Scanner -->
-            <input type="text" 
-                   id="main-scanner-input"
-                   class="opacity-0 absolute top-0 left-0 w-px h-px"
-                   autocomplete="off"
-                   autofocus>
-            
             <!-- Header -->
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-2xl">QuickScan</h3>
@@ -674,6 +667,10 @@
         const scannerInput = document.getElementById('main-scanner-input');
         if (scannerInput) {
             scannerInput.addEventListener('input', function(e) {
+                // Nur ausführen, wenn das QuickScan-Modal offen ist
+                const quickScanModal = document.getElementById('quickScanModal');
+                if (!quickScanModal || quickScanModal.style.display === 'none') return;
+                
                 const barcode = e.target.value.trim();
                 if (barcode.length > 0) {
                     handleBarcodeScan(barcode);
@@ -683,6 +680,10 @@
             
             // Fokus wiederherstellen, wenn er verloren geht
             scannerInput.addEventListener('blur', function() {
+                // Nur ausführen, wenn das QuickScan-Modal offen ist
+                const quickScanModal = document.getElementById('quickScanModal');
+                if (!quickScanModal || quickScanModal.style.display === 'none') return;
+                
                 setTimeout(() => {
                     scannerInput.focus();
                 }, 100);

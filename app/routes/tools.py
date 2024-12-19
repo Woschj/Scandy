@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.models.database import Database
 from app.utils.decorators import login_required, admin_required
 
@@ -137,3 +137,30 @@ def edit(barcode):
         flash(f'Fehler beim Aktualisieren: {str(e)}', 'error')
     
     return redirect(url_for('tools.details', barcode=barcode))
+
+@bp.route('/<barcode>/return', methods=['POST'])
+@admin_required
+def return_tool(barcode):
+    try:
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Aktualisiere den Status des Werkzeugs
+            cursor.execute('''
+                UPDATE tools 
+                SET status = 'Verfügbar'
+                WHERE barcode = ?
+            ''', [barcode])
+            
+            # Setze returned_at für die aktuelle Ausleihe
+            cursor.execute('''
+                UPDATE lendings 
+                SET returned_at = datetime('now')
+                WHERE tool_barcode = ? 
+                AND returned_at IS NULL
+            ''', [barcode])
+            
+            conn.commit()
+            return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})

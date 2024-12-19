@@ -70,7 +70,9 @@ def details(barcode):
         SELECT 
             t.name as tool_name,
             t.barcode as tool_barcode,
-            datetime(l.lent_at, 'localtime') as lent_at
+            strftime('%d.%m.%Y %H:%M', l.lent_at) as lent_at,
+            'Werkzeug' as item_type,
+            1 as amount_display
         FROM lendings l
         JOIN tools t ON l.tool_barcode = t.barcode
         WHERE l.worker_barcode = ? 
@@ -83,14 +85,28 @@ def details(barcode):
         SELECT 
             t.name as tool_name,
             t.barcode as tool_barcode,
-            datetime(l.lent_at, 'localtime') as lent_at,
-            datetime(l.returned_at, 'localtime') as returned_at
+            strftime('%d.%m.%Y %H:%M', l.lent_at) as lent_at,
+            strftime('%d.%m.%Y %H:%M', l.returned_at) as returned_at,
+            'Werkzeug' as item_type,
+            NULL as amount_display
         FROM lendings l
         JOIN tools t ON l.tool_barcode = t.barcode
         WHERE l.worker_barcode = ?
         AND l.returned_at IS NOT NULL
-        ORDER BY l.lent_at DESC
-    ''', [barcode])
+        UNION ALL
+        SELECT 
+            c.name as tool_name,
+            c.barcode as tool_barcode,
+            strftime('%d.%m.%Y %H:%M', cu.used_at) as lent_at,
+            strftime('%d.%m.%Y %H:%M', cu.used_at) as returned_at,
+            'Verbrauchsmaterial' as item_type,
+            NULL as amount_display
+        FROM consumable_usage cu
+        JOIN consumables c ON cu.consumable_id = c.id
+        JOIN workers w ON cu.worker_id = w.id
+        WHERE w.barcode = ?
+        ORDER BY lent_at DESC
+    ''', [barcode, barcode])
 
     return render_template('worker_details.html', 
                          worker=worker,
