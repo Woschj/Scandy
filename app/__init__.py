@@ -98,7 +98,8 @@ def create_app(test_config=None):
     def index():
         return 'Scandy Tool Management'
 
-    from app.cli import init_db_command
-    app.cli.add_command(init_db_command)
+    if os.environ.get('RENDER') != 'true':
+        from app.cli import init_db_command
+        app.cli.add_command(init_db_command)
 
     return app

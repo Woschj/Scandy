@@ -7,7 +7,7 @@ if project_path not in sys.path:
     sys.path.append(project_path)
 
 # Importiere und erstelle die App
-from app import create_app
+from run import create_app
 application = create_app()
 
 if __name__ == '__main__':
