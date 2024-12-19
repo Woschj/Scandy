@@ -2,7 +2,9 @@ services:
   - type: web
     name: scandy
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "from app.models.database import Database; from flask import Flask; app = Flask(__name__); with app.app_context(): Database.init_db()"
     startCommand: gunicorn wsgi:app
     envVars:
       - key: PYTHON_VERSION
