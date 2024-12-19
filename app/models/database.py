@@ -7,17 +7,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Database:
-    DATABASE_PATH = os.path.join('database', 'inventory.db')
+    @staticmethod
+    def get_database_path():
+        if os.environ.get('RENDER') == 'true':
+            return os.path.join('/opt/render/project/src/database', 'inventory.db')
+        else:
+            return os.path.join('database', 'inventory.db')
+    
+    DATABASE_PATH = property(get_database_path)
 
     @staticmethod
     def get_db():
         if 'db' not in g:
-            try:
-                g.db = sqlite3.connect(Database.DATABASE_PATH)
-                g.db.row_factory = sqlite3.Row
-            except Exception as e:
-                logger.error(f"Datenbankfehler: {str(e)}")
-                raise
+            db_path = Database.get_database_path()
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            g.db = sqlite3.connect(db_path)
+            g.db.row_factory = sqlite3.Row
         return g.db
 
     @staticmethod
@@ -29,15 +34,12 @@ class Database:
 
     @staticmethod
     def init_db():
-        logger.info("Initialisiere Datenbank...")
-        try:
-            db = Database.get_db()
-            with current_app.open_resource('schema.sql') as f:
-                db.executescript(f.read().decode('utf8'))
-            logger.info("Datenbankschema erfolgreich initialisiert")
-        except Exception as e:
-            logger.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
-            raise
+        """Initialisiert die Datenbank wenn sie nicht existiert"""
+        if not os.path.exists(Database.DATABASE_PATH):
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                # Hier SQL für Tabellenerstellung
+                cursor.execute('''CREATE TABLE IF NOT EXISTS...''')
 
     @staticmethod
     def close_db():
