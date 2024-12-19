@@ -5,18 +5,9 @@
 {% block content %}
 <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="card-title">{{ tool.name }}</h2>
-            <a href="{{ url_for(routes.TOOLS_INDEX) }}" class="btn btn-ghost">
-                <i class="fas fa-arrow-left"></i> Zurück
-            </a>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Werkzeug-Details -->
             <div>
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">{{ tool.name }}</h2>
-                
                 <form action="{{ url_for('tools.edit', barcode=tool.barcode) }}" method="POST" class="space-y-6">
                     <!-- Barcode (nicht editierbar) -->
                     <div>
@@ -24,46 +15,46 @@
                         <input type="text" value="{{ tool.barcode }}" readonly
                                class="input input-bordered w-full bg-base-200">
                     </div>
-
+                    
                     <!-- Name -->
                     <div>
-                        <label class="label">Bezeichnung</label>
+                        <label class="label">Name</label>
                         <input type="text" name="name" value="{{ tool.name }}" required
                                class="input input-bordered w-full">
                     </div>
-
+                    
                     <!-- Beschreibung -->
                     <div>
                         <label class="label">Beschreibung</label>
-                        <input type="text" name="description" value="{{ tool.description }}"
-                               class="input input-bordered w-full">
+                        <textarea name="description" rows="3"
+                                class="textarea textarea-bordered w-full">{{ tool.description or '' }}</textarea>
                     </div>
-
-                    <!-- Ort -->
+                    
+                    <!-- Standort -->
                     <div>
-                        <label class="label">Ort</label>
-                        <input type="text" name="location" value="{{ tool.location }}"
+                        <label class="label">Standort</label>
+                        <input type="text" name="location" value="{{ tool.location or '' }}"
                                class="input input-bordered w-full">
                     </div>
-
-                    <!-- Kategorie -->
-                    <div>
-                        <label class="label">Kategorie</label>
-                        <input type="text" name="category" value="{{ tool.category }}"
-                               class="input input-bordered w-full">
-                    </div>
-
+                    
                     <!-- Status -->
                     <div>
                         <label class="label">Status</label>
                         <select name="status" class="select select-bordered w-full">
                             <option value="Verfügbar" {% if tool.status == 'Verfügbar' %}selected{% endif %}>Verfügbar</option>
-                            <option value="Ausgeliehen" {% if tool.status == 'Ausgeliehen' %}selected{% endif %} disabled>Ausgeliehen</option>
+                            <option value="Ausgeliehen" {% if tool.status == 'Ausgeliehen' %}selected{% endif %}>Ausgeliehen</option>
                             <option value="Defekt" {% if tool.status == 'Defekt' %}selected{% endif %}>Defekt</option>
                         </select>
                     </div>
+                    
+                    <!-- Kategorie -->
+                    <div>
+                        <label class="label">Kategorie</label>
+                        <input type="text" name="category" value="{{ tool.category or '' }}"
+                               class="input input-bordered w-full">
+                    </div>
 
-                    <!-- Submit Button -->
+                    <!-- Speichern Button -->
                     {% if session.get('is_admin') %}
                     <div class="flex justify-end">
                         <button type="submit" class="btn btn-primary">
@@ -74,68 +65,28 @@
                 </form>
             </div>
 
-            <!-- Werkzeugverlauf -->
-            <div class="col-span-2 mt-8">
-                <h2 class="text-xl font-bold mb-4">Werkzeugverlauf</h2>
+            <!-- Ausleihverlauf -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Ausleihverlauf</h3>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+                    <table class="table w-full">
+                        <thead>
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Person</th>
+                                <th>Datum</th>
+                                <th>Mitarbeiter</th>
+                                <th>Aktion</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for lending in lendings %}
+                        <tbody>
+                            {% for entry in lending_history %}
                             <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ lending.checkout_time[:16] if lending.checkout_time else '-' }}
+                                <td>{{ entry.timestamp }}</td>
+                                <td>{{ entry.worker_name }}</td>
+                                <td>
+                                    <span class="badge {% if entry.action == 'Ausgeliehen' %}badge-warning{% else %}badge-success{% endif %}">
+                                        {{ entry.action }}
+                                    </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {% if lending.return_time %}Rückgabe{% else %}Ausleihe{% endif %}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {% if lending.return_time %}
-                                        Zurückgegeben am {{ lending.return_time[:16] }}
-                                    {% else %}
-                                        Ausgeliehen
-                                    {% endif %}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ lending.worker_name }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Statusverlauf Tabelle -->
-            <div class="mt-6">
-                <h3 class="text-lg font-medium text-gray-900">Statusverlauf</h3>
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Datum</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geändert von</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for entry in status_history %}
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {% if entry.formatted_time %}
-                                        {{ entry.formatted_time }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Statusänderung</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.old_status }} → {{ entry.new_status }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ entry.changed_by or 'System' }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

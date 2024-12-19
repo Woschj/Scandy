@@ -94,13 +94,16 @@ def details(barcode):
         flash('Werkzeug nicht gefunden', 'error')
         return redirect(url_for('tools.index'))
 
-    # Ausleihverlauf abrufen
-    lendings = Database.query('''
+    # Hole Ausleihverlauf
+    lending_history = Database.query('''
         SELECT 
-            l.*,
+            l.id,
             w.firstname || ' ' || w.lastname as worker_name,
-            datetime(l.lent_at, 'localtime') as checkout_time,
-            datetime(l.returned_at, 'localtime') as return_time
+            strftime('%d.%m.%Y %H:%M', l.lent_at) as timestamp,
+            CASE 
+                WHEN l.returned_at IS NULL THEN 'Ausgeliehen'
+                ELSE 'Zurückgegeben'
+            END as action
         FROM lendings l
         LEFT JOIN workers w ON l.worker_barcode = w.barcode
         WHERE l.tool_barcode = ?
@@ -109,7 +112,7 @@ def details(barcode):
 
     return render_template('tool_details.html', 
                          tool=tool,
-                         lendings=lendings)
+                         lending_history=lending_history)
 
 @bp.route('/<barcode>/edit', methods=['POST'])
 @admin_required
