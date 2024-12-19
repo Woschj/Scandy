@@ -55,14 +55,21 @@ def details(barcode):
     if consumable:
         try:
             history = Database.query('''
-                SELECT ch.*, w.firstname || ' ' || w.lastname as worker_name
-                FROM consumables_history ch
-                LEFT JOIN workers w ON ch.worker_barcode = w.barcode
-                WHERE ch.consumable_barcode = ?
-                ORDER BY ch.timestamp DESC
+                SELECT 
+                    w.firstname || ' ' || w.lastname as worker_name,
+                    strftime('%d.%m.%Y %H:%M', cu.used_at) as timestamp,
+                    cu.quantity as amount,
+                    'Ausgabe' as action
+                FROM consumable_usage cu
+                JOIN workers w ON cu.worker_barcode = w.barcode
+                WHERE cu.consumable_id = (
+                    SELECT id FROM consumables WHERE barcode = ?
+                )
+                ORDER BY cu.used_at DESC
             ''', [barcode])
-        except:
-            history = []  # Falls die Tabelle noch nicht existiert oder leer ist
+        except Exception as e:
+            print(f"Fehler beim Abrufen der Historie: {e}")  # Debug-Ausgabe
+            history = []
             
         return render_template('consumable_details.html', 
                              consumable=consumable, 

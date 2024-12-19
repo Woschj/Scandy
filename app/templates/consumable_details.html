@@ -1,108 +1,96 @@
 {% extends "base.html" %}
 
-{% block title %}{{ consumable.name }} - Details{% endblock %}
+{% block title %}{{ consumable.name }}{% endblock %}
 
 {% block content %}
 <div class="card bg-base-100 shadow-xl">
     <div class="card-body">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">{{ consumable.name }}</h2>
-            <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">
-                <i class="fas fa-arrow-left"></i> Zurück
-            </a>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Verbrauchsmaterial-Details -->
+            <div>
+                <form action="{{ url_for('consumables.edit', barcode=consumable.barcode) }}" method="POST" class="space-y-6">
+                    <!-- Barcode (nicht editierbar) -->
+                    <div>
+                        <label class="label">Barcode</label>
+                        <input type="text" value="{{ consumable.barcode }}" readonly
+                               class="input input-bordered w-full bg-base-200">
+                    </div>
+                    
+                    <!-- Name -->
+                    <div>
+                        <label class="label">Name</label>
+                        <input type="text" name="name" value="{{ consumable.name }}" required
+                               class="input input-bordered w-full">
+                    </div>
+                    
+                    <!-- Beschreibung -->
+                    <div>
+                        <label class="label">Beschreibung</label>
+                        <textarea name="description" rows="3"
+                                class="textarea textarea-bordered w-full">{{ consumable.description or '' }}</textarea>
+                    </div>
+                    
+                    <!-- Standort -->
+                    <div>
+                        <label class="label">Standort</label>
+                        <input type="text" name="location" value="{{ consumable.location or '' }}"
+                               class="input input-bordered w-full">
+                    </div>
+                    
+                    <!-- Bestand -->
+                    <div>
+                        <label class="label">Aktueller Bestand</label>
+                        <input type="number" name="quantity" value="{{ consumable.quantity }}" required
+                               class="input input-bordered w-full">
+                    </div>
+                    
+                    <!-- Mindestbestand -->
+                    <div>
+                        <label class="label">Mindestbestand</label>
+                        <input type="number" name="min_quantity" value="{{ consumable.min_quantity }}" required
+                               class="input input-bordered w-full">
+                    </div>
 
-        <form action="{{ url_for('consumables.edit', barcode=consumable.barcode) }}" method="post" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Name -->
-                <div>
-                    <label class="label">Name</label>
-                    <input type="text" name="name" value="{{ consumable.name }}" 
-                           class="input input-bordered w-full" required>
-                </div>
-                
-                <!-- Barcode -->
-                <div>
-                    <label class="label">Barcode</label>
-                    <input type="text" value="{{ consumable.barcode }}" 
-                           class="input input-bordered w-full" readonly>
-                </div>
-
-                <!-- Kategorie -->
-                <div>
-                    <label class="label">Kategorie</label>
-                    <input type="text" name="category" value="{{ consumable.category }}" 
-                           class="input input-bordered w-full">
-                </div>
-
-                <!-- Ort -->
-                <div>
-                    <label class="label">Ort</label>
-                    <input type="text" name="location" value="{{ consumable.location }}" 
-                           class="input input-bordered w-full">
-                </div>
-
-                <!-- Aktueller Bestand -->
-                <div>
-                    <label class="label">Aktueller Bestand</label>
-                    <input type="number" name="quantity" value="{{ consumable.quantity }}" 
-                           class="input input-bordered w-full" required>
-                </div>
-
-                <!-- Mindestbestand -->
-                <div>
-                    <label class="label">Mindestbestand</label>
-                    <input type="number" name="min_quantity" value="{{ consumable.min_quantity }}" 
-                           class="input input-bordered w-full" required>
-                </div>
-
-                <!-- Beschreibung -->
-                <div class="md:col-span-2">
-                    <label class="label">Beschreibung</label>
-                    <textarea name="description" class="textarea textarea-bordered w-full" 
-                              rows="3">{{ consumable.description }}</textarea>
-                </div>
+                    <!-- Speichern Button -->
+                    {% if session.get('is_admin') %}
+                    <div class="flex justify-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Speichern
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
             </div>
 
-            {% if session.get('is_admin') %}
-            <div class="flex justify-end space-x-4">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Speichern
-                </button>
-            </div>
-            {% endif %}
-        </form>
-
-        <!-- Verlauf -->
-        {% if history %}
-        <div class="mt-8">
-            <h3 class="text-xl font-bold mb-4">Verlauf</h3>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-base-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Datum</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Mitarbeiter</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Änderung</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Neuer Bestand</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Notiz</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-base-100 divide-y divide-base-200">
-                        {% for entry in history %}
-                        <tr class="hover:bg-base-200">
-                            <td class="px-6 py-4">{{ entry.timestamp }}</td>
-                            <td class="px-6 py-4">{{ entry.worker_name or '-' }}</td>
-                            <td class="px-6 py-4">{{ entry.quantity_change }}</td>
-                            <td class="px-6 py-4">{{ entry.quantity_after }}</td>
-                            <td class="px-6 py-4">{{ entry.note or '-' }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <!-- Ausgabeverlauf -->
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Ausgabeverlauf</h3>
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Mitarbeiter</th>
+                                <th>Menge</th>
+                                <th>Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in history %}
+                            <tr>
+                                <td>{{ entry.timestamp }}</td>
+                                <td>{{ entry.worker_name }}</td>
+                                <td>{{ entry.amount }} Stk</td>
+                                <td>
+                                    <span class="badge badge-info">{{ entry.action }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %} 

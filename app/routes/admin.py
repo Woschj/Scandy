@@ -136,7 +136,7 @@ def dashboard():
                     strftime('%d.%m.%Y %H:%M', cu.used_at) as used_at
                 FROM consumable_usage cu
                     JOIN consumables c ON cu.consumable_id = c.id
-                    JOIN workers w ON cu.worker_id = w.id
+                    JOIN workers w ON cu.worker_barcode = w.barcode
                 ORDER BY cu.used_at DESC
                 LIMIT 50
             """)
