@@ -2,6 +2,10 @@
 
 {% block title %}Werkzeuge{% endblock %}
 
+{% block head %}
+<script src="{{ url_for('static', filename='js/table-functions.js') }}" defer></script>
+{% endblock %}
+
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
@@ -47,7 +51,7 @@
 
         <!-- Tabelle -->
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-base-200">
+            <table id="toolsTable" class="min-w-full divide-y divide-base-200">
                 <thead class="bg-base-200">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer">
@@ -204,54 +208,11 @@ window.onload = function() {
     JsBarcode(".barcode").init();
 }
 
-// Filter und Sortierung
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const filterStatus = document.getElementById('filterStatus');
-    const filterOrt = document.getElementById('filterOrt');
-    const toolsTable = document.querySelector('table tbody');
-    let tools = Array.from(toolsTable.querySelectorAll('tr'));
-    let sortDirection = {};
-
-    // Filter-Funktion
-    function filterTools() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const selectedStatus = filterStatus.value.toLowerCase();
-        const selectedOrt = filterOrt.value.toLowerCase();
-
-        tools.forEach(row => {
-            const nameCell = row.querySelector('td:nth-child(1) a');
-            const name = nameCell.textContent.trim().toLowerCase();
-            
-            const ortCell = row.querySelector('td:nth-child(2) span');
-            const ort = ortCell.textContent.trim().toLowerCase();
-
-            const statusCell = row.querySelector('td:nth-child(3) span');
-            const status = statusCell.textContent.trim().toLowerCase();
-
-            const barcodeBtn = row.querySelector('td:nth-child(6) button');
-            const barcode = barcodeBtn.getAttribute('onclick').split("'")[1].toLowerCase();
-
-            const matchesSearch = name.includes(searchTerm) || 
-                                ort.includes(searchTerm) || 
-                                barcode.includes(searchTerm);
-            const matchesStatus = !selectedStatus || status === selectedStatus;
-            const matchesOrt = !selectedOrt || ort.includes(selectedOrt);
-
-            row.style.display = matchesSearch && matchesStatus && matchesOrt ? '' : 'none';
-        });
-    }
-
-    // Event Listener
-    searchInput.addEventListener('input', filterTools);
-    filterStatus.addEventListener('change', filterTools);
-    filterOrt.addEventListener('change', filterTools);
-
-    // Sortier-Header
-    document.querySelectorAll('th').forEach((th, index) => {
-        if (!th.classList.contains('no-sort')) {
-            th.style.cursor = 'pointer';
-            th.addEventListener('click', () => sortTable(index));
+    initializeTable('toolsTable', {
+        filterColumns: {
+            filterStatus: 2,  // Status-Spalte
+            filterOrt: 1      // Ort-Spalte
         }
     });
 });

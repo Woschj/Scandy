@@ -1,86 +1,79 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.getElementById('lendingsTable');
+function initializeTable(tableId, options = {}) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
     const searchInput = document.getElementById('searchInput');
-    const categoryFilter = document.getElementById('categoryFilter');
-
-    if (!table || !searchInput || !categoryFilter) return;
-
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
     let sortDirection = {};
 
-    // Hilfsfunktion zum Ermitteln des Spaltenindex
-    function getColumnIndex(column) {
-        switch(column) {
-            case 'item': return 0;    // Artikel
-            case 'worker': return 2;  // Ausgeliehen/Ausgegeben an
-            case 'date': return 4;    // Datum
-            default: return 0;
-        }
-    }
-
-    // Suchfunktion
+    // Filter-Funktion
     function filterTable() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const category = categoryFilter.value;
-        const rows = Array.from(table.querySelectorAll('tbody tr'));
+        const searchTerm = searchInput?.value.toLowerCase() || '';
+        const filters = {};
+        
+        // Sammle alle aktiven Filter
+        document.querySelectorAll('select[id^="filter"]').forEach(select => {
+            filters[select.id] = select.value.toLowerCase();
+        });
 
         rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            const categoryCell = row.querySelector('td:nth-child(6)');
-            const rowCategory = categoryCell ? categoryCell.textContent.trim() : '';
-            const matchesSearch = text.includes(searchTerm);
-            const matchesCategory = !category || rowCategory === category;
-            row.style.display = matchesSearch && matchesCategory ? '' : 'none';
+            let showRow = true;
+            
+            // Suche
+            if (searchTerm) {
+                const text = row.textContent.toLowerCase();
+                showRow = text.includes(searchTerm);
+            }
+
+            // Filter
+            if (showRow) {
+                Object.entries(filters).forEach(([filterId, filterValue]) => {
+                    if (filterValue) {
+                        const columnIndex = options.filterColumns?.[filterId] || 0;
+                        const cell = row.cells[columnIndex];
+                        const cellText = cell?.textContent.toLowerCase() || '';
+                        showRow = showRow && cellText.includes(filterValue);
+                    }
+                });
+            }
+
+            row.style.display = showRow ? '' : 'none';
         });
     }
 
-    // Sortierfunktion
-    function sortTable(column) {
-        console.log('Sorting by:', column);  // Debug
-        const rows = Array.from(table.querySelectorAll('tbody tr'));
-        const direction = sortDirection[column] = !sortDirection[column];
-
-        // Sortier-Icons aktualisieren
-        table.querySelectorAll('th[data-sort] i').forEach(icon => {
-            icon.className = 'fas fa-sort ml-1';
-        });
-        const currentIcon = table.querySelector(`th[data-sort="${column}"] i`);
-        if (currentIcon) {
-            currentIcon.className = `fas fa-sort-${direction ? 'up' : 'down'} ml-1`;
-        }
-
+    // Sortier-Funktion
+    function sortTable(columnIndex) {
+        const direction = sortDirection[columnIndex] = !sortDirection[columnIndex];
+        
         rows.sort((a, b) => {
-            const colIndex = getColumnIndex(column);
-            console.log('Column index:', colIndex);  // Debug
-            const aVal = a.children[colIndex].textContent.trim();
-            const bVal = b.children[colIndex].textContent.trim();
-            console.log('Comparing:', aVal, bVal);  // Debug
-
-            // Spezielle Behandlung für Datumsspalte
-            if (column === 'date') {
-                const aDate = new Date(aVal.split('.').reverse().join('-'));
-                const bDate = new Date(bVal.split('.').reverse().join('-'));
-                return direction ? aDate - bDate : bDate - aDate;
+            const aValue = a.cells[columnIndex].textContent.trim();
+            const bValue = b.cells[columnIndex].textContent.trim();
+            
+            if (direction) {
+                return aValue.localeCompare(bValue);
+            } else {
+                return bValue.localeCompare(aValue);
             }
-
-            return direction ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         });
 
-        const tbody = table.querySelector('tbody');
         rows.forEach(row => tbody.appendChild(row));
     }
 
     // Event Listener
-    searchInput.addEventListener('input', filterTable);
-    categoryFilter.addEventListener('change', filterTable);
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+    }
 
-    table.querySelectorAll('th[data-sort]').forEach(th => {
-        th.style.cursor = 'pointer';  // Visuelles Feedback
-        th.addEventListener('click', () => {
-            console.log('Clicked column:', th.dataset.sort);  // Debug
-            sortTable(th.dataset.sort);
-        });
+    document.querySelectorAll('select[id^="filter"]').forEach(select => {
+        select.addEventListener('change', filterTable);
     });
 
-    // Initial sort by date
-    sortTable('date');
-}); 
+    // Sortierbare Spalten
+    table.querySelectorAll('th').forEach((th, index) => {
+        if (!th.classList.contains('no-sort')) {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', () => sortTable(index));
+        }
+    });
+} 

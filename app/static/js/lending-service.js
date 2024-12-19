@@ -295,7 +295,7 @@ window.ManualLending = {
         const [type, id, barcode, name] = value.split(':');
         this.selectedWorker = { 
             id, 
-            barcode: barcode.replace('worker:', ''),  // "worker:" Prefix entfernen falls vorhanden
+            barcode: barcode,  // Barcode unverändert speichern
             name 
         };
         document.getElementById('previewWorker').textContent = `${name} (${barcode})`;
@@ -321,7 +321,9 @@ window.ManualLending = {
             };
 
             const workerData = {
-                barcode: this.selectedWorker.barcode.replace('worker:', '')  // Sicherstellen, dass kein Prefix vorhanden ist
+                barcode: this.selectedWorker.barcode.includes('worker:') 
+                    ? this.selectedWorker.barcode.replace('worker:', '')
+                    : this.selectedWorker.barcode
             };
 
             const result = await window.LendingService.processLending(itemData, workerData);

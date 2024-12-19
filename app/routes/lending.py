@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
+from flask_login import login_required
 from app.models.database import Database
-from app.utils.auth import login_required
 import logging
 
 bp = Blueprint('lending', __name__)

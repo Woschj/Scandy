@@ -25,7 +25,7 @@ def create_app():
     app.config.update(
         SECRET_KEY='your-secret-key-here',
         PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-        SESSION_COOKIE_SECURE=False,
+        SESSION_COOKIE_SECURE=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
         SESSION_COOKIE_NAME='scandy_session'
@@ -77,5 +77,5 @@ if __name__ == '__main__':
         print_app_structure()
     
     logger.info("Starte Entwicklungsserver...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='127.0.0.1', port=5000)
   
