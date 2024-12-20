@@ -4,7 +4,7 @@ from .constants import Routes
 from flask_login import LoginManager, login_required
 import os
 from datetime import datetime
-from app.utils.filters import register_filters  # Neue Import-Zeile
+from app.utils.filters import register_filters
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -98,6 +98,7 @@ def create_app(test_config=None):
     def index():
         return 'Scandy Tool Management'
 
+    # CLI-Befehle nur lokal laden
     try:
         if os.environ.get('RENDER') != 'true':
             from app.cli import init_db_command
