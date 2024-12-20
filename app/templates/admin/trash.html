@@ -16,9 +16,9 @@
     <!-- Werkzeuge -->
     <div id="tools-tab" class="tab-content">
         <h2 class="text-xl font-semibold mb-4">Gelöschte Werkzeuge</h2>
-        <div class="overflow-x-auto">
-            <table class="table w-full">
-                <thead>
+        <div class="w-full">
+            <table class="min-w-full divide-y divide-base-200">
+                <thead class="bg-base-200">
                     <tr>
                         <th>Barcode</th>
                         <th>Name</th>
@@ -52,9 +52,9 @@
     <!-- Verbrauchsmaterial -->
     <div id="consumables-tab" class="tab-content hidden">
         <h2 class="text-xl font-semibold mb-4">Gelöschtes Verbrauchsmaterial</h2>
-        <div class="overflow-x-auto">
-            <table class="table w-full">
-                <thead>
+        <div class="w-full">
+            <table class="min-w-full divide-y divide-base-200">
+                <thead class="bg-base-200">
                     <tr>
                         <th>Barcode</th>
                         <th>Bezeichnung</th>
@@ -92,9 +92,9 @@
     <!-- Mitarbeiter -->
     <div id="workers-tab" class="tab-content hidden">
         <h2 class="text-xl font-semibold mb-4">Gelöschte Mitarbeiter</h2>
-        <div class="overflow-x-auto">
-            <table class="table w-full">
-                <thead>
+        <div class="w-full">
+            <table class="min-w-full divide-y divide-base-200">
+                <thead class="bg-base-200">
                     <tr>
                         <th>Barcode</th>
                         <th>Name</th>
@@ -131,7 +131,7 @@ function showTab(tabName) {
         tab.classList.add('hidden');
     });
     
-    // Gewählten Tab-Inhalt anzeigen
+    // Gew��hlten Tab-Inhalt anzeigen
     document.getElementById(tabName + '-tab').classList.remove('hidden');
     
     // Tab-Buttons aktualisieren

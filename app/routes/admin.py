@@ -9,6 +9,9 @@ import colorsys
 import logging
 from datetime import datetime
 from app.models.models import Tool, Consumable, Worker
+import sqlite3
+from app.utils.error_handler import handle_errors, safe_db_query
+from app.utils.color_settings import save_color_setting
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -122,96 +125,187 @@ def get_color_settings():
             'primary_hex': '#3B82F6'
         }
 
-@bp.route('/dashboard')
-@admin_required
-def dashboard():
-    def get_consumable_usages():
+def get_deleted_items():
+    """Holt gelöschte Einträge, robust gegen fehlende Spalten"""
+    with Database.get_db() as conn:
+        cursor = conn.cursor()
+        deleted_items = {
+            'tools': [],
+            'consumables': [],
+            'workers': []
+        }
+        
+        try:
+            # Prüfe Spalten in tools Tabelle
+            columns = [col[1] for col in cursor.execute('PRAGMA table_info(tools)').fetchall()]
+            if all(col in columns for col in ['deleted', 'deleted_at']):
+                deleted_items['tools'] = cursor.execute('''
+                    SELECT * FROM tools 
+                    WHERE deleted = 1 
+                    ORDER BY deleted_at DESC
+                ''').fetchall()
+            
+            # Prüfe Spalten in consumables Tabelle
+            columns = [col[1] for col in cursor.execute('PRAGMA table_info(consumables)').fetchall()]
+            if all(col in columns for col in ['deleted', 'deleted_at']):
+                deleted_items['consumables'] = cursor.execute('''
+                    SELECT * FROM consumables 
+                    WHERE deleted = 1 
+                    ORDER BY deleted_at DESC
+                ''').fetchall()
+            
+            # Prüfe Spalten in workers Tabelle
+            columns = [col[1] for col in cursor.execute('PRAGMA table_info(workers)').fetchall()]
+            if all(col in columns for col in ['deleted', 'deleted_at']):
+                deleted_items['workers'] = cursor.execute('''
+                    SELECT * FROM workers 
+                    WHERE deleted = 1 
+                    ORDER BY deleted_at DESC
+                ''').fetchall()
+                
+        except sqlite3.Error as e:
+            print(f"Datenbankfehler beim Abrufen gelöschter Einträge: {str(e)}")
+            
+        return deleted_items
+
+def get_trash_count():
+    """Zählt gelöschte Einträge, robust gegen fehlende Spalten"""
+    try:
         with Database.get_db() as conn:
             cursor = conn.cursor()
+            total = 0
+            
+            # Prüfe jede Tabelle einzeln
+            for table in ['tools', 'consumables', 'workers']:
+                try:
+                    columns = [col[1] for col in cursor.execute(f'PRAGMA table_info({table})').fetchall()]
+                    if 'deleted' in columns:
+                        count = cursor.execute(f'SELECT COUNT(*) FROM {table} WHERE deleted = 1').fetchone()[0]
+                        total += count
+                except sqlite3.Error as e:
+                    print(f"Fehler beim Zählen von {table}: {str(e)}")
+                    continue
+                    
+            return total
+    except Exception as e:
+        print(f"Fehler beim Ermitteln der Papierkorb-Anzahl: {str(e)}")
+        return 0
+
+@bp.route('/dashboard')
+@admin_required
+@handle_errors
+def dashboard():
+    def get_consumable_usages():
+        """Holt die Verbrauchsmaterial-Nutzungsstatistiken"""
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            
             cursor.execute("""
                 SELECT 
                     c.name as consumable_name,
                     cu.quantity,
                     w.firstname || ' ' || w.lastname as worker_name,
-                    strftime('%d.%m.%Y %H:%M', cu.used_at) as used_at
-                FROM consumable_usage cu
-                    JOIN consumables c ON cu.consumable_id = c.id
-                    JOIN workers w ON cu.worker_barcode = w.barcode
+                    cu.used_at
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode
+                JOIN workers w ON cu.worker_barcode = w.barcode
+                WHERE c.deleted = 0
                 ORDER BY cu.used_at DESC
                 LIMIT 50
             """)
+            
             return [
                 {
-                    'consumable_name': row[0],
-                    'quantity': row[1],
-                    'worker_name': row[2],
-                    'used_at': row[3]
+                    'consumable_name': row['consumable_name'],
+                    'quantity': row['quantity'],
+                    'worker_name': row['worker_name'],
+                    'used_at': row['used_at']
                 }
                 for row in cursor.fetchall()
             ]
 
-    stats = {
-        'tools_count': Tool.count_active(),
-        'tools': {
-            'available': Tool.count_by_status('verfügbar'),
-            'lent': Tool.count_by_status('verliehen'),
-            'defect': Tool.count_by_status('defekt')
-        },
-        'consumables_count': Consumable.count_active(),
-        'consumables': {
-            'sufficient': Consumable.count_by_stock_status('sufficient'),
-            'low': Consumable.count_by_stock_status('low'),
-            'empty': Consumable.count_by_stock_status('empty')
-        },
-        'workers_count': Worker.count_active(),
-        'workers': {
-            'departments': Worker.count_by_department()
-        }
-    }
-    
+    stats = get_stats()
     current_lendings = get_current_lendings()
     consumable_usages = get_consumable_usages()
     colors = get_color_settings()
+    deleted_items = get_deleted_items()
     
     return render_template('admin/dashboard.html',
                          stats=stats,
                          current_lendings=current_lendings,
                          consumable_usages=consumable_usages,
-                         colors=colors)
+                         colors=colors,
+                         deleted_tools=deleted_items['tools'],
+                         deleted_consumables=deleted_items['consumables'],
+                         deleted_workers=deleted_items['workers'])
 
-@bp.route('/update_design', methods=['POST'])
-@admin_required
-def update_design():
-    try:
-        hex_color = request.form.get('primary', '#3B82F6')
-        print(f"Empfangene HEX Farbe: {hex_color}")  # Debug
-        
-        # Konvertiere HEX zu RGB
-        rgb = tuple(int(hex_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-        r, g, b = [x/255.0 for x in rgb]
-        
-        # Konvertiere RGB zu HSL
-        h, l, s = colorsys.rgb_to_hls(r, g, b)
-        hsl_value = f"{int(h*360)} {int(s*100)}% {int(l*100)}%"
-        print(f"Konvertierte HSL Farbe: {hsl_value}")  # Debug
-        
-        with Database.get_db() as db:
-            cursor = db.cursor()
-            cursor.execute(
-                'INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)',
-                ('color_primary', hsl_value)
-            )
-            db.commit()
-            
-        return jsonify({
-            'status': 'success', 
-            'message': 'Design wurde aktualisiert',
-            'color': {'hsl': hsl_value, 'hex': hex_color}
-        })
-        
-    except Exception as e:
-        print(f"Fehler beim Aktualisieren des Designs: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+@safe_db_query
+def get_stats():
+    with Database.get_db() as conn:
+        # Werkzeug-Statistiken
+        tools_stats = conn.execute('''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'Verfügbar' THEN 1 ELSE 0 END) as available,
+                SUM(CASE WHEN status = 'Ausgeliehen' THEN 1 ELSE 0 END) as lent,
+                SUM(CASE WHEN status = 'Defekt' THEN 1 ELSE 0 END) as defect
+            FROM tools 
+            WHERE deleted = 0
+        ''').fetchone()
+
+        # Verbrauchsmaterial-Statistiken
+        consumables_stats = conn.execute('''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN quantity > min_quantity THEN 1 ELSE 0 END) as sufficient,
+                SUM(CASE WHEN quantity <= min_quantity AND quantity > 0 THEN 1 ELSE 0 END) as low,
+                SUM(CASE WHEN quantity = 0 THEN 1 ELSE 0 END) as empty
+            FROM consumables 
+            WHERE deleted = 0
+        ''').fetchone()
+
+        # Mitarbeiter-Statistiken und Abteilungen
+        workers_stats = conn.execute('''
+            SELECT COUNT(*) as total
+            FROM workers 
+            WHERE deleted = 0
+        ''').fetchone()
+
+        departments = conn.execute('''
+            SELECT 
+                department as name,
+                COUNT(*) as count
+            FROM workers 
+            WHERE deleted = 0 
+            AND department IS NOT NULL 
+            GROUP BY department
+            ORDER BY department
+        ''').fetchall()
+
+        return {
+            'tools': {
+                'total': tools_stats['total'],
+                'available': tools_stats['available'],
+                'lent': tools_stats['lent'],
+                'defect': tools_stats['defect']
+            },
+            'tools_count': tools_stats['total'],
+            'consumables': {
+                'total': consumables_stats['total'],
+                'sufficient': consumables_stats['sufficient'],
+                'low': consumables_stats['low'],
+                'empty': consumables_stats['empty']
+            },
+            'consumables_count': consumables_stats['total'],
+            'workers': {
+                'total': workers_stats['total'],
+                'departments': [
+                    {'name': dept['name'], 'count': dept['count']} 
+                    for dept in departments
+                ]
+            },
+            'workers_count': workers_stats['total']
+        }
 
 @bp.route('/reset_design', methods=['POST'])
 @admin_required
@@ -706,5 +800,58 @@ def load_settings():
         print(f"Fehler beim Laden der Einstellungen: {str(e)}")
         g.settings = {'primary_color': '#3B82F6'}
 
+@bp.route('/trash')
+@admin_required
+def trash():
+    try:
+        deleted_items = get_deleted_items()
+        return render_template('admin/trash.html',
+                             deleted_tools=deleted_items['tools'],
+                             deleted_consumables=deleted_items['consumables'],
+                             deleted_workers=deleted_items['workers'])
+    except Exception as e:
+        flash(f'Fehler beim Laden des Papierkorbs: {str(e)}', 'error')
+        return render_template('error.html', 
+                             message='Der Papierkorb konnte nicht geladen werden.', 
+                             details=str(e))
+
+@bp.route('/api/settings/colors', methods=['POST'])
+def update_colors():
+    try:
+        data = request.get_json()
+        print('Empfangene Farbdaten:', data)
+        
+        for key, value in data.items():
+            print(f'Speichere Farbe: {key} = {value}')
+            save_color_setting(f'{key}_color', value)
+            
+        print('Farben erfolgreich gespeichert')
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f'Fehler beim Speichern der Farben: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)})
+
 def init_app(app):
     app.register_blueprint(bp)
+    
+    # Context Processor für globale Template-Variablen
+    @app.context_processor
+    def utility_processor():
+        def get_trash_count():
+            try:
+                with Database.get_db() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT 
+                            (SELECT COUNT(*) FROM tools WHERE deleted = 1) +
+                            (SELECT COUNT(*) FROM consumables WHERE deleted = 1) +
+                            (SELECT COUNT(*) FROM workers WHERE deleted = 1) as total
+                    """)
+                    return cursor.fetchone()['total']
+            except Exception as e:
+                print(f"Fehler beim Ermitteln der Papierkorb-Anzahl: {str(e)}")
+                return 0
+                
+        return {
+            'trash_count': get_trash_count()
+        }

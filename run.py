@@ -1,73 +1,41 @@
 from flask import Flask, redirect, url_for
-from app.models.database import Database
+from app.models.database import Database, init_db
 from app.utils.structure_viewer import print_database_structure, print_app_structure
 from app.utils.context_processors import register_context_processors
 from app.utils.db_schema import SchemaManager
 import logging
 import os
 from datetime import timedelta
+from app import create_app  # Importiere die create_app Funktion
 
 # Logging konfigurieren
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
-def create_app():
-    # Flask-App erstellen
-    app = Flask(__name__, 
-        template_folder='app/templates',
-        static_folder='app/static'
-    )
-    
-    # Secret Key setzen
-    app.config.update(
-        SECRET_KEY='your-secret-key-here',
-        PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-        SESSION_COOKIE_SECURE=True,
-        SESSION_COOKIE_HTTPONLY=True,
-        SESSION_COOKIE_SAMESITE='Lax',
-        SESSION_COOKIE_NAME='scandy_session'
-    )
-    
-    # Root Route hinzufügen
-    @app.route('/')
-    def index():
-        return redirect(url_for('tools.index'))
-    
-    # Blueprints importieren und registrieren
-    from app.routes import (
-        auth_bp, tools_bp, workers_bp, consumables_bp,
-        api_bp, admin_bp, inventory_bp, quick_scan_bp, history_bp
-    )
+# Erstelle die Flask-App
+app = create_app()  # Nutze die create_app Funktion aus __init__.py
 
-    logger.info("Registriere Blueprints...")
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(tools_bp)
-    app.register_blueprint(workers_bp)
-    app.register_blueprint(consumables_bp)
-    app.register_blueprint(api_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(inventory_bp)
-    app.register_blueprint(quick_scan_bp)
-    app.register_blueprint(history_bp)
+if __name__ == "__main__":
+    # Logging-Handler hinzufügen
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     
-    # Context Processors registrieren
-    register_context_processors(app)
+    logger.info("Starte Anwendung...")
     
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
-    
-    # Application Context erstellen
-    with app.app_context():
-        # Farbeinstellungen initialisieren
-        logger.info("Initialisiere Farbeinstellungen...")
-        db = Database()  # Database-Instanz erstellen
-        schema_manager = SchemaManager(db)
-        schema_manager.init_settings()
+    # Datenbank initialisieren falls nicht vorhanden
+    if not os.path.exists(Database.get_database_path()):
+        logger.info("Initialisiere Datenbank...")
+        Database.init_db()
+        
+        # Testdaten erstellen
+        logger.info("Erstelle Testdaten...")
+        from app.create_test_data import create_test_data
+        create_test_data()
+        
+        db = Database()
         
         # Struktur-Informationen ausgeben
         logger.info("Drucke Datenbank-Struktur...")

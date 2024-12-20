@@ -1,0 +1,363 @@
+Unbehandelter Fehler: Missing user_loader or request_loader. Refer to http://flask-login.readthedocs.io/#how-it-works for more info.
+Exception on /auth/login [GET]
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/auth.py", line 27, in login
+    return render_template('auth/login.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
+    app.update_template_context(context)
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 493, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/utils.py", line 405, in _user_context_processor
+    return dict(current_user=_get_user())
+                             ^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/utils.py", line 370, in _get_user
+    current_app.login_manager._load_user()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/login_manager.py", line 347, in _load_user
+    raise Exception(
+Exception: Missing user_loader or request_loader. Refer to http://flask-login.readthedocs.io/#how-it-works for more info.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/__init__.py", line 126, in handle_exception
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 127, in _render
+    app.update_template_context(context)
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 493, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/utils.py", line 405, in _user_context_processor
+    return dict(current_user=_get_user())
+                             ^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/utils.py", line 370, in _get_user
+    current_app.login_manager._load_user()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask_login/login_manager.py", line 347, in _load_user
+    raise Exception(
+Exception: Missing user_loader or request_loader. Refer to http://flask-login.readthedocs.io/#how-it-works for more info.
+Unerwarteter Fehler in get_stats: name 'stats' is not defined
+Unerwarteter Fehler in dashboard: 'trash_count' is undefined
+Unbehandelter Fehler: 'trash_count' is undefined
+Exception on /admin/dashboard [GET]
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/error_handler.py", line 13, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 232, in dashboard
+    return render_template('admin/dashboard.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/admin/dashboard.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count > 0 %}
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/decorators.py", line 20, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/error_handler.py", line 23, in decorated_function
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count > 0 %}
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/__init__.py", line 139, in handle_exception
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count > 0 %}
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+Unerwarteter Fehler in get_stats: name 'stats' is not defined
+Unerwarteter Fehler in dashboard: 'trash_count' is undefined
+Unbehandelter Fehler: 'trash_count' is undefined
+Exception on /admin/dashboard [GET]
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/error_handler.py", line 13, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 232, in dashboard
+    return render_template('admin/dashboard.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/admin/dashboard.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count is defined and trash_count > 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/decorators.py", line 20, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/utils/error_handler.py", line 23, in decorated_function
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count is defined and trash_count > 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/__init__.py", line 139, in handle_exception
+    def index():
+               ^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count is defined and trash_count > 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+Unbehandelter Fehler: 'trash_count' is undefined
+Exception on /auth/login [GET]
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/auth.py", line 27, in login
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/auth/login.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count is defined and trash_count > 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 772, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/__init__.py", line 139, in handle_exception
+    def index():
+               ^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 197, in top-level template code
+    {% if trash_count is defined and trash_count > 0 %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'trash_count' is undefined
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Exception on /inventory/tools/ [GET]
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 854, in dispatch_request
+    self.raise_routing_exception(req)
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 463, in raise_routing_exception
+    raise request.routing_exception  # type: ignore[misc]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/ctx.py", line 362, in match_request
+    result = self.url_adapter.match(return_rule=True)  # type: ignore
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/werkzeug/routing/map.py", line 629, in match
+    raise NotFound() from None
+werkzeug.exceptions.NotFound: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 765, in handle_user_exception
+    return self.handle_http_exception(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/app.py", line 740, in handle_http_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/app/__init__.py", line 177, in not_found_error
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "/Users/woschj/Downloads/technik/scandy/venv/lib/python3.11/site-packages/jinja2/environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/Users/woschj/Downloads/technik/scandy/app/templates/base.html", line 192, in top-level template code
+    class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: argument of type 'NoneType' is not iterable
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Error deleting tool: no such column: deleted_at
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/models/database.py", line 397, in soft_delete_tool
+    cursor.execute("""
+sqlite3.OperationalError: no such column: deleted_at
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?
+Unerwarteter Fehler in dashboard: Could not build url for endpoint 'inventory.tools'. Did you mean 'inventory.add_tool' instead?

@@ -1,0 +1,10 @@
+        <tr>
+-           <td><a href="{{ url_for('tools.details', barcode=tool.barcode) }}" class="btn">{{ tool.name }}</a></td>
++           <td class="item-name"><a href="{{ url_for('tools.details', barcode=tool.barcode) }}" class="btn">{{ tool.name }}</a></td>
+            <td>{{ tool.barcode }}</td>
+            <td>{{ tool.location }}</td>
+-           <td><span class="btn">{{ tool.status }}</span></td>
++           <td class="item-status"><span class="btn">{{ tool.status }}</span></td>
+            <td>{{ tool.category }}</td>
+            <!-- ... weitere Spalten ... -->
+        </tr> 

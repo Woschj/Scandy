@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from app.models.database import Database
 from app.utils.decorators import login_required, admin_required
 
-bp = Blueprint('tools', __name__, url_prefix='/inventory/tools')
+bp = Blueprint('tools', __name__, url_prefix='/tools')
 
 @bp.route('/', methods=['GET'])
 def index():

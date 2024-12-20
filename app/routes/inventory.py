@@ -13,6 +13,7 @@ from ..models.tool import Tool
 from ..models.worker import Worker
 from ..models.consumable import Consumable
 from app.utils.decorators import login_required, admin_required
+from app.utils.error_handler import handle_errors, safe_db_query
 
 bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
@@ -204,55 +205,28 @@ def worker_details(barcode):
         print(f"Fehler in worker_details: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/inventory/tools', methods=['GET'])
+@bp.route('/tools')
 @login_required
 def tools():
-    db = Database()
     try:
-        with db.get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                SELECT 
-                    t.id,
-                    t.barcode,
-                    t.name,
-                    t.description,
-                    t.status,
-                    t.location,
-                    t.category,
-                    l.lent_at,
-                    w.firstname || ' ' || w.lastname as worker_name
+        with Database.get_db() as conn:
+            tools = conn.execute('''
+                SELECT t.*, 
+                       CASE 
+                           WHEN l.returned_at IS NULL THEN w.firstname || ' ' || w.lastname 
+                           ELSE NULL 
+                       END as current_borrower,
+                       l.lent_at as status_since
                 FROM tools t
                 LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
                     AND l.returned_at IS NULL
                 LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE t.deleted = 0
                 ORDER BY t.name
-            """)
-            tools = cursor.fetchall()
-            
-            # Formatierte Tool-Liste mit Ausleih-Informationen
-            formatted_tools = []
-            for tool in tools:
-                formatted_tool = {
-                    'id': tool[0],
-                    'barcode': tool[1],
-                    'name': tool[2],
-                    'description': tool[3],
-                    'status': tool[4],
-                    'location': tool[5],
-                    'category': tool[6],
-                    'lent_at': tool[7],
-                    'lent_to': tool[8]
-                }
-                formatted_tools.append(formatted_tool)
-
-            return render_template(
-                'inventory/tools.html',
-                tools=formatted_tools
-            )
+            ''').fetchall()
+            return render_template('inventory/tools.html', tools=tools)
     except Exception as e:
-        flash(f'Fehler beim Laden der Werkzeuge: {str(e)}', 'error')
+        flash('Fehler beim Laden der Werkzeuge', 'error')
         return redirect(url_for('index'))
 
 @bp.route('/consumables')

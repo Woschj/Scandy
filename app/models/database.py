@@ -37,36 +37,15 @@ class Database:
 
     @staticmethod
     def init_db():
-        """Initialisiert die Datenbank wenn sie nicht existiert"""
-        if not os.path.exists(Database.DATABASE_PATH):
-            with Database.get_db() as conn:
-                cursor = conn.cursor()
-                # Hier SQL für Tabellenerstellung
-                cursor.execute('''CREATE TABLE IF NOT EXISTS...''')
-
-    @staticmethod
-    def close_db():
-        db = g.pop('db', None)
-        if db is not None:
-            db.close()
-
-    @staticmethod
-    def query(sql, params=(), one=False):
-        try:
-            db = Database.get_db()
-            cur = db.execute(sql, params)
-            rv = cur.fetchall()
-            db.commit()
-            return (rv[0] if rv else None) if one else rv
-        except sqlite3.Error as e:
-            db.rollback()
-            raise Exception(f"Datenbankfehler: {str(e)}")
-
-    @staticmethod
-    def init_db():
-        """Initialisiert die Datenbankstruktur"""
+        """Initialisiert die komplette Datenbankstruktur"""
+        # Verzeichnis erstellen falls nicht vorhanden
         if not os.path.exists('database'):
             os.makedirs('database')
+            
+        # Alte Datenbank löschen falls vorhanden
+        db_path = Database.get_database_path()
+        if os.path.exists(db_path):
+            os.remove(db_path)
             
         conn = Database.get_db_connection()
         cursor = conn.cursor()
@@ -80,7 +59,9 @@ class Database:
                 description TEXT,
                 status TEXT DEFAULT 'verfügbar',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0
+                deleted INTEGER DEFAULT 0,
+                category TEXT,
+                location TEXT
             )
         ''')
 
@@ -94,7 +75,9 @@ class Database:
                 quantity INTEGER DEFAULT 0,
                 min_quantity INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0
+                deleted INTEGER DEFAULT 0,
+                category TEXT,
+                location TEXT
             )
         ''')
 
@@ -144,8 +127,39 @@ class Database:
             )
         ''')
 
+        # Verbrauchsmaterial-Nutzung
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS consumable_usages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                consumable_barcode TEXT NOT NULL,
+                worker_barcode TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (consumable_barcode) REFERENCES consumables (barcode),
+                FOREIGN KEY (worker_barcode) REFERENCES workers (barcode)
+            )
+        ''')
+
         conn.commit()
         conn.close()
+
+    @staticmethod
+    def close_db():
+        db = g.pop('db', None)
+        if db is not None:
+            db.close()
+
+    @staticmethod
+    def query(sql, params=(), one=False):
+        try:
+            db = Database.get_db()
+            cur = db.execute(sql, params)
+            rv = cur.fetchall()
+            db.commit()
+            return (rv[0] if rv else None) if one else rv
+        except sqlite3.Error as e:
+            db.rollback()
+            raise Exception(f"Datenbankfehler: {str(e)}")
 
     def create_lending(self, tool_barcode, worker_barcode):
         try:
@@ -361,7 +375,52 @@ class Database:
                 'message': f'Datenbankfehler: {str(e)}'
             }
 
+    def soft_delete_tool(self, barcode):
+        """Verschiebt ein Werkzeug in den Papierkorb"""
+        try:
+            with self.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfen ob das Werkzeug ausgeliehen ist
+                cursor.execute("""
+                    SELECT COUNT(*) FROM lendings 
+                    WHERE tool_barcode = ? AND returned_at IS NULL
+                """, (barcode,))
+                
+                if cursor.fetchone()[0] > 0:
+                    return {
+                        'success': False,
+                        'message': 'Werkzeug kann nicht gelöscht werden, da es noch ausgeliehen ist.'
+                    }
+                
+                # Werkzeug als gelöscht markieren
+                cursor.execute("""
+                    UPDATE tools 
+                    SET deleted = 1, 
+                        deleted_at = datetime('now')
+                    WHERE barcode = ?
+                """, (barcode,))
+                
+                conn.commit()
+                
+                return {
+                    'success': True,
+                    'message': 'Werkzeug wurde in den Papierkorb verschoben'
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting tool: {str(e)}", exc_info=True)
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
+
 def init_db():
+    """Initialisiert die Datenbank"""
+    # Erst Database.init_db() aufrufen um die Tabellen zu erstellen
+    Database.init_db()
+    
+    # Dann die Spalten hinzufügen
     with Database.get_db() as conn:
         # Prüfe existierende Spalten in tools
         columns_tools = conn.execute('PRAGMA table_info(tools)').fetchall()

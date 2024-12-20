@@ -20,6 +20,7 @@ def login():
         
         if username == 'admin' and password == 'admin':
             session['is_admin'] = True
+            session['user_id'] = 'admin'
             return redirect(url_for('admin.dashboard'))
         else:
             flash('Ungültige Anmeldedaten', 'error')

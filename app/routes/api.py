@@ -208,3 +208,10 @@ def return_tool():
     except Exception as e:
         print(f"Fehler bei der Werkzeug-Rückgabe: {str(e)}")
         return jsonify({'success': False, 'message': 'Interner Server-Fehler'}), 500
+
+@bp.route('/tools/<barcode>/delete', methods=['POST'])
+@admin_required
+def delete_tool(barcode):
+    db = Database()
+    result = db.soft_delete_tool(barcode)
+    return jsonify(result)

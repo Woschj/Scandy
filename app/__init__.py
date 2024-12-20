@@ -1,10 +1,15 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template, redirect, url_for, g
 from flask_session import Session  # Session-Management
 from .constants import Routes
 from flask_login import LoginManager, login_required
 import os
 from datetime import datetime
 from app.utils.filters import register_filters
+import logging
+from app.models.database import Database
+from app.utils.error_handler import handle_errors
+from app.utils.db_schema import SchemaManager
+from app.utils.color_settings import get_color_settings
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -42,14 +47,26 @@ def create_app(test_config=None):
     # Globale Template-Variablen
     @app.context_processor
     def inject_globals():
-        return {
-            'routes': Routes(),
-            'colors': {
-                'primary': '#5b69a7',
-                'secondary': '#4c5789',
-                'accent': '#3d4675'
+        try:
+            with Database.get_db() as conn:
+                # Papierkorb-Zähler
+                trash_count = conn.execute("""
+                    SELECT 
+                        (SELECT COUNT(*) FROM tools WHERE deleted = 1) +
+                        (SELECT COUNT(*) FROM consumables WHERE deleted = 1) +
+                        (SELECT COUNT(*) FROM workers WHERE deleted = 1) as total
+                """).fetchone()['total']
+
+                return {
+                    'routes': Routes(),
+                    'trash_count': trash_count
+                }
+        except Exception as e:
+            print(f"Fehler beim Laden der globalen Variablen: {str(e)}")
+            return {
+                'routes': Routes(),
+                'trash_count': 0
             }
-        }
     
     # Debug-Route OHNE Login-Erfordernis
     @app.route('/api/debug/routes')
@@ -82,21 +99,42 @@ def create_app(test_config=None):
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
 
+    # User Loader hinzufügen
+    @login_manager.user_loader
+    def load_user(user_id):
+        # Für das einfache Admin-Login
+        if user_id == 'admin':
+            return type('User', (), {
+                'is_authenticated': True,
+                'is_active': True,
+                'is_anonymous': False,
+                'get_id': lambda: 'admin'
+            })
+        return None
+
     # Blueprints registrieren
-    from app.routes import auth
+    from app.routes import auth, admin, tools, workers, consumables, api, inventory, quick_scan, history, lending, index
+    
+    # Zuerst die Basis-Blueprints
     app.register_blueprint(auth.bp)
-
-    from app.routes import admin
+    app.register_blueprint(index.bp)  # Index-Blueprint für die Startseite
+    
+    # Dann die Feature-Blueprints
     admin.init_app(app)
-
-    from app.routes import lending
+    app.register_blueprint(tools.bp)
+    app.register_blueprint(workers.bp)
+    app.register_blueprint(consumables.bp)
+    
+    # Zuletzt die unterstützenden Blueprints
+    app.register_blueprint(api.bp)
+    app.register_blueprint(quick_scan.bp)
+    app.register_blueprint(history.bp)
     app.register_blueprint(lending.bp)
-
-    # Andere Blueprints...
+    app.register_blueprint(inventory.bp)
 
     @app.route('/')
     def index():
-        return 'Scandy Tool Management'
+        return redirect(url_for('tools.index'))
 
     # CLI-Befehle nur lokal laden
     try:
@@ -105,5 +143,43 @@ def create_app(test_config=None):
             app.cli.add_command(init_db_command)
     except ImportError:
         pass  # CLI-Modul ist optional
+
+    # Globale Fehlerbehandlung
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template('error.html',
+                             message="Die angeforderte Seite wurde nicht gefunden."), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        return render_template('error.html',
+                             message="Ein interner Serverfehler ist aufgetreten."), 500
+
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        app.logger.error(f"Unbehandelter Fehler: {str(e)}")
+        return render_template('error.html',
+                             message="Ein unerwarteter Fehler ist aufgetreten.",
+                             details=str(e)), 500
+
+    # Logging konfigurieren
+    if not app.debug:
+        file_handler = logging.FileHandler('app.log')
+        file_handler.setLevel(logging.WARNING)
+        app.logger.addHandler(file_handler)
+
+    # Context Processor für globale Template-Variablen
+    @app.context_processor
+    def inject_colors():
+        try:
+            colors = get_color_settings()
+            return {'colors': colors}
+        except Exception as e:
+            print(f"Fehler beim Laden der Farbeinstellungen: {str(e)}")
+            return {'colors': {
+                'primary': '259 94% 51%',
+                'secondary': '314 100% 47%',
+                'accent': '174 60% 51%'
+            }}
 
     return app

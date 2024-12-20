@@ -1,103 +1,158 @@
 import sqlite3
 import os
+import sys
 from datetime import datetime, timedelta
 import random
 
-def get_db_connection():
-    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'inventory.db')
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Füge das Hauptverzeichnis zum Python-Path hinzu
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+from app.models.database import Database
 
 def create_test_data():
     try:
-        with get_db_connection() as conn:
-            # Test-Mitarbeiter erstellen
-            workers = [
-                ('W001', 'Max', 'Mustermann'),
-                ('W002', 'Anna', 'Schmidt'),
-                ('W003', 'Peter', 'Meyer'),
-                ('W004', 'Lisa', 'Weber'),
-                ('W005', 'Klaus', 'Fischer')
-            ]
+        conn = Database.get_db_connection()
+        cursor = conn.cursor()
             
-            conn.executemany('''
-                INSERT INTO workers (barcode, name, lastname, created_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-            ''', workers)
+        # Abteilungen und andere Basisdaten definieren
+        departments = [
+            'Technik',
+            'Service',
+            'APE',
+            'Medien und Digitales',
+            'Kaufmännisches',
+            'Mitarbeiter'
+        ]
 
-            # Test-Werkzeuge erstellen
-            tools = [
-                ('T001', 'Hammer', 'Standardhammer 300g', 'Werkzeugschrank 1', 'verfügbar'),
-                ('T002', 'Schraubendreher Set', 'Phillips und Schlitz', 'Werkzeugschrank 2', 'verfügbar'),
-                ('T003', 'Bohrmaschine', 'Bosch Professional', 'Werkzeugschrank 1', 'ausgeliehen'),
-                ('T004', 'Säge', 'Handsäge 500mm', 'Werkzeugschrank 3', 'verfügbar'),
-                ('T005', 'Zange', 'Kombizange 180mm', 'Werkzeugschrank 2', 'defekt')
-            ]
-            
-            conn.executemany('''
-                INSERT INTO tools (barcode, name, description, location, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ''', tools)
+        locations = [
+            'Werkstatt', 'Lager A', 'Lager B', 'Büro', 'Serverraum', 
+            'Werkzeugraum', 'Elektronikwerkstatt', 'Holzwerkstatt'
+        ]
 
-            # Test-Verbrauchsmaterial erstellen
-            consumables = [
-                ('C001', 'Schrauben 4x30', 'Schrauben', 'Lager A1', 500, 'Stück', 100),
-                ('C002', 'Dübel 8mm', 'Dübel', 'Lager A2', 200, 'Stück', 50),
-                ('C003', 'Klebeband', 'Verbrauchsmaterial', 'Lager B1', 30, 'Rollen', 10),
-                ('C004', 'Arbeitshandschuhe', 'Schutzausrüstung', 'Lager C1', 45, 'Paar', 20),
-                ('C005', 'Schleifpapier', 'Verbrauchsmaterial', 'Lager B2', 15, 'Bögen', 25)
-            ]
-            
-            conn.executemany('''
-                INSERT INTO consumables (barcode, bezeichnung, typ, ort, bestand, einheit, mindestbestand, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ''', consumables)
+        categories = {
+            'tools': ['Handwerkzeug', 'Elektrowerkzeug', 'Messwerkzeug', 'Spezialwerkzeug', 'Gartenwerkzeug'],
+            'consumables': ['Befestigungsmaterial', 'Elektromaterial', 'Reinigungsmaterial', 'Schutzmaterial', 'Verbrauchsteile']
+        }
 
-            # Einige Werkzeug-Ausleihen erstellen
-            current_time = datetime.now()
-            lendings = [
-                ('T003', 'W001', current_time - timedelta(days=1), None),  # Noch ausgeliehen
-                ('T001', 'W002', current_time - timedelta(days=3), current_time - timedelta(days=2)),  # Zurückgegeben
-                ('T002', 'W003', current_time - timedelta(days=5), current_time - timedelta(days=4))   # Zurückgegeben
-            ]
+        # Test-Mitarbeiter erstellen (60 Mitarbeiter)
+        first_names = ['Max', 'Anna', 'Paul', 'Lisa', 'Felix', 'Emma', 'Ben', 'Clara', 'David', 'Sophie',
+                      'Ida', 'Jan', 'Laura', 'Noah', 'Mia', 'Oskar', 'Paula', 'Quentin', 'Rosa', 'Tim']
+        last_names = ['Müller', 'Schmidt', 'Weber', 'Hoffmann', 'Koch', 'Becker', 'Klein', 'Schröder', 
+                     'Neumann', 'Schwarz', 'Wagner', 'Schulz', 'Zimmermann']
+
+        workers = []
+        for i in range(60):
+            barcode = f'W{random.randint(100000, 999999)}'
+            first_name = random.choice(first_names)
+            last_name = random.choice(last_names)
+            department = random.choice(departments)
+            email = f"{first_name.lower()}.{last_name.lower()}@firma.de"
+            workers.append((barcode, first_name, last_name, department, email))
+
+        cursor.executemany('''
+            INSERT OR IGNORE INTO workers 
+            (barcode, firstname, lastname, department, email, created_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ''', workers)
+
+        # Test-Werkzeuge erstellen (100 Werkzeuge)
+        tool_types = ['Hammer', 'Bohrmaschine', 'Schraubendreher', 'Säge', 'Zange', 'Multimeter',
+                     'Wasserwaage', 'Maßband', 'Schraubenschlüssel', 'Kreissäge', 'Bandschleifer']
+        tool_status = ['Verfügbar', 'Ausgeliehen', 'Defekt']
+        
+        tools = []
+        for i in range(100):
+            barcode = f'T{random.randint(100000, 999999)}'
+            tool_type = random.choice(tool_types)
+            number = random.randint(1, 999)
+            name = f'{tool_type} {number}'
+            status = random.choice(tool_status)
+            category = random.choice(categories['tools'])
+            location = random.choice(locations)
+            tools.append((barcode, name, f'Standard {tool_type}', status, category, location))
+
+        cursor.executemany('''
+            INSERT OR IGNORE INTO tools 
+            (barcode, name, description, status, category, location, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ''', tools)
+
+        # Test-Verbrauchsmaterialien erstellen (100 Materialien)
+        consumable_types = [
+            ('Schrauben', 'Stück', 1000),
+            ('Dübel', 'Stück', 500),
+            ('Kabel', 'Meter', 200),
+            ('Klebeband', 'Rollen', 50),
+            ('Batterien', 'Stück', 100),
+            ('Handschuhe', 'Paar', 50),
+            ('Reinigungstücher', 'Packung', 30),
+            ('Schleifpapier', 'Blatt', 100),
+            ('Lötdraht', 'Meter', 100),
+            ('Kabelbinder', 'Stück', 500)
+        ]
+
+        consumables = []
+        for i in range(100):
+            barcode = f'C{random.randint(100000, 999999)}'
+            cons_type, unit, max_quantity = random.choice(consumable_types)
+            number = random.randint(1, 999)
+            name = f'{cons_type} {number}'
+            quantity = random.randint(0, max_quantity)
+            min_quantity = max_quantity // 10
+            category = random.choice(categories['consumables'])
+            location = random.choice(locations)
+            consumables.append((barcode, name, f'Standard {cons_type}', quantity, min_quantity, category, location))
+
+        cursor.executemany('''
+            INSERT OR IGNORE INTO consumables 
+            (barcode, name, description, quantity, min_quantity, category, location)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', consumables)
+
+        # Ausleihvorgänge erstellen (für ausgeliehene Werkzeuge)
+        lent_tools = cursor.execute(
+            "SELECT barcode FROM tools WHERE status = 'Ausgeliehen'"
+        ).fetchall()
+        
+        worker_barcodes = [w[0] for w in cursor.execute("SELECT barcode FROM workers").fetchall()]
+        
+        for tool in lent_tools:
+            # Zufälliges Ausleihdatum in den letzten 30 Tagen
+            days_ago = random.randint(1, 30)
+            lent_at = datetime.now() - timedelta(days=days_ago)
             
-            conn.executemany('''
-                INSERT INTO lendings (tool_barcode, worker_barcode, lending_time, return_time)
+            cursor.execute('''
+                INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
+                VALUES (?, ?, ?)
+            ''', (tool[0], random.choice(worker_barcodes), lent_at.strftime('%Y-%m-%d %H:%M:%S')))
+
+        # Verbrauchsmaterial-Nutzungen erstellen (50 Nutzungen)
+        consumable_barcodes = [c[0] for c in cursor.execute("SELECT barcode FROM consumables").fetchall()]
+        
+        for _ in range(50):
+            days_ago = random.randint(1, 30)
+            used_at = datetime.now() - timedelta(days=days_ago)
+            
+            cursor.execute('''
+                INSERT INTO consumable_usages 
+                (consumable_barcode, worker_barcode, quantity, used_at)
                 VALUES (?, ?, ?, ?)
-            ''', lendings)
+            ''', (
+                random.choice(consumable_barcodes),
+                random.choice(worker_barcodes),
+                random.randint(1, 10),
+                used_at.strftime('%Y-%m-%d %H:%M:%S')
+            ))
 
-            # Einige Werkzeug-Status-Änderungen
-            tool_history = [
-                ('T003', 'ausgeliehen', 'W001', current_time - timedelta(days=1)),
-                ('T005', 'defekt', 'W003', current_time - timedelta(days=2)),
-                ('T001', 'verfügbar', 'W002', current_time - timedelta(days=2))
-            ]
-            
-            conn.executemany('''
-                INSERT INTO tool_status_history (tool_barcode, action, worker_barcode, timestamp)
-                VALUES (?, ?, ?, ?)
-            ''', tool_history)
+        conn.commit()
+        print("Testdaten erfolgreich erstellt!")
 
-            # Einige Verbrauchsmaterial-Bewegungen
-            consumables_history = [
-                ('C001', 'entnahme', 'W001', -20, current_time - timedelta(days=1)),
-                ('C002', 'entnahme', 'W002', -10, current_time - timedelta(days=2)),
-                ('C003', 'nachbestellung', 'W003', 50, current_time - timedelta(days=3))
-            ]
-            
-            conn.executemany('''
-                INSERT INTO consumables_history (consumable_barcode, action, worker_barcode, quantity, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-            ''', consumables_history)
-
-            conn.commit()
-            print("Testdaten erfolgreich erstellt!")
-
-    except sqlite3.IntegrityError as e:
-        print(f"Fehler: Möglicherweise existieren einige Einträge bereits: {str(e)}")
+    except sqlite3.Error as e:
+        print(f"SQLite Fehler: {str(e)}")
     except Exception as e:
         print(f"Unerwarteter Fehler: {str(e)}")
+        raise e
 
 if __name__ == "__main__":
     create_test_data() 
