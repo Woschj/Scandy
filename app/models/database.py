@@ -7,8 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Database:
-    @classmethod
-    def get_database_path(cls):
+    @staticmethod
+    def get_database_path():
         if os.environ.get('RENDER') == 'true':
             return os.path.join('/opt/render/project/src/database', 'inventory.db')
         else:
@@ -28,7 +28,7 @@ class Database:
     @staticmethod
     def get_db_connection():
         """Direkter Datenbankzugriff für Verwaltungsaufgaben"""
-        conn = sqlite3.connect(Database.get_database_path())
+        conn = sqlite3.connect(Database.DATABASE_PATH)
         conn.row_factory = sqlite3.Row
         return conn
 
