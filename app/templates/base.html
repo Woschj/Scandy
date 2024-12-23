@@ -20,17 +20,75 @@
         [data-theme="light"] {
             {% if colors %}
                 --p: {{ colors.primary }};    /* primary */
-                --pf: {{ colors.primary }};   /* primary focus */
+                --pf: color-mix(in hsl, hsl({{ colors.primary }}) 85%, black);   /* primary focus */
                 --pc: #ffffff;  /* primary content */
                 
                 --s: {{ colors.secondary }};   /* secondary */
-                --sf: {{ colors.secondary }};  /* secondary focus */
+                --sf: color-mix(in hsl, hsl({{ colors.secondary }}) 85%, black);  /* secondary focus */
                 --sc: #ffffff; /* secondary content */
                 
                 --a: {{ colors.accent }};     /* accent */
-                --af: {{ colors.accent }};    /* accent focus */
+                --af: color-mix(in hsl, hsl({{ colors.accent }}) 85%, black);    /* accent focus */
                 --ac: #ffffff; /* accent content */
+                
+                /* Basis-Farben für Light Mode */
+                --b1: 0 0% 100%;              /* Weiß */
+                --b2: 0 0% 98%;               /* Sehr helles Grau */
+                --b3: 0 0% 95%;               /* Helles Grau */
+                --bc: 0 0% 20%;               /* Dunkles Grau für Text */
             {% endif %}
+        }
+        
+        /* Dark Mode Anpassungen */
+        [data-theme="dark"] {
+            {% if colors %}
+                --p: {{ colors.primary }};    /* primary */
+                --pf: color-mix(in hsl, hsl({{ colors.primary }}) 85%, white);   /* primary focus */
+                --pc: #ffffff;  /* primary content */
+                
+                --s: {{ colors.secondary }};   /* secondary */
+                --sf: color-mix(in hsl, hsl({{ colors.secondary }}) 85%, white);  /* secondary focus */
+                --sc: #ffffff; /* secondary content */
+                
+                --a: {{ colors.accent }};     /* accent */
+                --af: color-mix(in hsl, hsl({{ colors.accent }}) 85%, white);    /* accent focus */
+                --ac: #ffffff; /* accent content */
+                
+                /* Dark Mode spezifische Anpassungen */
+                --b1: 220 20% 12%;           /* Dunkelgrau für Hintergrund */
+                --b2: 220 20% 15%;           /* Etwas helleres Dunkelgrau für Hover */
+                --b3: 220 20% 18%;           /* Noch helleres Dunkelgrau für Active */
+                --bc: 220 20% 85%;           /* Helles Grau für Text */
+                
+                /* Neutrale Farben */
+                --n: 220 20% 12%;            /* Basis Neutral */
+                --nf: 220 20% 15%;           /* Neutral Focus */
+                --nc: 220 20% 85%;           /* Neutral Content */
+            {% endif %}
+        }
+        
+        /* Dark Mode spezifische Anpassungen für Komponenten */
+        [data-theme="dark"] .card {
+            background-color: hsl(var(--b1));
+            color: hsl(var(--bc));
+        }
+        
+        [data-theme="dark"] .table {
+            --tw-bg-opacity: 1;
+            background-color: hsl(var(--b1));
+        }
+        
+        [data-theme="dark"] .table thead {
+            background-color: hsl(var(--b2));
+        }
+        
+        [data-theme="dark"] .table tbody tr:hover {
+            background-color: hsl(var(--b2));
+        }
+        
+        [data-theme="dark"] .modal-box {
+            background-color: hsl(var(--b1));
+            color: hsl(var(--bc));
         }
         
         /* Globale Typografie */
@@ -62,6 +120,11 @@
         .btn-primary {
             background-color: hsl(var(--p));
             color: hsl(var(--pc));
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background-color: hsl(var(--pf));
         }
         
         @keyframes scanning {
@@ -181,6 +244,46 @@
         .btn-action {
             @apply btn btn-sm;
         }
+        
+        /* Status-Badge für Dark Mode anpassen */
+        [data-theme="dark"] .status-badge {
+            background-color: hsl(var(--b2));
+        }
+        
+        /* Links im Dark Mode */
+        [data-theme="dark"] a:not(.btn) {
+            color: hsl(var(--p));
+        }
+        
+        [data-theme="dark"] a:not(.btn):hover {
+            color: hsl(var(--pf));
+        }
+        
+        /* Navigation im Dark Mode */
+        [data-theme="dark"] .navbar {
+            color: hsl(var(--bc));
+        }
+        
+        [data-theme="dark"] .btn-ghost {
+            color: hsl(var(--bc));
+        }
+        
+        [data-theme="dark"] .btn-ghost:hover {
+            color: hsl(var(--pc));
+            background-color: hsl(var(--b2));
+        }
+        
+        /* QuickScan Button Anpassungen */
+        .quickscan-button {
+            width: 8rem !important;  /* Größerer Button */
+            height: 8rem !important;
+        }
+        
+        .quickscan-logo {
+            width: 6rem !important;  /* Größeres Logo */
+            height: 6rem !important;
+            margin: -0.5rem;  /* Negativer Margin für mehr Platz */
+        }
     </style>
     
     {% block head %}{% endblock %}
@@ -231,12 +334,12 @@
 
             <!-- QuickScan Button (Mittig) -->
             <button onclick="showQuickScan()" 
-                    class="btn btn-circle btn-primary text-white absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden"
-                    style="transform: translate(-50%, 0); width: 7rem; height: 7rem; z-index: 50;"
+                    class="btn btn-circle btn-primary text-white absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden quickscan-button"
+                    style="transform: translate(-50%, 0); z-index: 50;"
                     aria-label="QuickScan öffnen">
                 <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
                      alt="Scandy QuickScan" 
-                     class="w-20 h-20 transition-transform duration-200 hover:scale-110"
+                     class="quickscan-logo transition-transform duration-200 hover:scale-110"
                      style="filter: brightness(0) invert(1); image-rendering: -webkit-optimize-contrast;">
             </button>
 
@@ -629,7 +732,7 @@
         confirmStep.innerHTML = `
             <div class="text-center mb-6">
                 <i class="fas fa-check-circle text-5xl text-success mb-4"></i>
-                <h4 class="text-xl font-bold mb-2">Best��tigung</h4>
+                <h4 class="text-xl font-bold mb-2">Bestätigung</h4>
                 <p class="mb-4">
                     Werkzeug: <strong>${scannedTool.name}</strong><br>
                     Mitarbeiter: <strong>${scannedWorker.firstname} ${scannedWorker.lastname}</strong>
