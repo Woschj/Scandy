@@ -64,20 +64,20 @@
                 <ul class="menu menu-horizontal px-1">
                     <li>
                         <a href="{{ url_for('tools.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'tools' in request.endpoint %}btn-active{% endif %}">
                             <i class="fas fa-tools mr-2"></i>Werkzeuge
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('consumables.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'consumables' in request.endpoint %}btn-active{% endif %}">
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'consumables' in request.endpoint %}btn-active{% endif %}">
                             <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
                         </a>
                     </li>
                     {% if session.get('is_admin') %}
                     <li>
                         <a href="{{ url_for('workers.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'workers' in request.endpoint %}btn-active{% endif %}">
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'workers' in request.endpoint %}btn-active{% endif %}">
                             <i class="fas fa-users mr-2"></i>Mitarbeiter
                         </a>
                     </li>
@@ -168,7 +168,7 @@
                         <p class="text-sm opacity-70">Bitte scannen Sie den Barcode des Werkzeugs</p>
                     </div>
                     <div id="tool-preview" class="rounded-xl p-4">
-                        <!-- Wird dynamisch gef��llt -->
+                        <!-- Wird dynamisch gefüllt -->
                     </div>
                 </div>
 

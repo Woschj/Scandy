@@ -138,17 +138,20 @@ def edit(barcode):
     
     return redirect(url_for('workers.details', barcode=barcode))
 
-@bp.route('/workers/<barcode>/delete', methods=['POST'])
+@bp.route('/<barcode>/delete', methods=['POST', 'DELETE'])
 @admin_required
 def delete(barcode):
     try:
-        Database.query(
-            'UPDATE workers SET deleted = 1 WHERE barcode = ?',
-            [barcode]
-        )
-        return jsonify({'success': True})
+        print(f"Lösche Mitarbeiter: {barcode}")
+        result = Database.soft_delete('workers', barcode)
+        print(f"Lösch-Ergebnis: {result}")
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Fehler beim Löschen: {e}")
+        return jsonify({
+            'success': False, 
+            'message': str(e)
+        })
 
 @bp.route('/workers/search')
 def search():

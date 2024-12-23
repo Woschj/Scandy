@@ -113,16 +113,19 @@ def edit(barcode):
     
     return render_template('consumable_details.html', consumable=consumable)
 
-@bp.route('/<barcode>/delete', methods=['POST'])
+@bp.route('/<barcode>/delete', methods=['POST', 'DELETE'])
 @admin_required
 def delete(barcode):
     try:
-        Database.query(
-            'UPDATE consumables SET deleted = 1 WHERE barcode = ?',
-            [barcode]
-        )
-        return jsonify({'success': True})
+        print(f"Lösche Verbrauchsmaterial: {barcode}")
+        result = Database.soft_delete('consumables', barcode)
+        print(f"Lösch-Ergebnis: {result}")
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Fehler beim Löschen: {e}")
+        return jsonify({
+            'success': False, 
+            'message': str(e)
+        })
 
 # ... weitere Routen ...

@@ -25,19 +25,19 @@ if __name__ == "__main__":
     
     logger.info("Starte Anwendung...")
     
-    # Datenbank initialisieren falls nicht vorhanden
-    if not os.path.exists(Database.get_database_path()):
-        logger.info("Initialisiere Datenbank...")
-        Database.init_db()
+    # Application Context für Debug-Informationen
+    with app.app_context():
+        # Prüfe ob Datenbank existiert
+        if not os.path.exists(Database.get_database_path()):
+            logger.info("Initialisiere Datenbank...")
+            Database.init_db()
+            
+            # Testdaten erstellen
+            logger.info("Erstelle Testdaten...")
+            from app.create_test_data import create_test_data
+            create_test_data()
         
-        # Testdaten erstellen
-        logger.info("Erstelle Testdaten...")
-        from app.create_test_data import create_test_data
-        create_test_data()
-        
-        db = Database()
-        
-        # Struktur-Informationen ausgeben
+        # Debug-Informationen immer ausgeben
         logger.info("Drucke Datenbank-Struktur...")
         print_database_structure()
         

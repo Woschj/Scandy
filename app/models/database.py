@@ -7,17 +7,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Database:
-    @classmethod
-    def get_database_path(cls):
+    DATABASE_PATH = os.path.join('database', 'inventory.db')
+
+    @staticmethod
+    def get_database_path():
         if os.environ.get('RENDER') == 'true':
             return os.path.join('/opt/render/project/src/database', 'inventory.db')
         else:
             return os.path.join('database', 'inventory.db')
     
-    @property
-    def DATABASE_PATH(self):
-        return self.get_database_path()
-
     @staticmethod
     def get_db():
         if 'db' not in g:
@@ -60,6 +58,7 @@ class Database:
                 status TEXT DEFAULT 'verfügbar',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
                 category TEXT,
                 location TEXT
             )
@@ -76,6 +75,7 @@ class Database:
                 min_quantity INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
                 category TEXT,
                 location TEXT
             )
@@ -91,7 +91,8 @@ class Database:
                 department TEXT,
                 email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP
             )
         ''')
 
@@ -127,7 +128,7 @@ class Database:
             )
         ''')
 
-        # Verbrauchsmaterial-Nutzung
+        # Verbrauchsmaterial-Nutzungen
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS consumable_usages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -413,6 +414,124 @@ class Database:
             return {
                 'success': False,
                 'message': f'Datenbankfehler: {str(e)}'
+            }
+
+    @staticmethod
+    def soft_delete(table, barcode):
+        """Verschiebt einen Eintrag in den Papierkorb"""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe bei Werkzeugen ob sie ausgeliehen sind
+                if table == 'tools':
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM lendings 
+                        WHERE tool_barcode = ? AND returned_at IS NULL
+                    """, [barcode])
+                    if cursor.fetchone()[0] > 0:
+                        return {
+                            'success': False,
+                            'message': 'Werkzeug ist noch ausgeliehen'
+                        }
+                
+                # Prüfe ob der Eintrag existiert
+                cursor.execute(f"""
+                    SELECT COUNT(*) FROM {table}
+                    WHERE barcode = ? AND deleted = 0
+                """, [barcode])
+                if cursor.fetchone()[0] == 0:
+                    return {
+                        'success': False,
+                        'message': 'Eintrag nicht gefunden'
+                    }
+                
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET deleted = 1,
+                        deleted_at = datetime('now')
+                    WHERE barcode = ?
+                """, [barcode])
+                conn.commit()
+                return {
+                    'success': True,
+                    'message': 'In Papierkorb verschoben'
+                }
+        except Exception as e:
+            logger.error(f"Fehler beim Soft-Delete: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+
+    @staticmethod
+    def restore_item(table, barcode):
+        """Stellt einen Eintrag aus dem Papierkorb wieder her"""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe ob der Eintrag im Papierkorb ist
+                cursor.execute(f"""
+                    SELECT COUNT(*) FROM {table}
+                    WHERE barcode = ? AND deleted = 1
+                """, [barcode])
+                if cursor.fetchone()[0] == 0:
+                    return {
+                        'success': False,
+                        'message': 'Eintrag nicht im Papierkorb gefunden'
+                    }
+                
+                cursor.execute(f"""
+                    UPDATE {table}
+                    SET deleted = 0,
+                        deleted_at = NULL
+                    WHERE barcode = ?
+                """, [barcode])
+                conn.commit()
+                return {
+                    'success': True,
+                    'message': 'Erfolgreich wiederhergestellt'
+                }
+        except Exception as e:
+            logger.error(f"Fehler bei der Wiederherstellung: {e}")
+            return {
+                'success': False,
+                'message': str(e)
+            }
+
+    @staticmethod
+    def permanent_delete(table, barcode):
+        """Löscht einen Eintrag endgültig"""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe ob der Eintrag im Papierkorb ist
+                cursor.execute(f"""
+                    SELECT COUNT(*) FROM {table}
+                    WHERE barcode = ? AND deleted = 1
+                """, [barcode])
+                if cursor.fetchone()[0] == 0:
+                    return {
+                        'success': False,
+                        'message': 'Eintrag nicht im Papierkorb gefunden'
+                    }
+                
+                cursor.execute(f"""
+                    DELETE FROM {table}
+                    WHERE barcode = ?
+                """, [barcode])
+                conn.commit()
+                return {
+                    'success': True,
+                    'message': 'Endgültig gelöscht'
+                }
+        except Exception as e:
+            logger.error(f"Fehler beim endgültigen Löschen: {e}")
+            return {
+                'success': False,
+                'message': str(e)
             }
 
 def init_db():

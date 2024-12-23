@@ -167,3 +167,18 @@ def return_tool(barcode):
             return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@bp.route('/<barcode>/delete', methods=['POST', 'DELETE'])
+@admin_required
+def delete(barcode):
+    try:
+        print(f"Lösche Werkzeug: {barcode}")
+        result = Database.soft_delete('tools', barcode)
+        print(f"Lösch-Ergebnis: {result}")
+        return jsonify(result)
+    except Exception as e:
+        print(f"Fehler beim Löschen: {e}")
+        return jsonify({
+            'success': False, 
+            'message': str(e)
+        })

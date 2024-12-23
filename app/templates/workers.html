@@ -188,25 +188,23 @@ function closeDeleteModal() {
 function confirmDelete() {
     if (!currentDeleteBarcode) return;
     
-    fetch(`/api/workers/${currentDeleteBarcode}`, {
+    fetch(`/workers/${currentDeleteBarcode}/delete`, {
         method: 'DELETE',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         }
     })
     .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then(result => {
+        if (result.success) {
             location.reload();
         } else {
-            alert('Fehler beim Löschen: ' + data.error);
+            alert(result.message || 'Fehler beim Löschen');
         }
     })
     .catch(error => {
-        alert('Fehler beim Löschen: ' + error);
-    })
-    .finally(() => {
-        closeDeleteModal();
+        console.error('Error:', error);
+        alert('Fehler beim Löschen');
     });
 }
 

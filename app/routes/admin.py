@@ -831,6 +831,28 @@ def update_colors():
         print(f'Fehler beim Speichern der Farben: {str(e)}')
         return jsonify({'success': False, 'error': str(e)})
 
+@bp.route('/trash/<table>/<barcode>/restore', methods=['POST'])
+@admin_required
+def restore_from_trash(table, barcode):
+    """Stellt einen Eintrag aus dem Papierkorb wieder her"""
+    try:
+        if Database.restore_item(table, barcode):
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'message': 'Wiederherstellung fehlgeschlagen'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@bp.route('/trash/<table>/<barcode>/delete', methods=['POST'])
+@admin_required
+def delete_permanently(table, barcode):
+    """Löscht einen Eintrag endgültig"""
+    try:
+        if Database.permanent_delete(table, barcode):
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'message': 'Löschen fehlgeschlagen'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 def init_app(app):
     app.register_blueprint(bp)
     

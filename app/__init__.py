@@ -121,9 +121,9 @@ def create_app(test_config=None):
     
     # Dann die Feature-Blueprints
     admin.init_app(app)
-    app.register_blueprint(tools.bp)
-    app.register_blueprint(workers.bp)
-    app.register_blueprint(consumables.bp)
+    app.register_blueprint(tools.bp, url_prefix='/tools')
+    app.register_blueprint(workers.bp, url_prefix='/workers')
+    app.register_blueprint(consumables.bp, url_prefix='/inventory/consumables')
     
     # Zuletzt die unterstützenden Blueprints
     app.register_blueprint(api.bp)
