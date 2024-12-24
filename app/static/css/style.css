@@ -176,3 +176,29 @@ dialog#quickScanModal .modal-box {
     background-color: hsl(var(--b2));
     color: hsl(var(--bc));
 }
+
+/* Button Styles */
+.btn {
+    @apply inline-flex items-center justify-center;
+    color: hsl(var(--bc));
+    background-color: hsl(var(--b2));
+    border: 1px solid hsl(var(--b3));
+}
+
+.btn-primary {
+    color: hsl(var(--pc));
+    background-color: hsl(var(--p));
+    border-color: hsl(var(--p));
+}
+
+.btn-success {
+    color: hsl(var(--sc));
+    background-color: hsl(var(--su));
+    border-color: hsl(var(--su));
+}
+
+.btn-error {
+    color: hsl(var(--er));
+    background-color: hsl(var(--er));
+    border-color: hsl(var(--er));
+}
