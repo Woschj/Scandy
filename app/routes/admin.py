@@ -126,47 +126,79 @@ def get_color_settings():
         }
 
 def get_deleted_items():
-    """Holt gelöschte Einträge, robust gegen fehlende Spalten"""
-    with Database.get_db() as conn:
-        cursor = conn.cursor()
-        deleted_items = {
+    """Holt alle gelöschten Items aus der Datenbank"""
+    try:
+        with Database.get_db() as conn:
+            conn.row_factory = sqlite3.Row  # Wichtig: Row Factory setzen
+            cursor = conn.cursor()
+            
+            # Gelöschte Werkzeuge
+            cursor.execute("""
+                SELECT 
+                    'tools' as type,
+                    barcode,
+                    name,
+                    strftime('%d.%m.%Y %H:%M', deleted_at) as deleted_at,
+                    category,
+                    location
+                FROM tools 
+                WHERE deleted = 1
+                ORDER BY deleted_at DESC
+            """)
+            deleted_tools = [dict(zip([col[0] for col in cursor.description], row)) 
+                           for row in cursor.fetchall()]
+            
+            # Gelöschte Verbrauchsmaterialien
+            cursor.execute("""
+                SELECT 
+                    'consumables' as type,
+                    barcode,
+                    name,
+                    strftime('%d.%m.%Y %H:%M', deleted_at) as deleted_at,
+                    category,
+                    location
+                FROM consumables 
+                WHERE deleted = 1
+                ORDER BY deleted_at DESC
+            """)
+            deleted_consumables = [dict(zip([col[0] for col in cursor.description], row)) 
+                                  for row in cursor.fetchall()]
+            
+            # Gelöschte Mitarbeiter
+            cursor.execute("""
+                SELECT 
+                    'workers' as type,
+                    barcode,
+                    firstname || ' ' || lastname as name,
+                    strftime('%d.%m.%Y %H:%M', deleted_at) as deleted_at,
+                    department as category,
+                    email as location
+                FROM workers 
+                WHERE deleted = 1
+                ORDER BY deleted_at DESC
+            """)
+            deleted_workers = [dict(zip([col[0] for col in cursor.description], row)) 
+                              for row in cursor.fetchall()]
+
+            print("Gelöschte Items:", {  # Debug-Ausgabe
+                'tools': deleted_tools,
+                'consumables': deleted_consumables,
+                'workers': deleted_workers
+            })
+            
+            return {
+                'tools': deleted_tools,
+                'consumables': deleted_consumables,
+                'workers': deleted_workers
+            }
+            
+    except Exception as e:
+        print(f"Fehler beim Laden der gelöschten Items: {e}")
+        return {
             'tools': [],
             'consumables': [],
             'workers': []
         }
-        
-        try:
-            # Prüfe Spalten in tools Tabelle
-            columns = [col[1] for col in cursor.execute('PRAGMA table_info(tools)').fetchall()]
-            if all(col in columns for col in ['deleted', 'deleted_at']):
-                deleted_items['tools'] = cursor.execute('''
-                    SELECT * FROM tools 
-                    WHERE deleted = 1 
-                    ORDER BY deleted_at DESC
-                ''').fetchall()
-            
-            # Prüfe Spalten in consumables Tabelle
-            columns = [col[1] for col in cursor.execute('PRAGMA table_info(consumables)').fetchall()]
-            if all(col in columns for col in ['deleted', 'deleted_at']):
-                deleted_items['consumables'] = cursor.execute('''
-                    SELECT * FROM consumables 
-                    WHERE deleted = 1 
-                    ORDER BY deleted_at DESC
-                ''').fetchall()
-            
-            # Prüfe Spalten in workers Tabelle
-            columns = [col[1] for col in cursor.execute('PRAGMA table_info(workers)').fetchall()]
-            if all(col in columns for col in ['deleted', 'deleted_at']):
-                deleted_items['workers'] = cursor.execute('''
-                    SELECT * FROM workers 
-                    WHERE deleted = 1 
-                    ORDER BY deleted_at DESC
-                ''').fetchall()
-                
-        except sqlite3.Error as e:
-            print(f"Datenbankfehler beim Abrufen gelöschter Einträge: {str(e)}")
-            
-        return deleted_items
 
 def get_trash_count():
     """Zählt gelöschte Einträge, robust gegen fehlende Spalten"""
@@ -805,11 +837,20 @@ def load_settings():
 def trash():
     try:
         deleted_items = get_deleted_items()
+        print("DEBUG - Gelöschte Items:", {
+            'tools': len(deleted_items['tools']),
+            'consumables': len(deleted_items['consumables']),
+            'workers': len(deleted_items['workers'])
+        })
+        print("DEBUG - Beispiel-Tool:", deleted_items['tools'][0] if deleted_items['tools'] else "Keine Tools")
         return render_template('admin/trash.html',
                              deleted_tools=deleted_items['tools'],
                              deleted_consumables=deleted_items['consumables'],
                              deleted_workers=deleted_items['workers'])
     except Exception as e:
+        print(f"DEBUG - Fehler in trash route: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         flash(f'Fehler beim Laden des Papierkorbs: {str(e)}', 'error')
         return render_template('error.html', 
                              message='Der Papierkorb konnte nicht geladen werden.', 
