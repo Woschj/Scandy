@@ -11,10 +11,11 @@ class Database:
 
     @staticmethod
     def get_database_path():
-        if os.environ.get('RENDER') == 'true':
-            return os.path.join('/opt/render/project/src/database', 'inventory.db')
-        else:
-            return os.path.join('database', 'inventory.db')
+        # Basis-Pfad: Entweder PythonAnywhere oder lokales Verzeichnis
+        base_path = '/home/aklann' if 'PYTHONANYWHERE_SITE' in os.environ else os.path.dirname(os.path.dirname(__file__))
+        
+        # Datenbank-Pfad ist immer im übergeordneten Verzeichnis
+        return os.path.join(base_path, 'database', 'inventory.db')
     
     @staticmethod
     def get_db():
@@ -37,11 +38,12 @@ class Database:
     def init_db():
         """Initialisiert die komplette Datenbankstruktur"""
         # Verzeichnis erstellen falls nicht vorhanden
-        if not os.path.exists('database'):
-            os.makedirs('database')
+        db_path = Database.get_database_path()
+        db_dir = os.path.dirname(db_path)
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
             
         # Alte Datenbank löschen falls vorhanden
-        db_path = Database.get_database_path()
         if os.path.exists(db_path):
             os.remove(db_path)
             
