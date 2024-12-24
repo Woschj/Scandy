@@ -286,19 +286,30 @@ dialog#quickScanModal .modal-box {
     width: 2.5rem !important;
 }
 
-/* Theme Toggle */
-.theme-toggle {
+/* Theme Controller */
+.swap {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
 }
 
-[data-theme="dark"] .theme-toggle .fa-sun {
+.swap .swap-on,
+.swap .swap-off {
+    position: absolute !important;
+}
+
+.swap input[type="checkbox"]:checked ~ .swap-on {
+    display: flex !important;
+}
+
+.swap input[type="checkbox"]:checked ~ .swap-off {
     display: none !important;
 }
 
-[data-theme="dark"] .theme-toggle::before {
-    content: "\f186" !important;  /* Moon icon */
-    font-family: "Font Awesome 6 Free" !important;
-    font-weight: 900 !important;
+.swap input[type="checkbox"]:not(:checked) ~ .swap-on {
+    display: none !important;
+}
+
+.swap input[type="checkbox"]:not(:checked) ~ .swap-off {
+    display: flex !important;
 }
