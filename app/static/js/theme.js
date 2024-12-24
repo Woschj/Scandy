@@ -1,16 +1,10 @@
 // Theme handling
 document.addEventListener('DOMContentLoaded', function() {
-    const themeController = document.querySelector('.theme-controller');
+    // Setze Standard-Theme
+    if (!localStorage.getItem('theme')) {
+        localStorage.setItem('theme', 'light');
+    }
     
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme') || 'winter';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    themeController.checked = savedTheme === 'dark';
-    
-    // Theme toggle handler
-    themeController.addEventListener('change', function() {
-        const newTheme = this.checked ? 'dark' : 'winter';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-    });
+    // Wende Theme an
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('theme'));
 }); 

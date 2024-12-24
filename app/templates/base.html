@@ -6,37 +6,34 @@
     <title>{% block title %}{% endblock %} - Scandy</title>
     
     <!-- Tailwind und DaisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.css" rel="stylesheet" type="text/css" />
-    
-    <!-- Theme Styles -->
-    <style>
-        :root {
-            --primary-color: hsl({{ colors.primary }});
-            --primary-focus: hsl({{ colors.primary }});
-        }
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.css" rel="stylesheet">
 
-        /* Button Styles - Höchste Spezifität */
-        html[data-theme="light"] .btn.btn-primary,
-        html[data-theme="light"] .btn.btn-active {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            border-color: var(--primary-color) !important;
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {}
+        },
+        daisyui: {
+          themes: [{
+            light: {
+              "primary": "hsl(215 100% 34%)",
+              "primary-content": "white",
+              "primary-focus": "hsl({{ colors.primary }})",
+              "base-100": "white",
+              "base-200": "#f9fafb",
+              "base-300": "#d1d5db"
+            }
+          }],
+          darkTheme: false
         }
-
-        html[data-theme="light"] .btn.btn-primary:hover,
-        html[data-theme="light"] .btn.btn-active:hover {
-            background-color: var(--primary-focus) !important;
-            border-color: var(--primary-focus) !important;
-        }
-    </style>
+      }
+    </script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Custom Styles -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
     {% block head %}{% endblock %}
@@ -64,14 +61,16 @@
                 <ul class="menu menu-horizontal px-1">
                     <li>
                         <a href="{{ url_for('tools.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'tools' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-tools mr-2"></i>Werkzeuge
+                           class="btn btn-ghost flex items-center gap-2 {% if request and request.endpoint and 'tools' in request.endpoint %}btn-active{% endif %}">
+                            <i class="fas fa-tools"></i>
+                            <span class="flex-1">Werkzeuge</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('consumables.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'consumables' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
+                           class="btn btn-ghost flex items-center gap-2 {% if request and request.endpoint and 'consumables' in request.endpoint %}btn-active{% endif %}">
+                            <i class="fas fa-box-open"></i>
+                            <span class="flex-1">Verbrauchsmaterial</span>
                         </a>
                     </li>
                     {% if session.get('is_admin') %}
@@ -105,7 +104,7 @@
                         <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
                     </a>
                     <a href="{{ url_for('admin.dashboard') }}" 
-                       class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
+                       class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint and 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
                         <i class="fas fa-chart-line mr-2"></i>Dashboard
                     </a>
                     {% else %}

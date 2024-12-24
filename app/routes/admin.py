@@ -894,6 +894,27 @@ def delete_permanently(table, barcode):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@bp.route('/settings/color', methods=['POST'])
+@admin_required
+def update_color():
+    try:
+        data = request.get_json()
+        key = data.get('key')
+        value = data.get('value')
+        
+        if not key or not value:
+            return jsonify({'success': False, 'message': 'Fehlende Parameter'})
+        
+        # Speichere HSL-Wert direkt
+        save_color_setting(key, value)
+        
+        # Aktualisiere die Anwendungs-Konfiguration
+        g.colors = get_color_settings()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 def init_app(app):
     app.register_blueprint(bp)
     

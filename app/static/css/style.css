@@ -1,29 +1,89 @@
-/* Theme Styles */
+/* Basis-Theme-Einstellungen */
 :root {
+    --rounded-btn: 0.5rem;
+    --animation-btn: 0.25s;
+    --btn-text-case: uppercase;
+    --btn-focus-scale: 0.95;
     --primary-color: hsl({{ colors.primary }});
     --primary-focus: hsl({{ colors.primary }});
 }
 
-/* Button Styles - Höchste Spezifität */
-html[data-theme="light"] .btn.btn-primary,
-html[data-theme="light"] .btn.btn-active {
-    background-color: var(--primary-color) !important;
-    color: white !important;
-    border-color: var(--primary-color) !important;
+/* Button Basis */
+.btn {
+    @apply font-semibold px-4 py-2 rounded-lg;
 }
 
-html[data-theme="light"] .btn.btn-primary:hover,
-html[data-theme="light"] .btn.btn-active:hover {
-    background-color: var(--primary-focus) !important;
-    border-color: var(--primary-focus) !important;
+/* Primary Button */
+.btn-primary {
+    background-color: hsl(228 41% 51%) !important;
+    color: white !important;
+    border-color: hsl(228 41% 51%) !important;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+/* Success Button */
+.btn-success {
+    @apply bg-success text-success-content border-success hover:bg-success-focus;
+}
+
+/* Error Button */
+.btn-error {
+    @apply bg-error text-error-content border-error hover:bg-error-focus;
+}
+
+/* Ghost Button */
+.btn-ghost {
+    @apply bg-transparent border-transparent;
+}
+
+.btn-ghost:hover {
+    opacity: 0.8;
+}
+
+/* Active Button Styles */
+.btn-active {
+    background-color: hsl(228 41% 51%) !important;
+    color: white !important;
+    border-color: hsl(228 41% 51%) !important;
+    padding: 0 1rem !important;
+    height: 2.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    &:hover {
+        background-color: hsl(228 41% 51%) !important;
+        opacity: 1 !important;
+    }
+    & i, 
+    & span {
+        display: inline-flex;
+        align-items: center;
+        height: 100%;
+    }
 }
 
 /* Navbar Styles */
+.navbar {
+    height: 4rem;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+}
+
 .navbar .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 3rem;
+    height: 2.5rem;
+    padding: 0 1rem;
+    & i, 
+    & span {
+        display: inline-flex;
+        align-items: center;
+        height: 100%;
+    }
 }
 
 /* QuickScan Button */
@@ -141,7 +201,7 @@ dialog#quickScanModal .modal-box {
 }
 
 .tabs.tabs-boxed .tab.tab-active {
-    background-color: hsl(var(--p));
+    background-color: hsl(228 41% 51%);
     color: hsl(var(--pc));
 }
 
@@ -176,29 +236,38 @@ dialog#quickScanModal .modal-box {
     background-color: hsl(var(--b2));
     color: hsl(var(--bc));
 }
-
-/* Button Styles */
-.btn {
-    @apply inline-flex items-center justify-center;
-    color: hsl(var(--bc));
     background-color: hsl(var(--b2));
-    border: 1px solid hsl(var(--b3));
+    color: hsl(var(--bc));
 }
 
-.btn-primary {
-    color: hsl(var(--pc));
-    background-color: hsl(var(--p));
-    border-color: hsl(var(--p));
+/* Navigation Links Vertikale Ausrichtung */
+.drawer-side .menu {
+    padding: 0;
+    min-height: 4rem;
+    display: flex;
+    align-items: center;
 }
 
-.btn-success {
-    color: hsl(var(--sc));
-    background-color: hsl(var(--su));
-    border-color: hsl(var(--su));
+.drawer-side .menu ul {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
 }
 
-.btn-error {
-    color: hsl(var(--er));
-    background-color: hsl(var(--er));
-    border-color: hsl(var(--er));
+.drawer-side .menu a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 4rem;
+    padding: 0 1rem;
+    margin: 0;
+    text-align: center;
+    width: 100%;
+}
+
+/* Spezifisch für die Icons und Text in der Navigation */
+.drawer-side .menu a svg,
+.drawer-side .menu a span {
+    margin: auto;
 }
