@@ -127,7 +127,7 @@ dialog#quickScanModal::backdrop {
 }
 
 dialog#quickScanModal .modal-box {
-    background: hsl(var(--b1));
+    background: white;
     border-radius: 1rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     width: 90%;
@@ -135,6 +135,72 @@ dialog#quickScanModal .modal-box {
     padding: 1.5rem;
     position: relative;
     overflow: hidden;
+    color: black;
+}
+
+/* QuickScan Modal Content Styles */
+.scan-step {
+    text-align: center;
+    position: relative;
+}
+
+.scan-step i {
+    color: hsl(228 41% 51%);
+}
+
+#tool-preview,
+#worker-preview {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Scanner Animation */
+.scan-step::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: hsl(228 41% 51%);
+    box-shadow: 0 0 8px hsl(228 41% 51%);
+    animation: scanning 2s ease-in-out infinite;
+    opacity: 0.8;
+}
+
+@keyframes scanning {
+    0% {
+        top: 0;
+    }
+    50% {
+        top: 100%;
+    }
+    100% {
+        top: 0;
+    }
+}
+
+/* Optional: Scanbereich-Markierung */
+.scan-step {
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin: 1rem 0;
+    background: rgba(248, 249, 250, 0.5);
+}
+
+/* Progress Bar Styles */
+.progress {
+    height: 0.5rem;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    background-color: hsl(228 41% 51%);
+    height: 100%;
+    transition: width 0.3s ease;
 }
 
 /* Tab Styles */
@@ -241,8 +307,17 @@ dialog#quickScanModal .modal-box {
     background-color: hsl(var(--b2));
     color: hsl(var(--bc));
 }
-    background-color: hsl(var(--b2));
-    color: hsl(var(--bc));
+
+/* Trash Counter Badge */
+.navbar .btn-circle .absolute {
+    min-width: 1.25rem !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    border-radius: 9999px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
 }
 
 /* Navigation Links Vertikale Ausrichtung */
