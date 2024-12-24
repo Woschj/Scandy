@@ -61,16 +61,14 @@
                 <ul class="menu menu-horizontal px-1">
                     <li>
                         <a href="{{ url_for('tools.index') }}"
-                           class="btn btn-ghost flex items-center gap-2 {% if request and request.endpoint and 'tools' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-tools"></i>
-                            <span class="flex-1">Werkzeuge</span>
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'tools' in request.endpoint %}btn-active{% endif %}">
+                            <i class="fas fa-tools mr-2"></i>Werkzeuge
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('consumables.index') }}"
-                           class="btn btn-ghost flex items-center gap-2 {% if request and request.endpoint and 'consumables' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-box-open"></i>
-                            <span class="flex-1">Verbrauchsmaterial</span>
+                           class="btn btn-ghost min-h-[3rem] flex items-center {% if request and request.endpoint and 'consumables' in request.endpoint %}btn-active{% endif %}">
+                            <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
                         </a>
                     </li>
                     {% if session.get('is_admin') %}
@@ -128,13 +126,9 @@
                         </span>
                         {% endif %}
                     </a>
-                    <label class="swap swap-rotate btn btn-ghost btn-circle">
-                        <input type="checkbox" class="theme-controller" />
-                        <!-- Sonne -->
-                        <i class="fas fa-sun swap-on"></i>
-                        <!-- Mond -->
-                        <i class="fas fa-moon swap-off"></i>
-                    </label>
+                    <button class="btn btn-circle theme-toggle">
+                        <i class="fas fa-sun"></i>
+                    </button>
                     {% endif %}
                 </div>
             </div>
