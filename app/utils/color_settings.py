@@ -21,26 +21,41 @@ def hex_to_hsl(hex_color):
     return hsl
 
 def get_color_settings():
-    """Holt die Farbeinstellungen aus der Datenbank und konvertiert sie ins HSL-Format"""
-    with Database.get_db() as conn:
-        settings = dict(conn.execute('''
-            SELECT key, value FROM settings
-            WHERE key IN ('primary_color', 'secondary_color', 'accent_color')
-        ''').fetchall())
-        
-        # Konvertiere HEX zu HSL
+    """Holt die Farbeinstellungen aus der Datenbank"""
+    try:
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT key, value FROM settings 
+                WHERE key IN ('primary_color', 'secondary_color', 'accent_color')
+            """)
+            settings = {row['key'].replace('_color', ''): row['value'] 
+                       for row in cursor.fetchall()}
+            
+            # Fallback-Werte falls keine Einstellungen gefunden
+            return {
+                'primary': settings.get('primary', '259 94% 51%'),
+                'secondary': settings.get('secondary', '314 100% 47%'),
+                'accent': settings.get('accent', '174 60% 51%')
+            }
+    except Exception as e:
+        print(f"Fehler beim Laden der Farbeinstellungen: {e}")
+        # Fallback-Werte bei Fehler
         return {
-            'primary': hex_to_hsl(settings.get('primary_color', '#570DF8')),     # Default Lila
-            'secondary': hex_to_hsl(settings.get('secondary_color', '#F000B8')), # Default Pink
-            'accent': hex_to_hsl(settings.get('accent_color', '#37CDBE'))        # Default Türkis
+            'primary': '259 94% 51%',
+            'secondary': '314 100% 47%',
+            'accent': '174 60% 51%'
         }
 
 def save_color_setting(key, value):
     """Speichert eine Farbeinstellung in der Datenbank"""
-    print(f'Speichere Farbeinstellung: {key} = {value}')
-    with Database.get_db() as conn:
-        conn.execute('''
-            INSERT OR REPLACE INTO settings (key, value)
-            VALUES (?, ?)
-        ''', (key, value))
-    print('Farbeinstellung gespeichert')
+    try:
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO settings (key, value)
+                VALUES (?, ?)
+            """, (f'{key}_color', value))
+            conn.commit()
+    except Exception as e:
+        print(f"Fehler beim Speichern der Farbeinstellung: {e}")

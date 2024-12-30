@@ -36,8 +36,10 @@ class SchemaManager:
         default_settings = {
             'theme': 'light',
             'language': 'de',
-            'items_per_page': '10'
-            # Fügen Sie hier weitere Standardeinstellungen hinzu
+            'items_per_page': '10',
+            'primary_color': '259 94% 51%',    # Standard Blau
+            'secondary_color': '314 100% 47%',  # Standard Pink
+            'accent_color': '174 60% 51%'       # Standard Türkis
         }
         
         try:
