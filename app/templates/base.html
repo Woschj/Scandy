@@ -400,75 +400,51 @@
 
 <body class="min-h-screen bg-base-200">
     <div class="flex flex-col min-h-screen">
+        <!-- Vertikales Seitenmenü -->
+        <div class="fixed left-0 top-0 h-full w-16 bg-base-300 flex flex-col items-center py-4 gap-2 shadow-lg z-50">
+            <!-- Logo als Home-Button -->
+            <a href="{{ url_for('index') }}" 
+               class="w-12 h-12 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100">
+                <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
+                     alt="BTZ Logo" 
+                     class="w-10 h-10 object-contain">
+            </a>
+            
+            <!-- Trennlinie -->
+            <div class="w-8 h-0.5 bg-base-content/20 rounded-full mb-2"></div>
+            
+            <!-- Inventar-Menü -->
+            <a href="{{ url_for('tools.index') }}" 
+               class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300 
+                      {% if 'tools' in request.endpoint %}bg-primary text-primary-content{% else %}hover:bg-base-100{% endif %}">
+                <i class="fas fa-tools text-xl"></i>
+            </a>
+            
+            <a href="{{ url_for('consumables.index') }}" 
+               class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300
+                      {% if 'consumables' in request.endpoint %}bg-primary text-primary-content{% else %}hover:bg-base-100{% endif %}">
+                <i class="fas fa-box-open text-xl"></i>
+            </a>
+            
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('workers.index') }}" 
+               class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300
+                      {% if 'workers' in request.endpoint %}bg-primary text-primary-content{% else %}hover:bg-base-100{% endif %}">
+                <i class="fas fa-users text-xl"></i>
+            </a>
+            {% endif %}
+        </div>
+
         <!-- Navbar -->
-        <div class="navbar bg-base-100 shadow-lg px-4 relative">
+        <div class="navbar bg-base-100 shadow-lg px-4 relative ml-16">
             <!-- Linke Seite -->
-            <div class="flex-none lg:hidden">
-                <label for="drawer-toggle" class="btn btn-square btn-ghost">
-                    <i class="fas fa-bars"></i>
-                </label>
-            </div>
             <div class="flex-1">
-                <!-- Logo -->
-                <a href="{{ url_for('index') }}" class="flex items-center">
-                    <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
-                         alt="BTZ Logo" 
-                         class="h-12 w-auto">
-                </a>
-                
-                <!-- Desktop Navigation -->
-                <ul class="menu menu-horizontal px-1 hidden lg:flex">
-                    <li>
-                        <a href="{{ url_for('tools.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-tools mr-2"></i>Werkzeuge
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('consumables.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'consumables' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
-                        </a>
-                    </li>
-                    {% if session.get('is_admin') %}
-                    <li>
-                        <a href="{{ url_for('workers.index') }}"
-                           class="btn btn-ghost min-h-[3rem] flex items-center {% if 'workers' in request.endpoint %}btn-active{% endif %}">
-                            <i class="fas fa-users mr-2"></i>Mitarbeiter
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-                
-                <!-- Mobile Navigation Dropdown -->
-                <div class="dropdown lg:hidden">
-                    <label tabindex="0" class="btn btn-ghost m-1">
-                        <span class="mr-2">Inventar</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </label>
-                    <ul tabindex="0" class="dropdown-content z-[102] menu p-2 shadow bg-base-100 rounded-box w-52">
-                        <li>
-                            <a href="{{ url_for('tools.index') }}"
-                               class="{% if 'tools' in request.endpoint %}active{% endif %}">
-                                <i class="fas fa-tools mr-2"></i>Werkzeuge
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('consumables.index') }}"
-                               class="{% if 'consumables' in request.endpoint %}active{% endif %}">
-                                <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
-                            </a>
-                        </li>
-                        {% if session.get('is_admin') %}
-                        <li>
-                            <a href="{{ url_for('workers.index') }}"
-                               class="{% if 'workers' in request.endpoint %}active{% endif %}">
-                                <i class="fas fa-users mr-2"></i>Mitarbeiter
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
+                <h1 class="text-xl font-bold">
+                    {% if 'tools' in request.endpoint %}Werkzeuge
+                    {% elif 'consumables' in request.endpoint %}Verbrauchsmaterial
+                    {% elif 'workers' in request.endpoint %}Mitarbeiter
+                    {% else %}Dashboard{% endif %}
+                </h1>
             </div>
 
             <!-- QuickScan Button (Mittig) -->
@@ -484,8 +460,7 @@
 
             <!-- Rechte Seite -->
             <div class="flex-none">
-                <!-- Desktop Navigation -->
-                <div class="hidden lg:flex items-center gap-4">
+                <div class="flex items-center gap-4">
                     {% if session.get('is_admin') %}
                     <a href="{{ url_for('admin.manual_lending') }}" 
                        class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'admin.manual_lending' %}btn-active{% endif %}">
@@ -507,62 +482,26 @@
                     </a>
                     <label class="swap swap-rotate btn btn-ghost btn-circle">
                         <input type="checkbox" class="theme-controller" />
-                        <!-- Sonne -->
                         <i class="fas fa-sun swap-on"></i>
-                        <!-- Mond -->
                         <i class="fas fa-moon swap-off"></i>
                     </label>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-circle" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-ghost">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Login
+                    </a>
                     {% endif %}
-                </div>
-                
-                <!-- Mobile Navigation Dropdown -->
-                <div class="dropdown dropdown-end lg:hidden">
-                    <label tabindex="0" class="btn btn-ghost m-1">
-                        <span class="mr-2">Einstellungen</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </label>
-                    <ul tabindex="0" class="dropdown-content z-[102] menu p-2 shadow bg-base-100 rounded-box w-52">
-                        {% if session.get('is_admin') %}
-                        <li>
-                            <a href="{{ url_for('admin.manual_lending') }}"
-                               class="{% if request.endpoint == 'admin.manual_lending' %}active{% endif %}">
-                                <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('admin.dashboard') }}"
-                               class="{% if 'admin.dashboard' in request.endpoint %}active{% endif %}">
-                                <i class="fas fa-chart-line mr-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('admin.trash') }}">
-                                <i class="fas fa-trash-alt mr-2"></i>Papierkorb
-                                {% if trash_count is defined and trash_count > 0 %}
-                                <span class="badge badge-error badge-sm">{{ trash_count }}</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for('auth.logout') }}">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                            </a>
-                        </li>
-                        {% else %}
-                        <li>
-                            <a href="{{ url_for('auth.login') }}">
-                                <i class="fas fa-sign-in-alt mr-2"></i>Login
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
                 </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <main class="container-fluid max-w-[95%] mx-auto px-4 py-8 relative z-0">
-            {% block content %}{% endblock %}
+        <main class="container-fluid max-w-[95%] mx-auto px-4 py-8 relative z-0 overflow-x-hidden">
+            <div class="overflow-auto h-[calc(100vh-8rem)]">
+                {% block content %}{% endblock %}
+            </div>
         </main>
     </div>
 

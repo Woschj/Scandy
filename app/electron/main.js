@@ -2,6 +2,7 @@ const { app, BrowserWindow, Notification } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 let flaskProcess = null;
+let mainWindow = null;
 
 function showNotification(title, body) {
     new Notification({
@@ -13,70 +14,81 @@ function showNotification(title, body) {
 
 function startFlaskServer() {
     console.log('Starting Flask server...');
-    // Nutze die virtuelle Umgebung
-    const pythonPath = process.platform === 'win32' 
-        ? 'venv\\Scripts\\python.exe'
-        : 'venv/bin/python';
     
-    flaskProcess = spawn(pythonPath, ['-m', 'flask', 'run'], {
-        env: {
-            ...process.env,
-            FLASK_APP: 'wsgi.py',
-            FLASK_ENV: 'development'
-        }
-    });
+    // Pfad zur Python-Executable im venv
+    const pythonPath = path.join(__dirname, '../../venv/bin/python');
+    const scriptPath = path.join(__dirname, '../wsgi.py');
+    
+    flaskProcess = spawn(pythonPath, [scriptPath]);
     
     flaskProcess.stdout.on('data', (data) => {
-        console.log(`Flask: ${data}`);
+        console.log('Flask:', data.toString());
     });
-
+    
     flaskProcess.stderr.on('data', (data) => {
-        console.error(`Flask Error: ${data}`);
+        console.log('Flask Error:', data.toString());
     });
 }
 
+function stopFlaskServer() {
+    if (flaskProcess) {
+        // Unter Windows
+        if (process.platform === 'win32') {
+            spawn('taskkill', ['/pid', flaskProcess.pid, '/f', '/t']);
+        } else {
+            // Unter Unix-basierten Systemen
+            flaskProcess.kill('SIGTERM');
+        }
+        flaskProcess = null;
+        console.log('Flask server stopped');
+    }
+}
+
 function createWindow() {
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         titleBarStyle: 'hidden',
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
-        },
-        minWidth: 800,
-        minHeight: 600,
-        backgroundColor: '#ffffff',
-        show: false
+        }
     });
-
-    win.once('ready-to-show', () => {
-        win.show();
-    });
-
-    if (process.env.NODE_ENV === 'production') {
-        win.setMenu(null);
-    }
-
+    
     // Warte kurz, bis der Flask-Server gestartet ist
     setTimeout(() => {
-        win.loadURL('http://localhost:5000');
+        mainWindow.loadURL('http://localhost:5000');
     }, 2000);
+    
+    // Event-Handler für das Schließen des Fensters
+    mainWindow.on('closed', () => {
+        stopFlaskServer();
+        mainWindow = null;
+    });
 }
 
+// App Events
 app.whenReady().then(() => {
     startFlaskServer();
     createWindow();
 });
 
 app.on('window-all-closed', () => {
+    stopFlaskServer();
     if (process.platform !== 'darwin') {
         app.quit();
     }
-    // Beende den Flask-Server
-    if (flaskProcess) {
-        flaskProcess.kill();
+});
+
+app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
     }
+});
+
+// Cleanup beim Beenden der App
+app.on('before-quit', () => {
+    stopFlaskServer();
 });
 
 // App im Dock/Taskbar behalten

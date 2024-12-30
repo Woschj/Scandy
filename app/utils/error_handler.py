@@ -37,4 +37,4 @@ def safe_db_query(func):
         except Exception as e:
             logger.error(f"Unerwarteter Fehler in {func.__name__}: {str(e)}")
             return []
-    return wrapper 
+    return wrapper
