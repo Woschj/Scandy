@@ -14,6 +14,17 @@ from app.utils.color_settings import get_color_settings
 def create_app(test_config=None):
     app = Flask(__name__)
     
+    # Stelle sicher, dass das Datenbankverzeichnis existiert
+    if not os.path.exists('database'):
+        os.makedirs('database')
+    
+    # Initialisiere die Datenbank
+    db_path = Database.get_database_path()
+    if not os.path.exists(db_path):
+        print("Initialisiere neue Datenbank...")
+        Database.init_db()
+        print("Datenbank erfolgreich initialisiert!")
+    
     if test_config is None:
         app.config.from_pyfile('config.py', silent=True)
     else:
@@ -181,5 +192,8 @@ def create_app(test_config=None):
                 'secondary': '314 100% 47%',
                 'accent': '174 60% 51%'
             }}
+
+    # Stelle sicher, dass die Datenbank existiert und initialisiert ist
+    Database.ensure_db_exists()
 
     return app

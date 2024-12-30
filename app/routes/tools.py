@@ -84,6 +84,7 @@ def add():
     return render_template('admin/add_tool.html')
 
 @bp.route('/<barcode>', methods=['GET'])
+@login_required
 def details(barcode):
     tool = Database.query('''
         SELECT * FROM tools 
@@ -110,9 +111,11 @@ def details(barcode):
         ORDER BY l.lent_at DESC
     ''', [barcode])
 
-    return render_template('tool_details.html', 
-                         tool=tool,
-                         lending_history=lending_history)
+    if request.headers.get('HX-Request'):
+        # Wenn HTMX Request, nur Modalinhalt zurückgeben
+        return render_template('tools/details_modal.html', tool=tool)
+    # Ansonsten normale Seite zurückgeben
+    return render_template('tools/details.html', tool=tool)
 
 @bp.route('/<barcode>/edit', methods=['POST'])
 @admin_required

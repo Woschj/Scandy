@@ -9,6 +9,43 @@ logger = logging.getLogger(__name__)
 class Database:
     DATABASE_PATH = os.path.join('database', 'inventory.db')
 
+    @classmethod
+    def ensure_db_exists(cls):
+        """Stellt sicher, dass die Datenbank existiert und initialisiert ist"""
+        db_path = cls.get_database_path()
+        
+        # Stelle sicher, dass das Verzeichnis existiert
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        
+        print(f"Überprüfe Datenbank in: {db_path}")
+        
+        # Wenn die Datenbank nicht existiert, erstelle sie
+        if not os.path.exists(db_path):
+            print("Erstelle neue Datenbank...")
+            conn = sqlite3.connect(db_path)
+            conn.close()
+            # Initialisiere die Datenbankstruktur
+            cls.init_db()
+            print("Datenbank erfolgreich initialisiert!")
+        else:
+            print("Datenbank existiert bereits")
+
+        # Überprüfe ob alle Tabellen existieren
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        tables = cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        """).fetchall()
+        
+        if not tables:
+            print("Keine Tabellen gefunden, initialisiere Datenbankstruktur...")
+            conn.close()
+            cls.init_db()
+        else:
+            print(f"Gefundene Tabellen: {[table[0] for table in tables]}")
+            conn.close()
+
     @staticmethod
     def get_database_path():
         # Basis-Pfad: Entweder PythonAnywhere oder lokales Verzeichnis
@@ -21,9 +58,14 @@ class Database:
     def get_db():
         if 'db' not in g:
             db_path = Database.get_database_path()
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            
+            # Stelle sicher, dass die Datenbank existiert
+            Database.ensure_db_exists()
+            
+            # Verbindung herstellen
             g.db = sqlite3.connect(db_path)
             g.db.row_factory = sqlite3.Row
+            
         return g.db
 
     @staticmethod
@@ -37,20 +79,15 @@ class Database:
     @staticmethod
     def init_db():
         """Initialisiert die komplette Datenbankstruktur"""
-        # Verzeichnis erstellen falls nicht vorhanden
         db_path = Database.get_database_path()
-        db_dir = os.path.dirname(db_path)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-            
-        # Alte Datenbank löschen falls vorhanden
-        if os.path.exists(db_path):
-            os.remove(db_path)
-            
+        
+        # Stelle sicher, dass das Verzeichnis existiert
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        
         conn = Database.get_db_connection()
         cursor = conn.cursor()
-
-        # Werkzeuge (Tools)
+        
+        # Erstelle alle Tabellen
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS tools (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,8 +102,25 @@ class Database:
                 location TEXT
             )
         ''')
-
-        # Verbrauchsmaterialien (Consumables)
+        
+        print("Tools-Tabelle erstellt")
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS workers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT UNIQUE NOT NULL,
+                firstname TEXT NOT NULL,
+                lastname TEXT NOT NULL,
+                department TEXT,
+                email TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP
+            )
+        ''')
+        
+        print("Workers-Tabelle erstellt")
+        
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS consumables (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,23 +136,7 @@ class Database:
                 location TEXT
             )
         ''')
-
-        # Mitarbeiter (Workers)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT UNIQUE NOT NULL,
-                firstname TEXT NOT NULL,
-                lastname TEXT NOT NULL,
-                department TEXT,
-                email TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP
-            )
-        ''')
-
-        # Ausleihvorgänge (Lendings)
+        
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS lendings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,27 +148,7 @@ class Database:
                 FOREIGN KEY (worker_barcode) REFERENCES workers (barcode)
             )
         ''')
-
-        # System-Logs
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS system_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                level TEXT,
-                message TEXT,
-                details TEXT
-            )
-        ''')
-
-        # Settings
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            )
-        ''')
-
-        # Verbrauchsmaterial-Nutzungen
+        
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS consumable_usages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,13 +156,15 @@ class Database:
                 worker_barcode TEXT NOT NULL,
                 quantity INTEGER NOT NULL,
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (consumable_barcode) REFERENCES consumables (barcode),
-                FOREIGN KEY (worker_barcode) REFERENCES workers (barcode)
+                FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
             )
         ''')
-
+        
         conn.commit()
+        print("Alle Tabellen wurden erstellt und committet")
         conn.close()
+        print("Datenbankverbindung geschlossen")
 
     @staticmethod
     def close_db():
@@ -535,6 +555,17 @@ class Database:
                 'success': False,
                 'message': str(e)
             }
+
+    def _run_migrations(self):
+        migrations = [
+            '001_initial_schema.sql',
+            '002_add_deleted_column.sql',
+            '003_add_timestamps.sql',
+            '004_add_categories.sql',
+            '005_add_description.sql',
+            '006_add_stock_threshold.sql',
+            '007_add_consumable_usage_table.sql',
+        ]
 
 def init_db():
     """Initialisiert die Datenbank"""

@@ -17,16 +17,29 @@ function startFlaskServer() {
     
     // Pfad zur Python-Executable im venv
     const pythonPath = path.join(__dirname, '../../venv/bin/python');
-    const scriptPath = path.join(__dirname, '../wsgi.py');
+    const scriptPath = path.join(__dirname, '../../wsgi.py');
+    
+    console.log(`Python Path: ${pythonPath}`);
+    console.log(`Script Path: ${scriptPath}`);
     
     flaskProcess = spawn(pythonPath, [scriptPath]);
     
     flaskProcess.stdout.on('data', (data) => {
-        console.log('Flask:', data.toString());
+        console.log(`Flask: ${data.toString()}`);
     });
     
     flaskProcess.stderr.on('data', (data) => {
-        console.log('Flask Error:', data.toString());
+        console.error(`Flask Error: ${data.toString()}`);
+        showNotification('Flask Error', data.toString());
+    });
+    
+    flaskProcess.on('error', (err) => {
+        console.error('Failed to start Flask:', err);
+        showNotification('Error', 'Failed to start Flask server');
+    });
+    
+    flaskProcess.on('exit', (code, signal) => {
+        console.log(`Flask process exited with code ${code} and signal ${signal}`);
     });
 }
 

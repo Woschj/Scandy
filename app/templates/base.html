@@ -509,11 +509,30 @@
     <dialog id="quickScanModal">
         <div class="modal-box">
             <!-- Header -->
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-bold text-2xl">QuickScan</h3>
-                <form method="dialog">
-                    <button class="btn btn-sm btn-circle btn-ghost" type="submit">✕</button>
-                </form>
+            <div class="mb-6">
+                <!-- Titel und Schließen-Button -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-2xl">QuickScan</h3>
+                    <form method="dialog">
+                        <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                    </form>
+                </div>
+                
+                <!-- Scanner-Modus Auswahl -->
+                <div class="flex justify-center">
+                    <div class="join">
+                        <button class="join-item btn btn-sm btn-primary" 
+                                onclick="switchScanMode('barcode')"
+                                id="barcodeModeBtn">
+                            <i class="fas fa-barcode mr-2"></i>Barcode-Scanner
+                        </button>
+                        <button class="join-item btn btn-sm" 
+                                onclick="switchScanMode('camera')"
+                                id="cameraModeBtn">
+                            <i class="fas fa-camera mr-2"></i>Kamera-Scanner
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Scan Steps -->
@@ -524,6 +543,10 @@
                         <i class="fas fa-tools text-5xl text-primary mb-4"></i>
                         <h4 class="text-xl font-bold mb-2">Werkzeug scannen</h4>
                         <p class="text-sm opacity-70">Bitte scannen Sie den Barcode des Werkzeugs</p>
+                    </div>
+                    <!-- Kamera-Vorschau Container -->
+                    <div id="cameraPreview" class="hidden mb-4">
+                        <video id="video" class="w-full rounded-lg"></video>
                     </div>
                     <div id="tool-preview" class="rounded-xl p-4">
                         <!-- Wird dynamisch gefüllt -->
@@ -1039,6 +1062,88 @@
             closeQuickScan();
         }
     });
+
+    let scanner = null;
+    
+    async function switchScanMode(mode) {
+        const barcodeBtn = document.getElementById('barcodeModeBtn');
+        const cameraBtn = document.getElementById('cameraModeBtn');
+        const cameraPreview = document.getElementById('cameraPreview');
+        
+        // UI-Update
+        if (mode === 'camera') {
+            barcodeBtn.classList.remove('btn-primary');
+            cameraBtn.classList.add('btn-primary');
+            cameraPreview.classList.remove('hidden');
+            
+            try {
+                // Kamera initialisieren
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                video.play();
+                
+                // QR-Scanner initialisieren
+                if (!scanner) {
+                    scanner = new Html5QrcodeScanner("cameraPreview", { 
+                        fps: 10,
+                        qrbox: 250
+                    });
+                    scanner.render((text) => {
+                        handleBarcodeScan(text);
+                        // Optional: Scanner nach erfolgreicher Erkennung stoppen
+                        scanner.clear();
+                    });
+                }
+            } catch (err) {
+                console.error('Fehler beim Zugriff auf die Kamera:', err);
+                alert('Kamera konnte nicht aktiviert werden. Bitte Berechtigungen prüfen.');
+            }
+        } else {
+            barcodeBtn.classList.add('btn-primary');
+            cameraBtn.classList.remove('btn-primary');
+            cameraPreview.classList.add('hidden');
+            
+            // Kamera-Stream beenden
+            if (scanner) {
+                scanner.clear();
+                scanner = null;
+            }
+            const video = document.getElementById('video');
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+    }
+
+    // Beim Öffnen des Modals
+    function showQuickScan() {
+        document.getElementById('quickScanModal').showModal();
+        // Standardmäßig Barcode-Modus aktivieren
+        switchScanMode('barcode');
+    }
+
+    // Beim Schließen des Modals
+    function closeQuickScan() {
+        // Kamera-Stream beenden
+        if (scanner) {
+            scanner.clear();
+            scanner = null;
+        }
+        const video = document.getElementById('video');
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        document.getElementById('quickScanModal').close();
+    }
     </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- HTML5-QR-Code-Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </body>
 </html>

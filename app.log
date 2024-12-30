@@ -1702,3 +1702,60 @@ Traceback (most recent call last):
     class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
     ^^^^^^^^^^^^^^^^^^^^^^^^^
 TypeError: argument of type 'NoneType' is not iterable
+Unbehandelter Fehler: [Errno 32] Broken pipe
+Error in process_lending: no such table: consumable_usage
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 599, in process_lending
+    cursor.execute("""
+sqlite3.OperationalError: no such table: consumable_usage
+Error in process_lending: no such table: consumable_usage
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 599, in process_lending
+    cursor.execute("""
+sqlite3.OperationalError: no such table: consumable_usage
+Error in process_lending: no such table: consumable_usage
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 599, in process_lending
+    cursor.execute("""
+sqlite3.OperationalError: no such table: consumable_usage
+Error in process_lending: no such table: consumable_usage
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 599, in process_lending
+    cursor.execute("""
+sqlite3.OperationalError: no such table: consumable_usage
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: Datenbankfehler: no such table: consumables
+Unbehandelter Fehler: Datenbankfehler: no such table: workers
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: Datenbankfehler: no such table: consumables
+Unbehandelter Fehler: Datenbankfehler: no such table: workers
+Error in manual_lending route: no such table: tools
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 382, in manual_lending
+    cursor.execute(tools_query)
+sqlite3.OperationalError: no such table: tools
+Unbehandelter Fehler: [Errno 32] Broken pipe
+Datenbankfehler in get_stats: no such table: tools
+Datenbankfehler in dashboard: no such table: lendings
+Error in manual_lending route: no such table: tools
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 382, in manual_lending
+    cursor.execute(tools_query)
+sqlite3.OperationalError: no such table: tools
+Datenbankfehler in get_stats: no such table: tools
+Datenbankfehler in dashboard: no such table: lendings
+Error in manual_lending route: no such table: tools
+Traceback (most recent call last):
+  File "/Users/woschj/Downloads/technik/scandy/app/routes/admin.py", line 382, in manual_lending
+    cursor.execute(tools_query)
+sqlite3.OperationalError: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: no such table: tools
+Unbehandelter Fehler: [Errno 32] Broken pipe
