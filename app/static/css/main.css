@@ -211,3 +211,89 @@ html[data-theme="dark"] #main-tab .btn.btn-primary {
 .btn:focus:not(:focus-visible) {
     box-shadow: none !important;
 } 
+
+/* Native App Styles */
+body {
+    user-select: none;  /* Verhindert Text-Selektion */
+    -webkit-app-region: drag;  /* Ermöglicht das Verschieben des Fensters */
+}
+
+/* Ausnahmen für interaktive Elemente */
+button, input, .btn, .quickscan-button, .navbar {
+    -webkit-app-region: no-drag;
+}
+
+/* Verbesserte Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+} 
+
+/* Navbar Layout Fixes */
+.navbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 100 !important;
+    padding: 0 1rem !important;
+    height: 4rem !important;  /* Feste Höhe für die Navbar */
+    min-height: 4rem !important;
+    max-height: 4rem !important;
+}
+
+/* Hauptcontainer-Anpassung */
+main.container-fluid {
+    margin-top: 4rem !important;  /* Gleiche Höhe wie Navbar */
+    height: calc(100vh - 4rem) !important;  /* Volle Höhe minus Navbar */
+    overflow-y: auto !important;  /* Scrollbar nur im Hauptbereich */
+    position: fixed !important;
+    top: 4rem !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+}
+
+/* QuickScan Button Anpassung */
+.quickscan-button {
+    position: fixed !important;
+    left: 50% !important;
+    top: 0 !important;
+    z-index: 101 !important;  /* Über der Navbar */
+}
+
+/* Navigation Container */
+.navbar .flex-1 {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    padding: 0 1rem !important;
+}
+
+/* Logo und Navigation Links */
+.navbar .flex-1 > a,
+.navbar .menu {
+    flex-shrink: 0 !important;
+}
+
+/* Rechte Navigations-Buttons */
+.navbar .flex-none {
+    flex-shrink: 0 !important;
+    margin-left: auto !important;
+} 

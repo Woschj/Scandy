@@ -416,8 +416,8 @@
                          class="h-12 w-auto">
                 </a>
                 
-                <!-- Hauptnavigation -->
-                <ul class="menu menu-horizontal px-1">
+                <!-- Desktop Navigation -->
+                <ul class="menu menu-horizontal px-1 hidden lg:flex">
                     <li>
                         <a href="{{ url_for('tools.index') }}"
                            class="btn btn-ghost min-h-[3rem] flex items-center {% if 'tools' in request.endpoint %}btn-active{% endif %}">
@@ -439,6 +439,36 @@
                     </li>
                     {% endif %}
                 </ul>
+                
+                <!-- Mobile Navigation Dropdown -->
+                <div class="dropdown lg:hidden">
+                    <label tabindex="0" class="btn btn-ghost m-1">
+                        <span class="mr-2">Inventar</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[102] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li>
+                            <a href="{{ url_for('tools.index') }}"
+                               class="{% if 'tools' in request.endpoint %}active{% endif %}">
+                                <i class="fas fa-tools mr-2"></i>Werkzeuge
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('consumables.index') }}"
+                               class="{% if 'consumables' in request.endpoint %}active{% endif %}">
+                                <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
+                            </a>
+                        </li>
+                        {% if session.get('is_admin') %}
+                        <li>
+                            <a href="{{ url_for('workers.index') }}"
+                               class="{% if 'workers' in request.endpoint %}active{% endif %}">
+                                <i class="fas fa-users mr-2"></i>Mitarbeiter
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
 
             <!-- QuickScan Button (Mittig) -->
@@ -454,6 +484,7 @@
 
             <!-- Rechte Seite -->
             <div class="flex-none">
+                <!-- Desktop Navigation -->
                 <div class="hidden lg:flex items-center gap-4">
                     {% if session.get('is_admin') %}
                     <a href="{{ url_for('admin.manual_lending') }}" 
@@ -463,17 +494,6 @@
                     <a href="{{ url_for('admin.dashboard') }}" 
                        class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
                         <i class="fas fa-chart-line mr-2"></i>Dashboard
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('auth.login') }}" 
-                       class="btn btn-ghost min-h-[3rem] flex items-center">
-                        <i class="fas fa-sign-in-alt mr-2"></i>Login
-                    </a>
-                    {% endif %}
-                    
-                    {% if session.get('is_admin') %}
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-circle">
-                        <i class="fas fa-sign-out-alt"></i>
                     </a>
                     <a href="{{ url_for('admin.trash') }}" 
                        class="btn btn-ghost btn-circle text-error relative">
@@ -493,6 +513,49 @@
                         <i class="fas fa-moon swap-off"></i>
                     </label>
                     {% endif %}
+                </div>
+                
+                <!-- Mobile Navigation Dropdown -->
+                <div class="dropdown dropdown-end lg:hidden">
+                    <label tabindex="0" class="btn btn-ghost m-1">
+                        <span class="mr-2">Einstellungen</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[102] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        {% if session.get('is_admin') %}
+                        <li>
+                            <a href="{{ url_for('admin.manual_lending') }}"
+                               class="{% if request.endpoint == 'admin.manual_lending' %}active{% endif %}">
+                                <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('admin.dashboard') }}"
+                               class="{% if 'admin.dashboard' in request.endpoint %}active{% endif %}">
+                                <i class="fas fa-chart-line mr-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('admin.trash') }}">
+                                <i class="fas fa-trash-alt mr-2"></i>Papierkorb
+                                {% if trash_count is defined and trash_count > 0 %}
+                                <span class="badge badge-error badge-sm">{{ trash_count }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('auth.logout') }}">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                            </a>
+                        </li>
+                        {% else %}
+                        <li>
+                            <a href="{{ url_for('auth.login') }}">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Login
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
                 </div>
             </div>
         </div>

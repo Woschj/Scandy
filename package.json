@@ -10,7 +10,19 @@
     "electron-serve": "^1.1.0"
   },
   "devDependencies": {
-    "electron": "^latest",
-    "electron-builder": "^latest"
-  }
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Woschj/Scandy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Woschj/Scandy/issues"
+  },
+  "homepage": "https://github.com/Woschj/Scandy#readme",
+  "description": ""
 } 
