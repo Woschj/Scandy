@@ -87,3 +87,127 @@
 .lending-list-items::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-400);
 } 
+
+/* Globale Button-Styles */
+[data-theme="light"],
+[data-theme="dark"] {
+    --btn-primary-bg: hsl(var(--p));
+    --btn-primary-color: hsl(0, 0%, 100%);
+    --btn-hover-bg: hsl(var(--pf));
+    --btn-hover-color: hsl(0, 0%, 100%);
+}
+
+/* Primary Buttons */
+.btn.btn-primary {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+    border-color: var(--btn-primary-bg) !important;
+}
+
+.btn.btn-primary:hover {
+    background-color: var(--btn-hover-bg) !important;
+    color: var(--btn-hover-color) !important;
+}
+
+/* Active Navigation */
+.navbar .btn-ghost.btn-active {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+}
+
+/* QuickScan Button */
+.quickscan-button {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease-in-out !important;
+    outline: none !important;
+    transform: translateX(-50%) !important;
+    width: 18rem !important;
+    height: 18rem !important;
+    padding: 0 !important;
+}
+
+.quickscan-button:hover {
+    transform: translateX(-50%) scale(1.05) !important;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.quickscan-button:active {
+    transform: translateX(-50%) scale(1) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* QuickScan Logo */
+.quickscan-logo {
+    width: 16rem !important;
+    height: 16rem !important;
+    padding: 0.1rem !important;
+    margin: 0 !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Ghost Buttons */
+.btn-ghost {
+    background-color: transparent !important;
+    color: hsl(var(--bc)) !important;
+    border-color: transparent !important;
+    outline: none !important;
+    transition: all 0.2s ease-in-out !important;
+    box-shadow: none !important;
+}
+
+.btn-ghost:hover {
+    background-color: hsl(var(--b2)) !important;
+    color: hsl(var(--bc)) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    transform: scale(1.02) !important;
+}
+
+/* Active Ghost Button Hover */
+.btn-ghost.btn-active:hover {
+    background-color: var(--btn-hover-bg) !important;
+    color: var(--btn-hover-color) !important;
+}
+
+/* Active Tabs */
+.tab.tab-active {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+    border-color: var(--btn-primary-bg) !important;
+} 
+
+/* Dashboard-spezifische Button-Styles */
+#main-tab .btn.btn-primary,
+#main-tab .btn.btn-primary:hover,
+#main-tab .quickscan-button {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+    border-color: var(--btn-primary-bg) !important;
+}
+
+/* Erhöhte Spezifität für DaisyUI-Überschreibungen */
+html[data-theme="light"] #main-tab .btn.btn-primary,
+html[data-theme="dark"] #main-tab .btn.btn-primary {
+    background-color: var(--btn-primary-bg) !important;
+    color: var(--btn-primary-color) !important;
+} 
+
+/* Navigation Buttons */
+.navbar .btn {
+    outline: none !important;
+}
+
+/* Allgemeine Button Focus Styles */
+.btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(var(--p), 0.2) !important;
+}
+
+/* Entferne Focus Ring für Mouse Users */
+.btn:focus:not(:focus-visible) {
+    box-shadow: none !important;
+} 

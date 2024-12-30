@@ -32,19 +32,19 @@ def get_color_settings():
             settings = {row['key'].replace('_color', ''): row['value'] 
                        for row in cursor.fetchall()}
             
-            # Fallback-Werte falls keine Einstellungen gefunden
+            # BTZ-Blau als Standardfarbe
             return {
-                'primary': settings.get('primary', '259 94% 51%'),
-                'secondary': settings.get('secondary', '314 100% 47%'),
-                'accent': settings.get('accent', '174 60% 51%')
+                'primary': settings.get('primary', '220 35% 45%'),  # BTZ-Blau
+                'secondary': settings.get('secondary', '220 35% 35%'),  # Dunkleres BTZ-Blau
+                'accent': settings.get('accent', '220 35% 55%')  # Helleres BTZ-Blau
             }
     except Exception as e:
         print(f"Fehler beim Laden der Farbeinstellungen: {e}")
         # Fallback-Werte bei Fehler
         return {
-            'primary': '259 94% 51%',
-            'secondary': '314 100% 47%',
-            'accent': '174 60% 51%'
+            'primary': '220 35% 45%',  # BTZ-Blau
+            'secondary': '220 35% 35%',  # Dunkleres BTZ-Blau
+            'accent': '220 35% 55%'  # Helleres BTZ-Blau
         }
 
 def save_color_setting(key, value):

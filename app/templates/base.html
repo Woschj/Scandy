@@ -7,12 +7,26 @@
     
     <!-- Tailwind und DaisyUI -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Debug: Stylesheet Load Order -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Feste BTZ-Blau Farbe setzen
+        document.documentElement.style.setProperty('--p', '220 35% 45%');
+        document.documentElement.style.setProperty('--pf', '220 35% 35%');
+        document.documentElement.style.setProperty('--pc', '0 0% 100%');
+    });
+    </script>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     
     <!-- Custom Styles -->
     <style>
@@ -21,11 +35,11 @@
             {% if colors %}
                 --p: {{ colors.primary }};    /* primary */
                 --pf: color-mix(in hsl, hsl({{ colors.primary }}) 85%, black);   /* primary focus */
-                --pc: #ffffff;  /* primary content */
+                --pc: 0 0% 100%;  /* primary content - in HSL Format */
                 
                 --s: {{ colors.secondary }};   /* secondary */
                 --sf: color-mix(in hsl, hsl({{ colors.secondary }}) 85%, black);  /* secondary focus */
-                --sc: #ffffff; /* secondary content */
+                --sc: 0 0% 100%; /* secondary content */
                 
                 --a: {{ colors.accent }};     /* accent */
                 --af: color-mix(in hsl, hsl({{ colors.accent }}) 85%, black);    /* accent focus */
@@ -319,14 +333,65 @@
         
         /* QuickScan Button Anpassungen */
         .quickscan-button {
-            width: 7rem !important;
-            height: 7rem !important;
+            width: 4rem !important;
+            height: 4rem !important;
         }
         
         .quickscan-logo {
-            width: 5.5rem !important;
-            height: 5.5rem !important;
+            width: 3rem !important;
+            height: 3rem !important;
             margin: -0.5rem;  /* Negativer Margin für mehr Platz */
+        }
+        
+        /* Button Styles mit höchster Spezifität */
+        .btn.btn-primary,
+        .btn.btn-active,
+        .navbar .btn-ghost.btn-active,
+        .quickscan-button.btn-primary {
+            background-color: hsl(var(--p)) !important;
+            color: white !important;
+            border-color: hsl(var(--p)) !important;
+        }
+        
+        /* Ghost Buttons */
+        .btn-ghost {
+            background-color: transparent !important;
+            color: hsl(var(--bc)) !important;
+            border-color: transparent !important;
+        }
+        
+        /* Hover States */
+        .btn.btn-primary:hover {
+            background-color: hsl(var(--pf)) !important;
+            color: white !important;
+        }
+        
+        .navbar .btn-ghost:hover {
+            background-color: hsl(var(--b2)) !important;
+            color: hsl(var(--bc)) !important;
+        }
+        
+        .navbar .btn-ghost.btn-active:hover {
+            background-color: hsl(var(--pf)) !important;
+            color: white !important;
+        }
+        
+        /* Dashboard spezifische Styles */
+        #main-tab .btn.btn-primary {
+            background-color: hsl(var(--p)) !important;
+            color: white !important;
+        }
+        
+        #main-tab .btn.btn-primary:hover {
+            background-color: hsl(var(--pf)) !important;
+            color: white !important;
+        }
+        
+        /* Active States */
+        .tab.tab-active {
+            background-color: hsl(var(--p)) !important;
+            color: white !important;
+            border-color: hsl(var(--p)) !important;
         }
     </style>
     
@@ -379,7 +444,7 @@
             <!-- QuickScan Button (Mittig) -->
             <button onclick="showQuickScan()" 
                     class="btn btn-circle btn-primary text-white absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden quickscan-button"
-                    style="transform: translate(-50%, 0); z-index: 50;"
+                    style="z-index: 50;"
                     aria-label="QuickScan öffnen">
                 <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
                      alt="Scandy QuickScan" 

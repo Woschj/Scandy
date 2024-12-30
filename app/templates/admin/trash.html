@@ -20,7 +20,7 @@
 
             <!-- Tabs -->
             <div class="tabs tabs-lifted mb-6">
-                <button class="tab tab-lg" data-tab="tools">
+                <button class="tab tab-lg tab-active" data-tab="tools">
                     <i class="fas fa-tools mr-2"></i>
                     <span class="text-base-content">Werkzeuge</span>
                     <div class="badge ml-2">{{ deleted_tools|length }}</div>
@@ -38,8 +38,10 @@
             </div>
 
             <!-- Werkzeuge Tab -->
-            <div id="tools-tab" class="tab-content card bg-base-100 shadow-sm p-4">
-                
+            <div id="tools-tab" class="tab-content card bg-base-100 shadow-sm p-4 block">
+                <div class="text-sm text-gray-500 mb-2">
+                    Anzahl Tools: {{ deleted_tools|length }}
+                </div>
                 <div class="overflow-x-auto">
                     {% if deleted_tools %}
                     <table class="table table-zebra w-full">
@@ -190,55 +192,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabs = document.querySelectorAll('.tab');
     const contents = document.querySelectorAll('.tab-content');
 
-    console.log("DEBUG - Gefundene Tabs:", tabs.length);
-    console.log("DEBUG - Gefundene Contents:", contents.length);
-
     function showTab(tabName) {
-        console.log("DEBUG - Tab wird angezeigt:", tabName);
+        // Alle Tab-Inhalte ausblenden
+        contents.forEach(content => {
+            content.style.display = 'none';
+        });
         
-        try {
-            // Alle Tab-Inhalte ausblenden
-            contents.forEach(content => {
-                content.classList.add('hidden');
-                console.log("DEBUG - Verstecke Content:", content.id);
-            });
-            
-            // Gewählten Tab-Inhalt anzeigen
-            const activeContent = document.getElementById(`${tabName}-tab`);
-            console.log("DEBUG - Aktiver Content gefunden:", activeContent?.id);
-            if (activeContent) {
-                activeContent.classList.remove('hidden');
-            }
-            
-            // Aktiven Tab markieren
-            tabs.forEach(tab => {
-                tab.classList.remove('tab-active');
-            });
-            const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-            if (activeTab) {
-                activeTab.classList.add('tab-active');
-            }
-        } catch (error) {
-            console.error("Fehler beim Tab-Wechsel:", error);
+        // Gewählten Tab-Inhalt anzeigen
+        const activeContent = document.getElementById(`${tabName}-tab`);
+        if (activeContent) {
+            activeContent.style.display = 'block';
+        }
+        
+        // Aktiven Tab markieren
+        tabs.forEach(tab => {
+            tab.classList.remove('tab-active');
+        });
+        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('tab-active');
         }
     }
 
     // Click-Handler für Tabs
     tabs.forEach(tab => {
         tab.addEventListener('click', function() {
-            console.log("Tab geklickt:", this.dataset.tab);
             showTab(this.dataset.tab);
         });
     });
 
     // Initial den ersten Tab aktivieren
-    setTimeout(() => {
-        if (tabs.length > 0) {
-            const firstTab = tabs[0];
-            console.log("Aktiviere ersten Tab:", firstTab.dataset.tab);
-            showTab(firstTab.dataset.tab);
-        }
-    }, 100);
+    if (tabs.length > 0) {
+        showTab('tools');  // Zeige standardmäßig den Werkzeuge-Tab
+    }
 });
 
 // Restore-Funktion

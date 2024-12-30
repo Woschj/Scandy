@@ -1,27 +1,4 @@
-/* Button Styles mit höchster Spezifität */
-html[data-theme="light"] .btn.btn-primary,
-html[data-theme="light"] .btn.btn-active,
-html[data-theme="dark"] .btn.btn-primary,
-html[data-theme="dark"] .btn.btn-active {
-    background-color: hsl(var(--p)) !important;
-    color: hsl(var(--pc)) !important;
-    border-color: hsl(var(--p)) !important;
-}
-
-html[data-theme="light"] .btn.btn-primary:hover,
-html[data-theme="light"] .btn.btn-active:hover,
-html[data-theme="dark"] .btn.btn-primary:hover,
-html[data-theme="dark"] .btn.btn-active:hover {
-    background-color: hsl(var(--pf)) !important;
-    border-color: hsl(var(--pf)) !important;
-}
-
 /* Navigation Active State */
-html[data-theme="light"] .btn-ghost.btn-active,
-html[data-theme="dark"] .btn-ghost.btn-active {
-    background-color: hsl(var(--p)) !important;
-    color: hsl(var(--pc)) !important;
-}
 
 /* Navbar Styles */
 .navbar .btn {
@@ -33,7 +10,6 @@ html[data-theme="dark"] .btn-ghost.btn-active {
 
 /* QuickScan Button */
 .quickscan-button {
-    transform: scale(2) !important;
     width: 3rem !important;
     height: 3rem !important;
     margin: 0 2rem !important;
@@ -94,13 +70,6 @@ dialog#quickScanModal .modal-box {
 
 .tab:hover {
     background: hsl(var(--b2));
-}
-
-.tab.tab-active {
-    border: 1px solid hsl(var(--b3));
-    border-bottom: 1px solid hsl(var(--b1));
-    background: hsl(var(--b1));
-    color: hsl(var(--p));
 }
 
 /* Table Styles für den Papierkorb */

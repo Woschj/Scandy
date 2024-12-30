@@ -1,0 +1,16 @@
+{
+  "name": "scandy-desktop",
+  "version": "1.0.0",
+  "main": "app/electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "electron-serve": "^1.1.0"
+  },
+  "devDependencies": {
+    "electron": "^latest",
+    "electron-builder": "^latest"
+  }
+} 

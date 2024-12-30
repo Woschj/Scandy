@@ -1,37 +1,33 @@
-import os
-import sqlite3
-from pathlib import Path
-
-# Pfad zur Datenbank (jetzt im database Ordner)
-DB_PATH = Path(__file__).parent.parent.parent / 'database' / 'inventory.db'
-
-# Pfad zum SQL Script
-SQL_PATH = Path(__file__).parent.parent / 'sql' / 'design_settings.sql'
+from app import create_app
+from app.models.database import Database
 
 def setup_design_settings():
-    print(f"Verwende Datenbank: {DB_PATH}")
-    
-    # Stelle sicher, dass der database Ordner existiert
-    DB_PATH.parent.mkdir(exist_ok=True)
-    
-    # Verbinde zur Datenbank
-    with sqlite3.connect(DB_PATH) as conn:
-        # Lese und führe das SQL Script aus
-        with open(SQL_PATH, 'r') as f:
-            conn.executescript(f.read())
-        conn.commit()
-        
-        # Überprüfe, ob die Tabelle erstellt wurde
-        result = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'").fetchone()
-        if result:
-            print("Settings-Tabelle wurde erfolgreich erstellt!")
-            # Zeige die eingetragenen Werte
-            settings = conn.execute("SELECT * FROM settings").fetchall()
-            print("\nAktuelle Einstellungen:")
-            for key, value in settings:
-                print(f"{key}: {value}")
-        else:
-            print("Fehler: Settings-Tabelle wurde nicht erstellt!")
+    app = create_app()
+    with app.app_context():
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                # Setze BTZ-Blau als Standard
+                settings = {
+                    'primary_color': '220 35% 45%',
+                    'secondary_color': '220 35% 35%',
+                    'accent_color': '220 35% 55%'
+                }
+                
+                # Lösche alte Einstellungen
+                cursor.execute("DELETE FROM settings WHERE key LIKE '%color%'")
+                
+                # Füge neue Standardeinstellungen hinzu
+                for key, value in settings.items():
+                    cursor.execute("""
+                        INSERT INTO settings (key, value)
+                        VALUES (?, ?)
+                    """, (key, value))
+                    
+                conn.commit()
+                print("Design-Einstellungen erfolgreich initialisiert")
+        except Exception as e:
+            print(f"Fehler beim Einrichten der Design-Einstellungen: {e}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     setup_design_settings()
