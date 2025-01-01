@@ -3,8 +3,8 @@
 {% block actions %}
 {% if is_admin %}
 <div class="flex gap-2">
-    <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Neues Werkzeug
+    <a href="{{ url_for('consumables.add') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Neues Verbrauchsmaterial
     </a>
 </div>
 {% endif %}
@@ -25,10 +25,11 @@
     {% endfor %}
 </select>
 
-<select class="select select-bordered w-full max-w-xs" id="statusFilter">
-    <option value="">Alle Status</option>
-    <option value="available">Verfügbar</option>
-    <option value="lent">Ausgeliehen</option>
+<select class="select select-bordered w-full max-w-xs" id="stockFilter">
+    <option value="">Alle Bestände</option>
+    <option value="in_stock">Verfügbar</option>
+    <option value="low_stock">Niedriger Bestand</option>
+    <option value="out_of_stock">Nicht verfügbar</option>
 </select>
 {% endblock %}
 
@@ -36,7 +37,7 @@
 <th>Name</th>
 <th>Barcode</th>
 <th>Standort</th>
-<th>Status</th>
+<th>Bestand</th>
 <th>Kategorie</th>
 {% if is_admin %}
 <th class="text-right">Aktionen</th>
@@ -44,36 +45,32 @@
 {% endblock %}
 
 {% block table_rows %}
-{% for tool in tools %}
+{% for item in items %}
 <tr class="hover data-row" 
-    data-category="{{ tool.category }}"
-    data-location="{{ tool.location }}"
-    data-status="{{ 'lent' if tool.lent_to else 'available' }}">
+    data-category="{{ item.category }}"
+    data-location="{{ item.location }}"
+    data-stock="{{ 'out_of_stock' if item.stock == 0 else 'low_stock' if item.stock < item.min_stock else 'in_stock' }}">
     <td>
-        <a href="{{ url_for('tools.details', barcode=tool.barcode) }}" class="link link-hover font-medium">
-            {{ tool.name }}
+        <a href="{{ url_for('consumables.details', barcode=item.barcode) }}" class="link link-hover font-medium">
+            {{ item.name }}
         </a>
     </td>
-    <td><code>{{ tool.barcode }}</code></td>
-    <td>{{ tool.location }}</td>
+    <td><code>{{ item.barcode }}</code></td>
+    <td>{{ item.location }}</td>
     <td>
-        <span class="badge {% if tool.lent_to %}badge-warning{% else %}badge-success{% endif %} gap-1">
-            <i class="fas fa-{% if tool.lent_to %}user{% else %}check{% endif %}"></i>
-            {% if tool.lent_to %}
-                Ausgeliehen an {{ tool.lent_to }}
-            {% else %}
-                Verfügbar
-            {% endif %}
+        <span class="badge {{ 'badge-error' if item.stock == 0 else 'badge-warning' if item.stock < item.min_stock else 'badge-success' }} gap-1">
+            <i class="fas fa-box"></i>
+            {{ item.stock }} / {{ item.min_stock }}
         </span>
     </td>
-    <td>{{ tool.category }}</td>
+    <td>{{ item.category }}</td>
     {% if is_admin %}
     <td class="text-right">
         <div class="btn-group">
-            <button class="btn btn-sm" onclick="editTool('{{ tool.barcode }}')">
+            <button class="btn btn-sm" onclick="editConsumable('{{ item.barcode }}')">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="btn btn-sm btn-error" onclick="deleteTool('{{ tool.barcode }}')">
+            <button class="btn btn-sm btn-error" onclick="deleteConsumable('{{ item.barcode }}')">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -97,18 +94,18 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
 function applyFilters() {
     const category = document.getElementById('categoryFilter').value;
     const location = document.getElementById('locationFilter').value;
-    const status = document.getElementById('statusFilter').value;
+    const stock = document.getElementById('stockFilter').value;
     
     document.querySelectorAll('.data-row').forEach(row => {
         const matchesCategory = !category || row.dataset.category === category;
         const matchesLocation = !location || row.dataset.location === location;
-        const matchesStatus = !status || row.dataset.status === status;
+        const matchesStock = !stock || row.dataset.stock === stock;
         
-        row.style.display = (matchesCategory && matchesLocation && matchesStatus) ? '' : 'none';
+        row.style.display = (matchesCategory && matchesLocation && matchesStock) ? '' : 'none';
     });
 }
 
 document.getElementById('categoryFilter').addEventListener('change', applyFilters);
 document.getElementById('locationFilter').addEventListener('change', applyFilters);
-document.getElementById('statusFilter').addEventListener('change', applyFilters);
+document.getElementById('stockFilter').addEventListener('change', applyFilters);
 {% endblock %} 

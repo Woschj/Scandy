@@ -12,6 +12,8 @@ from app.models.models import Tool, Consumable, Worker
 import sqlite3
 from app.utils.error_handler import handle_errors, safe_db_query
 from app.utils.color_settings import save_color_setting
+from werkzeug.security import generate_password_hash
+from app.models.settings import Settings
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -914,6 +916,127 @@ def update_color():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@bp.route('/users/add', methods=['GET', 'POST'])
+@admin_required
+def add_user():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role', 'user')
+        
+        try:
+            Database.query('''
+                INSERT INTO users (username, password, role)
+                VALUES (?, ?, ?)
+            ''', [
+                username,
+                generate_password_hash(password),
+                role
+            ])
+            flash('Benutzer erfolgreich erstellt', 'success')
+            return redirect(url_for('admin.dashboard'))
+        except Exception as e:
+            flash(f'Fehler beim Erstellen des Benutzers: {str(e)}', 'error')
+    
+    return render_template('admin/add_user.html')
+
+@bp.route('/settings/access', methods=['GET'])
+@admin_required
+def access_settings():
+    try:
+        # Mapping für benutzerfreundliche Namen
+        route_names = {
+            'tools.index': 'Werkzeug-Übersicht',
+            'tools.details': 'Werkzeug-Details',
+            'tools.add': 'Werkzeug hinzufügen',
+            'consumables.index': 'Verbrauchsmaterial-Übersicht',
+            'consumables.details': 'Verbrauchsmaterial-Details',
+            'consumables.add': 'Verbrauchsmaterial hinzufügen',
+            'workers.index': 'Mitarbeiter-Übersicht',
+            'workers.details': 'Mitarbeiter-Details',
+            'workers.add': 'Mitarbeiter hinzufügen',
+            'admin.dashboard': 'Admin-Dashboard',
+            'admin.trash': 'Papierkorb',
+            'admin.manual_lending': 'Manuelle Ausleihe',
+            'history.view': 'Verlauf anzeigen',
+            'quick_scan.index': 'Quick-Scan',
+        }
+
+        # Hole alle verfügbaren Routen
+        available_routes = []
+        for rule in current_app.url_map.iter_rules():
+            if not rule.endpoint.startswith(('static', 'api', '_')):
+                available_routes.append({
+                    'endpoint': rule.endpoint,
+                    'path': str(rule),
+                    'name': route_names.get(rule.endpoint, rule.endpoint)
+                })
+
+        # Sortiere Routen nach Kategorien
+        categorized_routes = {
+            'Werkzeuge': [],
+            'Verbrauchsmaterial': [],
+            'Mitarbeiter': [],
+            'Administration': [],
+            'Sonstiges': []
+        }
+
+        for route in available_routes:
+            if route['endpoint'].startswith('tools.'):
+                categorized_routes['Werkzeuge'].append(route)
+            elif route['endpoint'].startswith('consumables.'):
+                categorized_routes['Verbrauchsmaterial'].append(route)
+            elif route['endpoint'].startswith('workers.'):
+                categorized_routes['Mitarbeiter'].append(route)
+            elif route['endpoint'].startswith('admin.'):
+                categorized_routes['Administration'].append(route)
+            else:
+                categorized_routes['Sonstiges'].append(route)
+
+        # Hole aktuelle Einstellungen
+        settings = {s['route']: s for s in Database.query('''
+            SELECT route, is_public, description 
+            FROM access_settings
+        ''', one=False) or []}
+
+        return render_template('admin/access_settings.html', 
+                             categories=categorized_routes,
+                             settings=settings,
+                             route_names=route_names)
+    except Exception as e:
+        flash(f'Fehler beim Laden der Zugriffseinstellungen: {str(e)}', 'error')
+        return redirect(url_for('admin.dashboard'))
+
+@bp.route('/settings/access/update', methods=['POST'])
+@admin_required
+def update_access():
+    route = request.form.get('route')
+    is_public = request.form.get('is_public') == '1'
+    
+    try:
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Aktualisiere oder füge neu ein
+            cursor.execute('''
+                INSERT OR REPLACE INTO access_settings (route, is_public, description)
+                VALUES (?, ?, ?)
+            ''', [route, is_public, route])
+            
+            conn.commit()
+            
+        flash(f'Zugriffseinstellungen für {route} wurden aktualisiert', 'success')
+        return jsonify({
+            'success': True,
+            'message': f'Zugriffseinstellungen für {route} aktualisiert',
+            'is_public': is_public
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Fehler beim Aktualisieren der Einstellungen: {str(e)}'
+        }), 500
 
 def init_app(app):
     app.register_blueprint(bp)

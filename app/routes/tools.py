@@ -1,30 +1,36 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.models.database import Database
-from app.utils.decorators import login_required, admin_required
+from app.utils.decorators import admin_required
+from functools import wraps
 
 bp = Blueprint('tools', __name__, url_prefix='/tools')
 
-@bp.route('/', methods=['GET'])
-def index():
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('is_admin'):
+            # Prüfe ob die Route öffentlich ist
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT is_public FROM access_settings WHERE route = ?', 
+                             [request.endpoint])
+                result = cursor.fetchone()
+                if not result or not result['is_public']:
+                    flash('Diese Seite erfordert eine Anmeldung.', 'warning')
+                    return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_tools():
+    """Holt alle aktiven Werkzeuge aus der Datenbank"""
     with Database.get_db() as conn:
         cursor = conn.cursor()
-        # Status-Filter aus URL
-        status = request.args.get('status')
         
-        # Basis-Query
+        # Optimierte Query mit allen benötigten Informationen
         query = """
-            SELECT 
-                t.barcode,
-                t.name,
-                t.location,
-                CASE 
-                    WHEN t.status = 'Defekt' THEN 'Defekt'
-                    WHEN l.id IS NOT NULL THEN 'Ausgeliehen'
-                    ELSE 'Verfügbar'
-                END as status,
-                strftime('%d.%m.%Y %H:%M', l.lent_at) as status_since,
-                CASE WHEN ? THEN w.firstname || ' ' || w.lastname ELSE NULL END as current_borrower,
-                CASE WHEN ? THEN w.department ELSE NULL END as borrower_department
+            SELECT t.*, 
+                   l.lent_at,
+                   w.firstname || ' ' || w.lastname as lent_to
             FROM tools t
             LEFT JOIN (
                 SELECT tool_barcode, MAX(id) as latest_id
@@ -35,34 +41,44 @@ def index():
             LEFT JOIN lendings l ON latest.latest_id = l.id
             LEFT JOIN workers w ON l.worker_barcode = w.barcode
             WHERE t.deleted = 0
+            ORDER BY t.name
         """
         
-        params = [session.get('is_admin', False), session.get('is_admin', False)]
-        if status:
-            query += """ AND LOWER(CASE 
-                        WHEN t.status = 'Defekt' THEN 'Defekt'
-                        WHEN l.id IS NOT NULL THEN 'Ausgeliehen'
-                        ELSE 'Verfügbar'
-                    END) = LOWER(?)"""
-            params.append(status)
-            
-        query += " ORDER BY t.name"
+        tools = cursor.execute(query).fetchall()
+        return tools
+
+@bp.route('/')
+def index():
+    """Öffentliche Werkzeug-Übersicht"""
+    try:
+        tools = get_tools()
         
-        cursor.execute(query, params)
-        tools = cursor.fetchall()
+        # Hole Filter-Optionen
+        categories = Database.query('''
+            SELECT DISTINCT category FROM tools 
+            WHERE deleted = 0 AND category IS NOT NULL
+            ORDER BY category
+        ''')
         
-        # Hole alle unique Orte für Filter
-        cursor.execute("SELECT DISTINCT location FROM tools WHERE location IS NOT NULL AND deleted = 0")
-        locations = [row[0] for row in cursor.fetchall()]
+        locations = Database.query('''
+            SELECT DISTINCT location FROM tools 
+            WHERE deleted = 0 AND location IS NOT NULL
+            ORDER BY location
+        ''')
         
-        return render_template('tools.html', 
-                             tools=tools, 
-                             orte=locations,
-                             selected_status=status)
+        return render_template('tools/index.html',
+                             tools=tools,
+                             categories=[c['category'] for c in categories],
+                             locations=[l['location'] for l in locations])
+        
+    except Exception as e:
+        flash(f'Fehler beim Laden der Werkzeuge: {str(e)}', 'error')
+        return redirect(url_for('tools.index'))
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required
 def add():
+    """Werkzeug hinzufügen (nur Admin)"""
     if request.method == 'POST':
         try:
             Database.query('''
@@ -86,6 +102,7 @@ def add():
 @bp.route('/<barcode>', methods=['GET'])
 @login_required
 def details(barcode):
+    """Werkzeug-Details (Login erforderlich)"""
     tool = Database.query('''
         SELECT * FROM tools 
         WHERE barcode = ? AND deleted = 0
@@ -184,4 +201,68 @@ def delete(barcode):
         return jsonify({
             'success': False, 
             'message': str(e)
+        })
+
+@bp.route('/manual_lending', methods=['POST'])
+@login_required
+def manual_lending():
+    """Manuelle Ausleihe eines Werkzeugs"""
+    try:
+        tool_barcode = request.form.get('tool_barcode')
+        worker_barcode = request.form.get('worker_barcode')
+        
+        print(f"Manuelle Ausleihe - Tool: {tool_barcode}, Worker: {worker_barcode}")  # Debug
+        
+        # Prüfe ob Tool existiert und nicht gelöscht ist
+        tool = Database.query('''
+            SELECT * FROM tools 
+            WHERE barcode = ? AND deleted = 0
+        ''', [tool_barcode], one=True)
+        
+        if not tool:
+            return jsonify({
+                'success': False,
+                'message': 'Werkzeug nicht gefunden'
+            })
+            
+        # Prüfe ob Worker existiert und nicht gelöscht ist
+        worker = Database.query('''
+            SELECT * FROM workers 
+            WHERE barcode = ? AND deleted = 0
+        ''', [worker_barcode], one=True)
+        
+        if not worker:
+            return jsonify({
+                'success': False,
+                'message': 'Mitarbeiter nicht gefunden'
+            })
+            
+        # Prüfe ob Tool bereits ausgeliehen ist
+        lending = Database.query('''
+            SELECT * FROM lendings 
+            WHERE tool_barcode = ? AND returned_at IS NULL
+        ''', [tool_barcode], one=True)
+        
+        if lending:
+            return jsonify({
+                'success': False,
+                'message': 'Werkzeug ist bereits ausgeliehen'
+            })
+            
+        # Neue Ausleihe eintragen
+        Database.query('''
+            INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
+            VALUES (?, ?, datetime('now'))
+        ''', [tool_barcode, worker_barcode])
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ausleihe erfolgreich eingetragen'
+        })
+        
+    except Exception as e:
+        print(f"Fehler bei manueller Ausleihe: {str(e)}")  # Debug
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Ausleihe: {str(e)}'
         })

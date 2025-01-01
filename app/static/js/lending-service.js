@@ -352,3 +352,37 @@ window.ManualLending = {
         }
     }
 }; 
+
+function manualLending(event) {
+    event.preventDefault();
+    
+    const toolBarcode = document.getElementById('toolBarcode').value;
+    const workerBarcode = document.getElementById('workerBarcode').value;
+    
+    if (!toolBarcode || !workerBarcode) {
+        alert('Bitte beide Barcodes eingeben');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('tool_barcode', toolBarcode);
+    formData.append('worker_barcode', workerBarcode);
+    
+    fetch('/tools/manual_lending', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Ausleihe erfolgreich');
+            window.location.reload();
+        } else {
+            alert('Fehler: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler bei der Ausleihe');
+    });
+} 

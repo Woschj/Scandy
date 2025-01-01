@@ -9,8 +9,85 @@ bp = Blueprint('workers', __name__, url_prefix='/workers')
 @bp.route('/')
 @admin_required
 def index():
-    workers = Worker.get_all_with_lendings()
-    return render_template('workers.html', workers=workers)
+    """Mitarbeiter-Übersicht"""
+    try:
+        workers = Database.query('''
+            SELECT w.*,
+                   COUNT(DISTINCT l.id) as active_lendings
+            FROM workers w
+            LEFT JOIN lendings l ON w.barcode = l.worker_barcode AND l.returned_at IS NULL
+            WHERE w.deleted = 0
+            GROUP BY w.barcode
+            ORDER BY w.lastname, w.firstname
+        ''')
+        
+        # Hole Filter-Optionen
+        departments = Database.query('''
+            SELECT DISTINCT department FROM workers 
+            WHERE deleted = 0 AND department IS NOT NULL
+            ORDER BY department
+        ''')
+        
+        # Template-Konfiguration
+        config = {
+            'columns': [
+                {'key': 'name', 'label': 'Name'},
+                {'key': 'barcode', 'label': 'Barcode'},
+                {'key': 'department', 'label': 'Abteilung'},
+                {'key': 'lendings', 'label': 'Ausleihen'},
+                {'key': 'actions', 'label': 'Aktionen', 'align': 'right'}
+            ],
+            'filters': [
+                {
+                    'id': 'departmentFilter',
+                    'placeholder': 'Alle Abteilungen',
+                    'options': [{'value': d['department'], 'label': d['department']} for d in departments]
+                },
+                {
+                    'id': 'lendingFilter',
+                    'placeholder': 'Ausleihstatus',
+                    'options': [
+                        {'value': 'with_lendings', 'label': 'Mit Ausleihen'},
+                        {'value': 'without_lendings', 'label': 'Ohne Ausleihen'}
+                    ]
+                }
+            ],
+            'items': [{
+                'name': f'<a href="{url_for("workers.details", barcode=item["barcode"])}" class="link link-hover font-medium">{item["lastname"]}, {item["firstname"]}</a>',
+                'barcode': f'<code>{item["barcode"]}</code>',
+                'department': item['department'],
+                'lendings': f'''
+                    <span class="badge {
+                        'badge-warning' if item['active_lendings'] > 0 else 'badge-success'
+                    } gap-1">
+                        <i class="fas fa-tools"></i>
+                        {item['active_lendings']} aktiv
+                    </span>
+                ''',
+                'actions': f'''
+                    <div class="btn-group">
+                        <button class="btn btn-sm" onclick="editWorker('{item['barcode']}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-error" onclick="deleteWorker('{item['barcode']}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                ''',
+                'data_attrs': {
+                    'department': item['department'],
+                    'lending': 'with_lendings' if item['active_lendings'] > 0 else 'without_lendings'
+                }
+            } for item in workers],
+            'add_url': url_for('workers.add'),
+            'add_text': 'Neuer Mitarbeiter'
+        }
+        
+        return render_template('shared/list_view.html', **config)
+        
+    except Exception as e:
+        flash(f'Fehler beim Laden der Mitarbeiter: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @bp.route('/workers/add', methods=['GET', 'POST'])
 @admin_required
@@ -49,7 +126,8 @@ def add():
             
     return render_template('admin/add_worker.html', departments=departments)
 
-@bp.route('/<barcode>', methods=['GET'])
+@bp.route('/<barcode>')
+@login_required
 def details(barcode):
     departments = [
         'Medien und Digitales',

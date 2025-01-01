@@ -1,0 +1,17 @@
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <h2 class="card-title">{{ tool.name }}</h2>
+        <!-- ... andere Details ... -->
+        
+        {% if is_admin %}
+        <div class="card-actions justify-end">
+            <button class="btn btn-primary" onclick="editTool('{{ tool.barcode }}')">
+                <i class="fas fa-edit"></i> Bearbeiten
+            </button>
+            <button class="btn btn-error" onclick="deleteTool('{{ tool.barcode }}')">
+                <i class="fas fa-trash"></i> Löschen
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div> 

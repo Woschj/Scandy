@@ -8,22 +8,36 @@ class SchemaManager:
             conn = self.db.get_db_connection()
             cursor = conn.cursor()
             
-            # Admin-Tabelle hinzufügen
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS admin (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL
+            # Access Settings Tabelle
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS access_settings (
+                    route TEXT PRIMARY KEY,
+                    is_public BOOLEAN DEFAULT 0,
+                    description TEXT
                 )
-            """)
+            ''')
             
-            # Admin-Account erstellen falls nicht vorhanden
-            cursor.execute("""
-                INSERT OR IGNORE INTO admin (username, password)
-                VALUES ('admin', 'admin')
-            """)
+            # Standard-Einstellungen
+            default_settings = [
+                ('tools.index', 1, 'Werkzeug-Übersicht'),
+                ('tools.details', 1, 'Werkzeug-Details'),
+                ('consumables.index', 1, 'Verbrauchsmaterial-Übersicht'),
+                ('consumables.details', 1, 'Verbrauchsmaterial-Details'),
+                ('workers.index', 0, 'Mitarbeiter-Übersicht'),
+                ('workers.details', 0, 'Mitarbeiter-Details'),
+                ('admin.dashboard', 0, 'Admin-Dashboard'),
+                ('admin.trash', 0, 'Papierkorb'),
+                ('history.view', 0, 'Verlauf')
+            ]
+            
+            # Füge Standardeinstellungen ein
+            cursor.executemany('''
+                INSERT OR IGNORE INTO access_settings (route, is_public, description)
+                VALUES (?, ?, ?)
+            ''', default_settings)
             
             conn.commit()
+            print("Zugriffseinstellungen initialisiert")
             
         except Exception as e:
             print(f"Fehler beim Initialisieren des Schemas: {e}")
@@ -104,3 +118,37 @@ class SchemaManager:
                 FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
             )
         ''')
+
+    def init_users_table(self):
+        """Initialisiert die Users-Tabelle"""
+        with Database.get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Users-Tabelle erstellen
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'user',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Standard Admin-Account erstellen
+            admin_exists = cursor.execute(
+                'SELECT 1 FROM users WHERE username = ?', 
+                ['admin']
+            ).fetchone()
+            
+            if not admin_exists:
+                cursor.execute('''
+                    INSERT INTO users (username, password, role)
+                    VALUES (?, ?, ?)
+                ''', [
+                    'admin',
+                    generate_password_hash('admin'),
+                    'admin'
+                ])
+            
+            conn.commit()

@@ -458,3 +458,65 @@ main.container-fluid {
     position: fixed !important;
     -webkit-transform: translateZ(0) !important; /* Hardware-Beschleunigung */
 } 
+
+/* Responsive Navigation */
+@media (max-width: 768px) {
+    .navbar ul.menu {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0.5rem;
+    }
+    
+    .navbar ul.menu::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .navbar ul.menu li {
+        flex-shrink: 0;
+    }
+    
+    /* Scan-Button immer sichtbar */
+    .navbar ul.menu li:last-child {
+        position: sticky;
+        right: 0;
+        background: inherit;
+        padding-left: 0.5rem;
+    }
+} 
+
+/* Scan-Button Styling */
+.scan-button {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    border-radius: 9999px !important;
+    width: 4rem;
+    height: 4rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.scan-button:hover {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Stelle sicher, dass der Button über dem Content aber unter Modals ist */
+.scan-button {
+    z-index: 40;
+}
+
+.modal {
+    z-index: 50;
+}
+
+/* Platz für den fixed Button am Ende der Seite */
+.content-wrapper {
+    padding-bottom: 6rem;
+} 

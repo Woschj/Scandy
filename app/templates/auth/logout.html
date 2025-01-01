@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0; url={{ url_for('tools.index') }}">
+    <title>Abmelden...</title>
+</head>
+<body>
+    <p>Sie werden abgemeldet und weitergeleitet...</p>
+    <script>
+        window.location.href = "{{ url_for('tools.index') }}";
+    </script>
+</body>
+</html> 

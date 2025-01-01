@@ -1,29 +1,43 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app.models.database import Database
-from app.models.consumable import Consumable
-from app.utils.decorators import login_required, admin_required
-from app.utils import routes
-from app.models.consumable import get_consumables
+from app.utils.decorators import admin_required
 
-bp = Blueprint('consumables', __name__, url_prefix='/inventory/consumables')
-print(f"Blueprint URL-Prefix: {bp.url_prefix}")
+# Blueprint mit korrektem Namen definieren
+bp = Blueprint('consumables', __name__, url_prefix='/consumables')
 
 @bp.route('/')
 def index():
-    print("Verbrauchsmaterial Route wurde aufgerufen")
-    consumables = get_consumables()
-    print(f"Gefundene Verbrauchsmaterialien: {len(consumables)}")
-    
-    # Sammle alle einzigartigen Orte und Typen für die Filter
-    orte = sorted(set(item['location'] for item in consumables if item['location']))
-    typen = sorted(set(item['category'] for item in consumables if item['category']))
-    print(f"Gefundene Orte: {orte}")
-    print(f"Gefundene Typen: {typen}")
-    
-    return render_template('consumables.html', 
-                         consumables=consumables,
-                         orte=orte,
-                         typen=typen)
+    """Verbrauchsmaterialien-Übersicht"""
+    try:
+        # Vereinfachte Query ohne die problematische JOIN
+        consumables = Database.query('''
+            SELECT * FROM consumables
+            WHERE deleted = 0
+            ORDER BY name
+        ''')
+        
+        # Hole Filter-Optionen
+        categories = Database.query('''
+            SELECT DISTINCT category FROM consumables 
+            WHERE deleted = 0 AND category IS NOT NULL
+            ORDER BY category
+        ''')
+        
+        locations = Database.query('''
+            SELECT DISTINCT location FROM consumables 
+            WHERE deleted = 0 AND location IS NOT NULL
+            ORDER BY location
+        ''')
+        
+        return render_template('consumables/index.html',
+                             items=consumables,
+                             categories=[c['category'] for c in categories],
+                             locations=[l['location'] for l in locations])
+        
+    except Exception as e:
+        print(f"Fehler in consumables.index: {str(e)}")  # Debug-Ausgabe
+        flash(f'Fehler beim Laden der Verbrauchsmaterialien: {str(e)}', 'error')
+        return redirect(url_for('tools.index'))
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required
@@ -127,5 +141,3 @@ def delete(barcode):
             'success': False, 
             'message': str(e)
         })
-
-# ... weitere Routen ...

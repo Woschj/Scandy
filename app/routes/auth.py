@@ -1,37 +1,34 @@
-from flask import Blueprint, request, session, redirect, url_for, render_template, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash
 from app.models.database import Database
-from functools import wraps
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form['username']
+        password = request.form['password']
         
-        if username == 'admin' and password == 'admin':
+        user = Database.query(
+            'SELECT * FROM users WHERE username = ?',
+            [username],
+            one=True
+        )
+        
+        if user and check_password_hash(user['password'], password):
+            session.clear()
+            session['user_id'] = user['id']
             session['is_admin'] = True
-            session['user_id'] = 'admin'
-            return redirect(url_for('admin.dashboard'))
-        else:
-            flash('Ungültige Anmeldedaten', 'error')
+            flash('Erfolgreich angemeldet', 'success')
+            return redirect(url_for('tools.index'))
+            
+        flash('Ungültige Anmeldedaten', 'error')
     
     return render_template('auth/login.html')
 
 @bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
-
-@bp.route('/test')
-def test():
-    return "Test Route funktioniert!"
+    flash('Erfolgreich abgemeldet', 'success')
+    return render_template('auth/logout.html')

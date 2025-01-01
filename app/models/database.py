@@ -48,10 +48,9 @@ class Database:
 
     @staticmethod
     def get_database_path():
-        # Basis-Pfad: Entweder PythonAnywhere oder lokales Verzeichnis
-        base_path = '/home/aklann' if 'PYTHONANYWHERE_SITE' in os.environ else os.path.dirname(os.path.dirname(__file__))
-        
-        # Datenbank-Pfad ist immer im übergeordneten Verzeichnis
+        """Gibt den Pfad zur Datenbank zurück"""
+        # Basis-Pfad ist das app-Verzeichnis
+        base_path = os.path.dirname(os.path.dirname(__file__))
         return os.path.join(base_path, 'database', 'inventory.db')
     
     @staticmethod
@@ -78,93 +77,42 @@ class Database:
 
     @staticmethod
     def init_db():
-        """Initialisiert die komplette Datenbankstruktur"""
-        db_path = Database.get_database_path()
-        
-        # Stelle sicher, dass das Verzeichnis existiert
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        
+        """Initialisiert die Datenbankstruktur"""
         conn = Database.get_db_connection()
         cursor = conn.cursor()
         
-        # Erstelle alle Tabellen
+        # Settings-Tabelle erstellen
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tools (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT,
-                status TEXT DEFAULT 'verfügbar',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP,
-                category TEXT,
-                location TEXT
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
             )
         ''')
         
-        print("Tools-Tabelle erstellt")
+        # Standard-Einstellungen einfügen
+        default_settings = [
+            ('primary_color', '220 35% 45%'),  # BTZ-Blau
+            ('secondary_color', '220 35% 35%'),  # Dunkleres BTZ-Blau
+            ('accent_color', '220 35% 55%'),  # Helleres BTZ-Blau
+            ('theme', 'light'),
+            ('items_per_page', '10')
+        ]
         
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT UNIQUE NOT NULL,
-                firstname TEXT NOT NULL,
-                lastname TEXT NOT NULL,
-                department TEXT,
-                email TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP
-            )
-        ''')
+        for key, value in default_settings:
+            cursor.execute('''
+                INSERT OR IGNORE INTO settings (key, value)
+                VALUES (?, ?)
+            ''', (key, value))
         
-        print("Workers-Tabelle erstellt")
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS consumables (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT,
-                quantity INTEGER DEFAULT 0,
-                min_quantity INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP,
-                category TEXT,
-                location TEXT
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS lendings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_barcode TEXT,
-                worker_barcode TEXT,
-                lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                returned_at TIMESTAMP,
-                FOREIGN KEY (tool_barcode) REFERENCES tools (barcode),
-                FOREIGN KEY (worker_barcode) REFERENCES workers (barcode)
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS consumable_usages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                consumable_barcode TEXT NOT NULL,
-                worker_barcode TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
-                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-            )
-        ''')
+        # Indizes für bessere Performance
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tools_deleted ON tools(deleted)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tools_barcode ON tools(barcode)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_workers_deleted ON workers(deleted)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_workers_barcode ON workers(barcode)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_consumables_deleted ON consumables(deleted)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_lendings_tool ON lendings(tool_barcode)')
         
         conn.commit()
-        print("Alle Tabellen wurden erstellt und committet")
-        conn.close()
-        print("Datenbankverbindung geschlossen")
 
     @staticmethod
     def close_db():
@@ -173,16 +121,22 @@ class Database:
             db.close()
 
     @staticmethod
-    def query(sql, params=(), one=False):
+    def query(query, args=None, one=False):
+        print(f"\n=== Database Query ===")
+        print(f"Query: {query}")
+        print(f"Args: {args}")
         try:
-            db = Database.get_db()
-            cur = db.execute(sql, params)
-            rv = cur.fetchall()
-            db.commit()
-            return (rv[0] if rv else None) if one else rv
-        except sqlite3.Error as e:
-            db.rollback()
-            raise Exception(f"Datenbankfehler: {str(e)}")
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                result = cursor.execute(query, args or [])
+                if one:
+                    print("Hole einen Datensatz...")
+                    return result.fetchone()
+                print("Hole alle Datensätze...")
+                return result.fetchall()
+        except Exception as e:
+            print(f"FEHLER bei Datenbankabfrage: {str(e)}")
+            raise
 
     def create_lending(self, tool_barcode, worker_barcode):
         try:

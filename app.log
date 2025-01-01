@@ -1759,3 +1759,184 @@ Unbehandelter Fehler: no such table: tools
 Unbehandelter Fehler: no such table: tools
 Unbehandelter Fehler: no such table: tools
 Unbehandelter Fehler: [Errno 32] Broken pipe
+Datenbankfehler in dashboard: no such table: settings
+Datenbankfehler in dashboard: no such table: settings
+Datenbankfehler in dashboard: no such table: settings
+Datenbankfehler in dashboard: no such table: settings
+Datenbankfehler in dashboard: no such table: settings
+Unbehandelter Fehler: block 'content' defined twice
+Exception on /tools/ [GET]
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\routes\tools.py", line 37, in index
+    return render_template('tools.html', tools=tools)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 133, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\tools.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\base.html", line 507, in template
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.TemplateAssertionError: block 'content' defined twice
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 759, in handle_user_exception
+    return self.ensure_sync(handler)(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 181, in handle_exception
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 133, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\base.html", line 507, in template
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.TemplateAssertionError: block 'content' defined twice
+Unbehandelter Fehler: name 'url_parse' is not defined
+Unbehandelter Fehler: name 'url_parse' is not defined
+Unbehandelter Fehler: name 'url_parse' is not defined
+Unbehandelter Fehler: name 'url_parse' is not defined
+Unbehandelter Fehler: name 'session' is not defined
+Exception on / [GET]
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 865, in full_dispatch_request
+    rv = self.preprocess_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1239, in preprocess_request
+    rv = self.ensure_sync(before_func)()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 252, in check_session
+    if not session.get('is_admin'):
+           ^^^^^^^
+NameError: name 'session' is not defined. Did you mean: 'Session'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 759, in handle_user_exception
+    return self.ensure_sync(handler)(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 183, in handle_exception
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 129, in _render
+    app.update_template_context(context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 480, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 228, in inject_admin_status
+    'is_admin': session.get('is_admin', False),
+                ^^^^^^^
+NameError: name 'session' is not defined. Did you mean: 'Session'?
+Unbehandelter Fehler: name 'session' is not defined
+Exception on / [GET]
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 865, in full_dispatch_request
+    rv = self.preprocess_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1239, in preprocess_request
+    rv = self.ensure_sync(before_func)()
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 252, in check_session
+    if not session.get('is_admin'):
+           ^^^^^^^
+NameError: name 'session' is not defined. Did you mean: 'Session'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 759, in handle_user_exception
+    return self.ensure_sync(handler)(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 183, in handle_exception
+    return render_template('error.html',
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 129, in _render
+    app.update_template_context(context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 480, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 228, in inject_admin_status
+    'is_admin': session.get('is_admin', False),
+                ^^^^^^^
+NameError: name 'session' is not defined. Did you mean: 'Session'?
+Unbehandelter Fehler: name 'get_tools' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: name 'request' is not defined
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Unbehandelter Fehler: no such table: access_settings
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Unbehandelter Fehler: no such table: users
+Unbehandelter Fehler: no such table: users
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Fehler beim Prüfen der Zugriffsrechte: name 'flash' is not defined
+Unbehandelter Fehler: no such table: consumable_usage
