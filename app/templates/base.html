@@ -3,399 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %} - Scandy</title>
+    <title>{% block title %}Scandy{% endblock %}</title>
     
     <!-- Tailwind und DaisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
-    
-    <!-- Debug: Stylesheet Load Order -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Feste BTZ-Blau Farbe setzen
-        document.documentElement.style.setProperty('--p', '220 35% 45%');
-        document.documentElement.style.setProperty('--pf', '220 35% 35%');
-        document.documentElement.style.setProperty('--pc', '0 0% 100%');
-    });
-    </script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.2/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Custom Styles -->
-    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    
-    <!-- Custom Styles -->
-    <style>
-        /* DaisyUI Theme Anpassungen */
-        [data-theme="light"] {
-            {% if colors %}
-                --p: {{ colors.primary }};    /* primary */
-                --pf: color-mix(in hsl, hsl({{ colors.primary }}) 85%, black);   /* primary focus */
-                --pc: 0 0% 100%;  /* primary content - in HSL Format */
-                
-                --s: {{ colors.secondary }};   /* secondary */
-                --sf: color-mix(in hsl, hsl({{ colors.secondary }}) 85%, black);  /* secondary focus */
-                --sc: 0 0% 100%; /* secondary content */
-                
-                --a: {{ colors.accent }};     /* accent */
-                --af: color-mix(in hsl, hsl({{ colors.accent }}) 85%, black);    /* accent focus */
-                --ac: #ffffff; /* accent content */
-                
-                /* Basis-Farben für Light Mode */
-                --b1: 0 0% 100%;              /* Weiß */
-                --b2: 0 0% 98%;               /* Sehr helles Grau */
-                --b3: 0 0% 95%;               /* Helles Grau */
-                --bc: 0 0% 20%;               /* Dunkles Grau für Text */
-            {% endif %}
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            },
+            daisyui: {
+                themes: ["light"]
+            }
         }
-        
-        /* Dark Mode Anpassungen */
-        [data-theme="dark"] {
-            {% if colors %}
-                --p: {{ colors.primary }};    /* primary */
-                --pf: color-mix(in hsl, hsl({{ colors.primary }}) 85%, white);   /* primary focus */
-                --pc: #ffffff;  /* primary content */
-                
-                --s: {{ colors.secondary }};   /* secondary */
-                --sf: color-mix(in hsl, hsl({{ colors.secondary }}) 85%, white);  /* secondary focus */
-                --sc: #ffffff; /* secondary content */
-                
-                --a: {{ colors.accent }};     /* accent */
-                --af: color-mix(in hsl, hsl({{ colors.accent }}) 85%, white);    /* accent focus */
-                --ac: #ffffff; /* accent content */
-                
-                /* Dark Mode spezifische Anpassungen */
-                --b1: 220 20% 12%;           /* Dunkelgrau für Hintergrund */
-                --b2: 220 20% 15%;           /* Etwas helleres Dunkelgrau für Hover */
-                --b3: 220 20% 18%;           /* Noch helleres Dunkelgrau für Active */
-                --bc: 220 20% 85%;           /* Helles Grau für Text */
-                
-                /* Neutrale Farben */
-                --n: 220 20% 12%;            /* Basis Neutral */
-                --nf: 220 20% 15%;           /* Neutral Focus */
-                --nc: 220 20% 85%;           /* Neutral Content */
-            {% endif %}
-        }
-        
-        /* Dark Mode spezifische Anpassungen für Komponenten */
-        [data-theme="dark"] .card {
-            background-color: hsl(var(--b1));
-            color: hsl(var(--bc));
-        }
-        
-        [data-theme="dark"] .table {
-            --tw-bg-opacity: 1;
-            background-color: hsl(var(--b1));
-        }
-        
-        [data-theme="dark"] .table thead {
-            background-color: hsl(var(--b2));
-        }
-        
-        [data-theme="dark"] .table tbody tr:hover {
-            background-color: hsl(var(--b2));
-        }
-        
-        [data-theme="dark"] .modal-box {
-            background-color: hsl(var(--b1));
-            color: hsl(var(--bc));
-        }
-        
-        /* Globale Typografie */
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        
-        /* Verbesserte Tabellen-Header */
-        thead th {
-            font-family: 'Inter';
-            letter-spacing: 0.05em;
-        }
-        
-        /* Button-Styles */
-        /* Basis Button Styles */
-        .btn {
-            @apply font-semibold;
-            height: 2.5rem;
-            min-height: 2.5rem;
-            padding: 0 1rem;
-        }
-        
-        /* Primary Button */
-        .btn-primary {
-            background-color: hsl(var(--p));
-            color: hsl(var(--pc));
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            background-color: hsl(var(--pf));
-        }
-        
-        /* Ghost Button */
-        .btn-ghost {
-            background-color: transparent;
-            border-color: transparent;
-            color: inherit;
-        }
-        
-        [data-theme="light"] .btn-ghost:hover {
-            background-color: hsl(var(--b2));
-            color: hsl(var(--bc));
-        }
-        
-        [data-theme="dark"] .btn-ghost:hover {
-            background-color: hsl(var(--b2));
-            color: hsl(var(--pc));
-        }
-        
-        /* Active Button */
-        .btn-active, 
-        .btn-ghost.btn-active {
-            background-color: hsl(var(--p));
-            color: hsl(var(--pc));
-        }
-        
-        /* Small Button */
-        .btn-sm {
-            height: 2rem;
-            min-height: 2rem;
-            padding: 0 0.75rem;
-            font-size: 0.875rem;
-        }
-        
-        /* Error Button */
-        .btn-error {
-            background-color: hsl(var(--er));
-            color: hsl(var(--erc));
-        }
-        
-        .btn-error:hover {
-            background-color: hsl(var(--er));
-            opacity: 0.9;
-        }
-        
-        /* Ghost Error Button */
-        .btn-ghost.text-error:hover {
-            background-color: hsl(var(--er));
-            color: hsl(var(--erc));
-        }
-        
-        @keyframes scanning {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
-        }
-        
-        .scan-step {
-            transition: all 0.3s ease-in-out;
-        }
-        
-        #quickScanModal::backdrop {
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        
-        #main-scanner-input:focus {
-            outline: none;
-        }
-        
-        /* Modal Styles - Neu */
-        #quickScanModal {
-            border: none;
-            padding: 0;
-            background: transparent;
-            max-width: 100vw;
-            max-height: 100vh;
-            width: 100%;
-            height: 100%;
-            display: grid;
-            place-items: center;
-            position: fixed;
-            margin: 0;
-        }
-        
-        #quickScanModal::backdrop {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(2px);
-        }
-        
-        .modal-box {
-            background: hsl(var(--b1));
-            border-radius: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            width: 90%;
-            max-width: 42rem;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .scan-animation {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        @keyframes scanning {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(400%); }
-        }
-        
-        .scan-line {
-            position: absolute;
-            height: 100%;
-            width: 25%;
-            background: hsl(var(--p));
-            animation: scanning 2s ease-in-out infinite;
-        }
-        
-        /* Nur Navigation-Buttons haben den Ghost-Style */
-        .menu .btn-ghost {
-            background-color: transparent;
-            border-color: transparent;
-            padding: 0.75rem 1rem;
-            border-radius: 0.5rem;
-        }
-        
-        /* Hover-Effekt nur für Navigation-Buttons */
-        .menu .btn-ghost:hover {
-            background-color: hsl(var(--b2));
-        }
-        
-        /* Tabellen-Styles */
-        .table {
-            @apply min-w-full divide-y divide-base-200;
-        }
-        
-        .table thead {
-            @apply bg-base-200;
-        }
-        
-        .table th {
-            @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider;
-        }
-        
-        .table td {
-            @apply px-6 py-4 whitespace-nowrap;
-        }
-        
-        /* Spezifische Styles für Name und Status in Tabellen */
-        td.item-name a {
-            @apply px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 
-                   inline-block font-inter font-semibold tracking-tight hover:scale-[1.02] 
-                   transform transition-all;
-        }
-        
-        /* Status-Badge Styles */
-        .status-badge {
-            @apply inline-flex items-center px-2 py-1 rounded-lg text-sm;
-        }
-        
-        /* Info-Badge Styles */
-        .info-badge {
-            @apply inline-flex items-center gap-2 text-gray-600;
-        }
-        
-        /* Action-Button Styles */
-        .btn-action {
-            @apply btn btn-sm;
-        }
-        
-        /* Status-Badge für Dark Mode anpassen */
-        [data-theme="dark"] .status-badge {
-            background-color: hsl(var(--b2));
-        }
-        
-        /* Links im Dark Mode */
-        [data-theme="dark"] a:not(.btn) {
-            color: hsl(var(--p));
-        }
-        
-        [data-theme="dark"] a:not(.btn):hover {
-            color: hsl(var(--pf));
-        }
-        
-        /* Navigation im Dark Mode */
-        [data-theme="dark"] .navbar {
-            color: hsl(var(--bc));
-        }
-        
-        [data-theme="dark"] .btn-ghost {
-            color: hsl(var(--bc));
-        }
-        
-        [data-theme="dark"] .btn-ghost:hover {
-            color: hsl(var(--pc));
-            background-color: hsl(var(--b2));
-        }
-        
-        /* QuickScan Button Anpassungen */
-        .quickscan-button {
-            width: 4rem !important;
-            height: 4rem !important;
-        }
-        
-        .quickscan-logo {
-            width: 3rem !important;
-            height: 3rem !important;
-            margin: -0.5rem;  /* Negativer Margin für mehr Platz */
-        }
-        
-        /* Button Styles mit höchster Spezifität */
-        .btn.btn-primary,
-        .btn.btn-active,
-        .navbar .btn-ghost.btn-active,
-        .quickscan-button.btn-primary {
-            background-color: hsl(var(--p)) !important;
-            color: white !important;
-            border-color: hsl(var(--p)) !important;
-        }
-        
-        /* Ghost Buttons */
-        .btn-ghost {
-            background-color: transparent !important;
-            color: hsl(var(--bc)) !important;
-            border-color: transparent !important;
-        }
-        
-        /* Hover States */
-        .btn.btn-primary:hover {
-            background-color: hsl(var(--pf)) !important;
-            color: white !important;
-        }
-        
-        .navbar .btn-ghost:hover {
-            background-color: hsl(var(--b2)) !important;
-            color: hsl(var(--bc)) !important;
-        }
-        
-        .navbar .btn-ghost.btn-active:hover {
-            background-color: hsl(var(--pf)) !important;
-            color: white !important;
-        }
-        
-        /* Dashboard spezifische Styles */
-        #main-tab .btn.btn-primary {
-            background-color: hsl(var(--p)) !important;
-            color: white !important;
-        }
-        
-        #main-tab .btn.btn-primary:hover {
-            background-color: hsl(var(--pf)) !important;
-            color: white !important;
-        }
-        
-        /* Active States */
-        .tab.tab-active {
-            background-color: hsl(var(--p)) !important;
-            color: white !important;
-            border-color: hsl(var(--p)) !important;
-        }
-    </style>
-    
-    {% block head %}{% endblock %}
+    </script>
 </head>
 
 <body class="min-h-screen bg-base-200">
@@ -470,6 +100,18 @@
                        class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
                         <i class="fas fa-chart-line mr-2"></i>Dashboard
                     </a>
+                    <li class="mt-4">
+                        <h2 class="menu-title">Admin</h2>
+                        <ul>
+                            <li>
+                                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center">
+                                    <i class="fas fa-chart-bar mr-2"></i> 
+                                    Dashboard
+                                </a>
+                            </li>
+                            <!-- ... andere Admin-Links ... -->
+                        </ul>
+                    </li>
                     <a href="{{ url_for('admin.trash') }}" 
                        class="btn btn-ghost btn-circle text-error relative">
                         <i class="fas fa-trash-alt"></i>

@@ -3,6 +3,9 @@ import sqlite3
 from datetime import datetime
 import os
 import logging
+import requests
+from app.config import Config
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +28,12 @@ class Database:
             conn = sqlite3.connect(db_path)
             conn.close()
             # Initialisiere die Datenbankstruktur
-            cls.init_db()
+            cls.init_db_schema()
             print("Datenbank erfolgreich initialisiert!")
         else:
             print("Datenbank existiert bereits")
-
-        # Überprüfe ob alle Tabellen existieren
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        tables = cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-        """).fetchall()
-        
-        if not tables:
-            print("Keine Tabellen gefunden, initialisiere Datenbankstruktur...")
-            conn.close()
-            cls.init_db()
-        else:
-            print(f"Gefundene Tabellen: {[table[0] for table in tables]}")
-            conn.close()
+            # Aktualisiere Schema wenn nötig
+            cls.init_db_schema()
 
     @staticmethod
     def get_database_path():
@@ -55,16 +44,13 @@ class Database:
     
     @staticmethod
     def get_db():
-        if 'db' not in g:
-            db_path = Database.get_database_path()
-            
-            # Stelle sicher, dass die Datenbank existiert
-            Database.ensure_db_exists()
-            
-            # Verbindung herstellen
-            g.db = sqlite3.connect(db_path)
-            g.db.row_factory = sqlite3.Row
-            
+        """Gibt eine Datenbankverbindung zurück"""
+        if hasattr(g, 'db'):
+            return g.db
+        
+        db_path = Database.get_database_path()
+        g.db = sqlite3.connect(db_path)
+        g.db.row_factory = sqlite3.Row
         return g.db
 
     @staticmethod
@@ -77,42 +63,123 @@ class Database:
 
     @staticmethod
     def init_db():
-        """Initialisiert die Datenbankstruktur"""
-        conn = Database.get_db_connection()
-        cursor = conn.cursor()
-        
-        # Settings-Tabelle erstellen
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT
-            )
-        ''')
-        
-        # Standard-Einstellungen einfügen
-        default_settings = [
-            ('primary_color', '220 35% 45%'),  # BTZ-Blau
-            ('secondary_color', '220 35% 35%'),  # Dunkleres BTZ-Blau
-            ('accent_color', '220 35% 55%'),  # Helleres BTZ-Blau
-            ('theme', 'light'),
-            ('items_per_page', '10')
-        ]
-        
-        for key, value in default_settings:
-            cursor.execute('''
-                INSERT OR IGNORE INTO settings (key, value)
-                VALUES (?, ?)
-            ''', (key, value))
-        
-        # Indizes für bessere Performance
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tools_deleted ON tools(deleted)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_tools_barcode ON tools(barcode)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_workers_deleted ON workers(deleted)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_workers_barcode ON workers(barcode)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_consumables_deleted ON consumables(deleted)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_lendings_tool ON lendings(tool_barcode)')
-        
-        conn.commit()
+        """Initialisiert die Datenbank"""
+        with Database.get_db() as conn:
+            # Werkzeuge
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS tools (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    status TEXT,
+                    category TEXT,
+                    location TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            # Mitarbeiter
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS workers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    firstname TEXT NOT NULL,
+                    lastname TEXT NOT NULL,
+                    department TEXT,
+                    email TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            # Verbrauchsmaterial
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS consumables (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    quantity INTEGER DEFAULT 0,
+                    min_quantity INTEGER DEFAULT 0,
+                    category TEXT,
+                    location TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            # Ausleihen
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS lendings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tool_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    returned_at TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending',
+                    FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''')
+
+            # Verbrauchsmaterial-Nutzung
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS consumable_usages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    consumable_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending',
+                    FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''')
+
+            # Benutzer
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL,
+                    role TEXT NOT NULL
+                )
+            ''')
+
+            # Sync-Status
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS sync_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    last_sync TIMESTAMP,
+                    last_attempt TIMESTAMP,
+                    status TEXT,
+                    error TEXT
+                )
+            ''')
+
+            # Einstellungen
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    description TEXT
+                )
+            ''')
+
+            conn.commit()
 
     @staticmethod
     def close_db():
@@ -121,21 +188,39 @@ class Database:
             db.close()
 
     @staticmethod
-    def query(query, args=None, one=False):
-        print(f"\n=== Database Query ===")
-        print(f"Query: {query}")
-        print(f"Args: {args}")
+    def query(sql, params=None, one=False):
+        """Führt eine Datenbankabfrage aus"""
+        print("\n=== DATABASE QUERY ===")
+        print(f"SQL: {sql}")
+        print(f"Parameters: {params}")
+        
         try:
             with Database.get_db() as conn:
-                cursor = conn.cursor()
-                result = cursor.execute(query, args or [])
+                if params:
+                    cursor = conn.execute(sql, params)
+                else:
+                    cursor = conn.execute(sql)
+                
                 if one:
-                    print("Hole einen Datensatz...")
-                    return result.fetchone()
-                print("Hole alle Datensätze...")
-                return result.fetchall()
+                    result = cursor.fetchone()
+                else:
+                    result = cursor.fetchall()
+                    
+                print(f"Anzahl Ergebnisse: {len(result) if result else 0}")
+                if result and len(result) > 0:
+                    print(f"Beispiel-Datensatz: {dict(result[0]) if not one else dict(result)}")
+                else:
+                    print("Keine Ergebnisse gefunden")
+                    
+                return result
+                
         except Exception as e:
-            print(f"FEHLER bei Datenbankabfrage: {str(e)}")
+            print(f"\nDatenbank-Fehler:")
+            print(f"Typ: {type(e)}")
+            print(f"Message: {str(e)}")
+            import traceback
+            print("Traceback:")
+            print(traceback.format_exc())
             raise
 
     def create_lending(self, tool_barcode, worker_barcode):
@@ -520,6 +605,302 @@ class Database:
             '006_add_stock_threshold.sql',
             '007_add_consumable_usage_table.sql',
         ]
+
+    @staticmethod
+    def sync_with_server():
+        """Synchronisiere lokale DB mit Server"""
+        if not Config.SERVER_URL:
+            return {'success': False, 'message': 'Keine Server-URL konfiguriert'}
+            
+        try:
+            # Hole lokale Änderungen seit letzter Synchronisation
+            last_sync = Database.get_last_sync_time()
+            local_changes = Database.get_changes_since(last_sync)
+            
+            # Sende Änderungen an Server
+            response = requests.post(
+                f"{Config.SERVER_URL}/api/sync",
+                json=local_changes
+            )
+            
+            if response.status_code == 200:
+                # Hole Server-Änderungen
+                server_changes = response.json()
+                
+                # Wende Server-Änderungen an
+                Database.apply_changes(server_changes)
+                
+                # Aktualisiere Sync-Zeitstempel
+                Database.update_sync_time()
+                
+                return {'success': True, 'message': 'Synchronisation erfolgreich'}
+            else:
+                return {'success': False, 'message': f'Server-Fehler: {response.text}'}
+                
+        except Exception as e:
+            return {'success': False, 'message': f'Sync-Fehler: {str(e)}'}
+    
+    @staticmethod
+    def get_changes_since(timestamp):
+        """Hole alle lokalen Änderungen seit timestamp"""
+        changes = {
+            'tools': [],
+            'consumables': [],
+            'workers': [],
+            'lendings': []
+        }
+        
+        # Hole geänderte Werkzeuge
+        tools = Database.query('''
+            SELECT * FROM tools 
+            WHERE modified_at > ?
+        ''', [timestamp])
+        changes['tools'] = [dict(t) for t in tools]
+        
+        # Hole geänderte Verbrauchsmaterialien
+        consumables = Database.query('''
+            SELECT * FROM consumables 
+            WHERE modified_at > ?
+        ''', [timestamp])
+        changes['consumables'] = [dict(c) for c in consumables]
+        
+        # ... ähnlich für workers und lendings
+        
+        return changes
+    
+    @staticmethod
+    def apply_changes(changes):
+        """Wende Server-Änderungen auf lokale DB an"""
+        with Database.get_db() as conn:
+            # Werkzeuge aktualisieren
+            for tool in changes.get('tools', []):
+                conn.execute('''
+                    INSERT OR REPLACE INTO tools 
+                    (barcode, name, category, location, deleted, modified_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', [
+                    tool['barcode'],
+                    tool['name'],
+                    tool['category'],
+                    tool['location'],
+                    tool['deleted'],
+                    tool['modified_at']
+                ])
+            
+            # ... ähnlich für andere Tabellen
+            
+            conn.commit()
+
+    @staticmethod
+    def init_sync_table():
+        """Erstellt die Sync-Tabelle"""
+        with Database.get_db() as conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS sync_status (
+                    id INTEGER PRIMARY KEY,
+                    last_sync TIMESTAMP,
+                    last_attempt TIMESTAMP,
+                    status TEXT,
+                    error TEXT
+                )
+            ''')
+            
+            # Füge modified_at zu allen relevanten Tabellen hinzu
+            tables = ['tools', 'consumables', 'workers', 'lendings']
+            for table in tables:
+                try:
+                    conn.execute(f'ALTER TABLE {table} ADD COLUMN modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+                    conn.execute(f'ALTER TABLE {table} ADD COLUMN sync_status TEXT DEFAULT "pending"')
+                except:
+                    pass  # Spalte existiert bereits
+
+    @staticmethod
+    def handle_sync_conflict(local_item, server_item):
+        """Behandelt Konflikte zwischen lokalen und Server-Änderungen"""
+        # Server gewinnt bei unterschiedlichen Zeitstempeln
+        if server_item['modified_at'] > local_item['modified_at']:
+            return server_item
+        
+        # Bei gleichem Zeitstempel, behalte gelöschte Items
+        if server_item['modified_at'] == local_item['modified_at']:
+            if server_item.get('deleted', False) or local_item.get('deleted', False):
+                return {'deleted': True, **server_item}
+            
+        # Ansonsten behalte Server-Version
+        return server_item
+
+    @staticmethod
+    def add_update_triggers():
+        """Fügt Trigger für modified_at Updates hinzu"""
+        with Database.get_db() as conn:
+            tables = ['tools', 'consumables', 'workers', 'lendings']
+            
+            for table in tables:
+                conn.execute(f'''
+                    CREATE TRIGGER IF NOT EXISTS update_{table}_modified
+                    AFTER UPDATE ON {table}
+                    BEGIN
+                        UPDATE {table} 
+                        SET modified_at = CURRENT_TIMESTAMP,
+                            sync_status = 'pending'
+                        WHERE id = NEW.id;
+                    END;
+                ''')
+                
+                conn.execute(f'''
+                    CREATE TRIGGER IF NOT EXISTS insert_{table}_modified
+                    AFTER INSERT ON {table}
+                    BEGIN
+                        UPDATE {table}
+                        SET modified_at = CURRENT_TIMESTAMP,
+                            sync_status = 'pending'
+                        WHERE id = NEW.id;
+                    END;
+                ''')
+
+    @staticmethod
+    def init_db_schema():
+        """Initialisiert oder aktualisiert das Datenbankschema"""
+        db_path = Database.get_database_path()
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        
+        try:
+            # Erstelle zuerst alle Basistabellen
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS tools (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    status TEXT,
+                    category TEXT,
+                    location TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS workers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    firstname TEXT NOT NULL,
+                    lastname TEXT NOT NULL,
+                    department TEXT,
+                    email TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS consumables (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT NOT NULL UNIQUE,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    quantity INTEGER DEFAULT 0,
+                    min_quantity INTEGER DEFAULT 0,
+                    category TEXT,
+                    location TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0,
+                    deleted_at TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending'
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS lendings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tool_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    returned_at TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending',
+                    FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS consumable_usages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    consumable_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    sync_status TEXT DEFAULT 'pending',
+                    FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL,
+                    role TEXT NOT NULL
+                )
+            ''')
+
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS sync_status (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    last_sync TIMESTAMP,
+                    last_attempt TIMESTAMP,
+                    status TEXT,
+                    error TEXT
+                )
+            ''')
+
+            # Erstelle settings Tabelle mit vollständiger Struktur
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    description TEXT
+                )
+            ''')
+            
+            # Füge Standardeinstellungen hinzu
+            default_settings = [
+                ('server_mode', '0', 'Aktiviert den Server-Modus (1) oder Client-Modus (0)'),
+                ('server_url', '', 'URL des Sync-Servers im Client-Modus'),
+                ('auto_sync', '0', 'Aktiviert automatische Synchronisation (1) oder nicht (0)')
+            ]
+            
+            for key, value, description in default_settings:
+                conn.execute('''
+                    INSERT OR REPLACE INTO settings (key, value, description)
+                    VALUES (?, ?, ?)
+                ''', [key, value, description])
+            
+            # Füge einen initialen sync_status Eintrag hinzu
+            conn.execute('''
+                INSERT OR IGNORE INTO sync_status (last_sync, status)
+                VALUES (NULL, 'never')
+            ''')
+            
+            conn.commit()
+            
+        except Exception as e:
+            print(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
 def init_db():
     """Initialisiert die Datenbank"""

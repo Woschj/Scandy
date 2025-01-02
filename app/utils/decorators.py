@@ -2,12 +2,23 @@ from functools import wraps
 from flask import session, redirect, url_for, request, flash
 from datetime import datetime
 from app.utils.logger import loggers
+from app.utils.auth_utils import needs_setup
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
+        # Setup-Route immer erlauben
+        if request.endpoint == 'auth.setup':
+            return f(*args, **kwargs)
+            
+        # Wenn Setup benötigt wird, dorthin weiterleiten
+        if needs_setup():
+            return redirect(url_for('auth.setup'))
+            
+        # Wenn nicht eingeloggt, zum Login weiterleiten
+        if 'user_id' not in session:
             return redirect(url_for('auth.login', next=request.url))
+            
         return f(*args, **kwargs)
     return decorated_function
 

@@ -11,87 +11,15 @@ from app.utils.db_schema import SchemaManager
 from app.utils.color_settings import get_color_settings
 from flask_compress import Compress
 from app.models.settings import Settings
+from app.sync_manager import SyncManager
+from app.utils.auth_utils import needs_setup
 
 def create_app(test_config=None):
     app = Flask(__name__)
     Compress(app)  # Aktiviert gzip Komprimierung
     
-    # Stelle sicher, dass das Datenbankverzeichnis existiert
-    if not os.path.exists('database'):
-        os.makedirs('database')
-    
-    # Initialisiere die Datenbank
-    db_path = Database.get_database_path()
-    if not os.path.exists(db_path):
-        print("Initialisiere neue Datenbank...")
-        Database.init_db()
-        print("Datenbank erfolgreich initialisiert!")
-    
-    # Initialisiere die Zugriffseinstellungen innerhalb des App-Kontexts
-    with app.app_context():
-        try:
-            # Lösche alte Einstellungen
-            Database.query('DROP TABLE IF EXISTS access_settings')
-            
-            # Erstelle die Tabelle neu
-            Database.query('''
-                CREATE TABLE access_settings (
-                    route TEXT PRIMARY KEY,
-                    is_public BOOLEAN DEFAULT 0,
-                    description TEXT
-                )
-            ''')
-            
-            # Standard-Einstellungen für Routen
-            default_settings = [
-                ('tools.index', 1, 'Werkzeug-Übersicht'),
-                ('tools.details', 0, 'Werkzeug-Details'),  # Details erfordern Login
-                ('tools.add', 0, 'Werkzeug hinzufügen'),
-                ('tools.edit', 0, 'Werkzeug bearbeiten'),
-                ('tools.delete', 0, 'Werkzeug löschen'),
-                ('consumables.index', 1, 'Verbrauchsmaterial-Übersicht'),
-                ('consumables.details', 0, 'Verbrauchsmaterial-Details'),
-                ('consumables.add', 0, 'Verbrauchsmaterial hinzufügen'),
-                ('workers.index', 0, 'Mitarbeiter-Übersicht'),
-                ('workers.details', 0, 'Mitarbeiter-Details'),
-                ('admin.dashboard', 0, 'Admin-Dashboard'),
-                ('admin.access_settings', 0, 'Zugriffseinstellungen'),
-                ('admin.trash', 0, 'Papierkorb'),
-                ('history.view', 0, 'Verlauf'),
-                ('auth.login', 1, 'Login'),
-                ('auth.logout', 1, 'Logout')
-            ]
-            
-            # Füge die Einstellungen einzeln ein
-            for route, is_public, desc in default_settings:
-                Database.query('''
-                    INSERT OR REPLACE INTO access_settings (route, is_public, description)
-                    VALUES (?, ?, ?)
-                ''', [route, is_public, desc])
-            
-            print("Zugriffseinstellungen erfolgreich initialisiert")
-            
-            # Users-Tabelle prüfen/erstellen
-            Database.query('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    role TEXT NOT NULL DEFAULT 'user'
-                )
-            ''')
-            
-            # Standard Admin-Account erstellen
-            from werkzeug.security import generate_password_hash
-            Database.query('''
-                INSERT OR IGNORE INTO users (username, password, role)
-                VALUES (?, ?, ?)
-            ''', ['admin', generate_password_hash('admin'), 'admin'])
-            
-            print("Benutzer-Tabelle initialisiert")
-            
-        except Exception as e:
-            print(f"Fehler beim Initialisieren der Zugriffseinstellungen: {e}")
+    # Initialisiere die Datenbank vor dem App-Kontext
+    Database.ensure_db_exists()
     
     if test_config is None:
         app.config.from_pyfile('config.py', silent=True)
@@ -106,16 +34,19 @@ def create_app(test_config=None):
 
     # Session-Konfiguration
     app.config.update(
-        SECRET_KEY='dev',  # In Produktion durch sicheren Schlüssel ersetzen
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),  # Sicherer Schlüssel
         SESSION_TYPE='filesystem',
-        SESSION_PERMANENT=True,  # Session bleibt auch nach Browser-Schließung erhalten
-        PERMANENT_SESSION_LIFETIME=timedelta(days=7),  # Session-Dauer: 7 Tage
-        SESSION_COOKIE_SECURE=False,  # True in Produktion
+        SESSION_PERMANENT=True,
+        PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+        SESSION_COOKIE_SECURE=False,  # Auf True setzen wenn HTTPS
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
-        SESSION_FILE_DIR='flask_session',  # Spezifischer Ordner für Session-Dateien
-        SESSION_FILE_THRESHOLD=500  # Maximale Anzahl von Session-Dateien
+        SESSION_FILE_DIR=os.path.join(app.instance_path, 'flask_session'),  # Besserer Pfad
+        SESSION_FILE_THRESHOLD=500
     )
+
+    # Stelle sicher, dass der Session-Ordner existiert
+    os.makedirs(os.path.join(app.instance_path, 'flask_session'), exist_ok=True)
 
     # Session initialisieren
     Session(app)
@@ -197,7 +128,11 @@ def create_app(test_config=None):
     # Standardroute
     @app.route('/')
     def index():
-        return redirect(url_for('tools.index'))
+        if needs_setup():
+            return redirect(url_for('auth.setup'))
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login'))
+        return redirect(url_for('quick_scan.quick_scan'))
 
     # CLI-Befehle nur lokal laden
     try:
@@ -293,17 +228,88 @@ def create_app(test_config=None):
         # Diese Routen sind immer öffentlich
         public_routes = [
             'static', 
-            'auth.login', 
+            'auth.login',
+            'auth.setup',  # Setup-Route hinzugefügt
             'auth.logout', 
             'tools.index',
-            'consumables.index'
+            'consumables.index',
+            'api.test'
         ]
         
-        if request.endpoint in public_routes:
+        # Erlaube Zugriff auf statische Dateien und öffentliche Routen
+        if request.endpoint in public_routes or request.endpoint == 'static':
             return None
         
+        # Erlaube API-Zugriff
+        if request.endpoint and request.endpoint.startswith('api.'):
+            return None
+        
+        # Wenn Setup benötigt wird, erlaube nur Setup-Route
+        if needs_setup():
+            if request.endpoint != 'auth.setup':
+                return redirect(url_for('auth.setup'))
+            return None
+        
+        # Prüfe Login für alle anderen Routen
         if not session.get('is_admin'):
-            flash('Diese Seite erfordert eine Anmeldung.', 'warning')
-            return redirect(url_for('auth.login'))
+            if request.endpoint != 'auth.login':
+                return redirect(url_for('auth.login', next=request.url))
 
+    with app.app_context():
+        # Initialisiere Sync-Manager
+        sync_manager = SyncManager(app)
+        app.extensions['sync_manager'] = sync_manager
+        
+        try:
+            # Prüfe Server/Client Modus
+            mode_setting = Database.query('''
+                SELECT value FROM settings 
+                WHERE key = 'server_mode'
+            ''', one=True)
+            
+            if mode_setting:
+                if bool(int(mode_setting['value'])):
+                    Config.init_server()
+                else:
+                    server_url = Database.query('''
+                        SELECT value FROM settings 
+                        WHERE key = 'server_url'
+                    ''', one=True)
+                    Config.init_client(server_url['value'] if server_url else None)
+            
+            # Prüfe Auto-Sync Einstellung
+            auto_sync = Database.query('''
+                SELECT value FROM settings 
+                WHERE key = 'auto_sync'
+            ''', one=True)
+            
+            if auto_sync and bool(int(auto_sync['value'])):
+                sync_manager.start_sync_scheduler()
+                
+        except Exception as e:
+            app.logger.error(f"Fehler beim Wiederherstellen der Sync-Einstellungen: {str(e)}")
+
+    # Nach den anderen context_processors
+    @app.context_processor
+    def inject_config():
+        from app.config import Config  # Import hier, um Zirkelbezüge zu vermeiden
+        return {'Config': Config}
+
+    with app.app_context():
+        # Überprüfe Datenbank beim Start
+        print("\n=== CHECKING DATABASE AT STARTUP ===")
+        Database.ensure_db_exists()
+        
+        # Überprüfe Verbrauchsmaterialien
+        try:
+            count = Database.query("SELECT COUNT(*) as count FROM consumables", one=True)
+            print(f"Gefundene Verbrauchsmaterialien: {count['count']}")
+            
+            if count['count'] > 0:
+                example = Database.query("SELECT * FROM consumables LIMIT 1", one=True)
+                print("Beispiel-Datensatz:")
+                print(dict(example))
+        except Exception as e:
+            print(f"Fehler beim Datenbankcheck: {e}")
+    
     return app

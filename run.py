@@ -1,49 +1,29 @@
-from flask import Flask, redirect, url_for
-from app.models.database import Database, init_db
-from app.utils.structure_viewer import print_database_structure, print_app_structure
-from app.utils.context_processors import register_context_processors
-from app.utils.db_schema import SchemaManager
+from app import create_app
+from app.models.init_db import init_users
 import logging
-import os
-from datetime import timedelta
-from app import create_app  # Importiere die create_app Funktion
 
 # Logging konfigurieren
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-# Erstelle die Flask-App
-app = create_app()  # Nutze die create_app Funktion aus __init__.py
-
-if __name__ == "__main__":
-    # Logging-Handler hinzufügen
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    
+if __name__ == '__main__':
     logger.info("Starte Anwendung...")
     
-    # Application Context für Debug-Informationen
+    # App erstellen
+    app = create_app()
+    
+    # Datenbank-Tabellen erstellen (ohne Admin-Account)
     with app.app_context():
-        # Prüfe ob Datenbank existiert
-        if not os.path.exists(Database.get_database_path()):
-            logger.info("Initialisiere Datenbank...")
-            Database.init_db()
-            
-            # Testdaten erstellen
-            logger.info("Erstelle Testdaten...")
-            from app.create_test_data import create_test_data
-            create_test_data()
-        
-        # Debug-Informationen immer ausgeben
-        logger.info("Drucke Datenbank-Struktur...")
-        print_database_structure()
-        
-        logger.info("Drucke App-Struktur...")
-        print_app_structure()
+        try:
+            init_users()  # Nur Tabelle erstellen, kein Admin-Account
+            logger.info("Datenbank initialisiert")
+        except Exception as e:
+            logger.error(f"Fehler bei der Datenbank-Initialisierung: {e}")
     
     logger.info("Starte Entwicklungsserver...")
-    app.run(debug=False, host='127.0.0.1', port=5000)
+    app.run(debug=True)
   

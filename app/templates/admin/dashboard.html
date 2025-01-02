@@ -3,14 +3,47 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<!-- Tabs für Dashboard/Papierkorb -->
-<!-- <div class="tabs tabs-boxed mb-6">
-    <a class="tab tab-active" onclick="showDashboardTab('main')">Dashboard</a>
-    <a class="tab" onclick="showDashboardTab('trash')">Papierkorb</a>
-</div> -->
-
 <!-- Hauptdashboard -->
 <div id="main-tab">
+    <!-- Server & Sync in eigener Reihe -->
+    <div class="grid grid-cols-1 gap-6 mb-8">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-sync"></i>
+                    Server & Sync
+                </h2>
+                <div class="stats stats-vertical shadow">
+                    <div class="stat">
+                        <div class="stat-title">Modus</div>
+                        <div class="stat-value text-base-content">
+                            {% if Config.SERVER_MODE %}
+                            <span class="badge badge-primary">Server</span>
+                            {% else %}
+                            <span class="badge">Client</span>
+                            {% endif %}
+                        </div>
+                        {% if Config.SERVER_MODE %}
+                        <div class="stat-desc">Server-URL: http://{{ Config.SERVER_HOST }}:{{ Config.SERVER_PORT }}</div>
+                        {% elif Config.SERVER_URL %}
+                        <div class="stat-desc">Server: {{ Config.SERVER_URL }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="stat">
+                        <div class="stat-actions">
+                            <a href="{{ url_for('admin.server_settings') }}" 
+                               class="btn btn-primary btn-block">
+                                <i class="fas fa-cog mr-2"></i>
+                                Einstellungen
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistik-Karten -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Werkzeuge -->
         <div class="card bg-base-100 shadow-xl">
@@ -19,7 +52,7 @@
                 <div class="stats stats-vertical shadow">
                     <div class="stat">
                         <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.tools_count }}</div>
+                        <div class="stat-value text-base-content">{{ stats.tools.total }}</div>
                     </div>
                     <div class="stat">
                         <div class="stat-title">Status</div>
@@ -37,13 +70,28 @@
                                 {{ stats.tools.lent }} verliehen
                             </span>
                         </a>
-                        <a href="{{ url_for('tools.index') }}?status=defekt"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-error flex items-center gap-2">
-                                <i class="fas fa-times"></i>
-                                {{ stats.tools.defect }} defekt
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mitarbeiter -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">Mitarbeiter</h2>
+                <div class="stats stats-vertical shadow">
+                    <div class="stat">
+                        <div class="stat-title">Gesamt</div>
+                        <div class="stat-value text-base-content">{{ stats.workers.total }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title">Status</div>
+                        <span class="stat-desc flex justify-between items-center p-2">
+                            <span class="text-success flex items-center gap-2">
+                                <i class="fas fa-user"></i>
+                                {{ stats.workers.active }} aktiv
                             </span>
-                        </a>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -56,7 +104,7 @@
                 <div class="stats stats-vertical shadow">
                     <div class="stat">
                         <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.consumables_count }}</div>
+                        <div class="stat-value text-base-content">{{ stats.consumables.total }}</div>
                     </div>
                     <div class="stat">
                         <div class="stat-title">Bestand</div>
@@ -74,58 +122,6 @@
                                 {{ stats.consumables.low }} nachbestellen
                             </span>
                         </a>
-                        <a href="{{ url_for('consumables.index') }}?stock=empty"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-error flex items-center gap-2">
-                                <i class="fas fa-times"></i>
-                                {{ stats.consumables.empty }} leer
-                            </span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mitarbeiter -->
-        <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-                <h2 class="card-title">Mitarbeiter</h2>
-                <div class="stats stats-vertical shadow">
-                    <div class="stat">
-                        <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.workers_count }}</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-title">Nach Abteilung</div>
-                        {% for dept in stats.workers.departments %}
-                        <a href="{{ url_for('workers.index') }}?department={{ dept.name|urlencode }}"
-                           class="stat-desc flex justify-between items-center p-2 cursor-pointer">
-                            <span class="px-3 py-1.5 rounded-lg font-medium inline-block font-inter tracking-tight w-full
-                                {% if dept.name == 'Medien und Digitales' %}
-                                    bg-purple-100 text-purple-800
-                                {% elif dept.name == 'Technik' %}
-                                    bg-yellow-100 text-yellow-800
-                                {% elif dept.name == 'Kaufmännisches' %}
-                                    bg-blue-100 text-blue-800
-                                {% elif dept.name == 'Service' %}
-                                    bg-pink-100 text-pink-800
-                                {% elif dept.name == 'APE' %}
-                                    bg-green-100 text-green-800
-                                {% else %}
-                                    bg-gray-100 text-gray-800
-                                {% endif %}">
-                                <i class="fas fa-{% if dept.name == 'Medien und Digitales' %}laptop
-                                            {% elif dept.name == 'Technik' %}wrench
-                                            {% elif dept.name == 'Kaufmännisches' %}chart-line
-                                            {% elif dept.name == 'Service' %}concierge-bell
-                                            {% elif dept.name == 'APE' %}seedling
-                                            {% else %}user
-                                            {% endif %} mr-2"></i>
-                                {{ dept.name }}
-                                <span class="float-right">{{ dept.count }}</span>
-                            </span>
-                        </a>
-                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -153,7 +149,7 @@
                             <td>{{ usage.consumable_name }}</td>
                             <td>{{ usage.quantity }} Stk</td>
                             <td>{{ usage.worker_name }}</td>
-                            <td>{{ usage.used_at }}</td>
+                            <td>{{ usage.used_at|format_datetime }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -164,7 +160,7 @@
         <!-- Werkzeug Ausleihen -->
         <div class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-semibold mb-4">Aktuelle Werkzeugausleihen</h2>
-            <div class="list-wrapper lending-lists">
+            <div class="overflow-y-auto max-h-96">
                 <table class="table w-full">
                     <thead>
                         <tr>
@@ -179,10 +175,9 @@
                         <tr class="{% if lending.overdue %}text-red-600{% endif %}">
                             <td>{{ lending.tool_name }}</td>
                             <td>{{ lending.worker_name }}</td>
-                            <td>{{ lending.lent_at }}</td>
+                            <td>{{ lending.lent_at|format_datetime }}</td>
                             <td>
-                                <button id="debug-button" 
-                                        onclick="returnTool('{{ lending.tool_barcode }}')"
+                                <button onclick="returnTool('{{ lending.tool_barcode }}')"
                                         class="btn btn-sm btn-primary">
                                     Rückgabe
                                 </button>
@@ -194,15 +189,106 @@
             </div>
         </div>
     </div>
-</div>
 
-<div class="menu p-4">
-    <!-- ... andere Menüpunkte ... -->
-    <li>
-        <a href="{{ url_for('admin.access_settings') }}" class="menu-item">
-            <i class="fas fa-lock"></i>
-            <span>Zugriffseinstellungen</span>
-        </a>
-    </li>
+    <!-- Nach den Statistik-Karten -->
+    <div class="mt-8">
+        <h2 class="text-xl font-semibold mb-4">Daten Export/Import</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Werkzeuge -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Werkzeuge</h3>
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('admin.export_table', table='tools') }}" 
+                           class="btn btn-primary btn-sm">
+                            <i class="fas fa-download mr-2"></i>
+                            Exportieren
+                        </a>
+                        <form action="{{ url_for('admin.import_table', table='tools') }}" 
+                              method="post" 
+                              enctype="multipart/form-data"
+                              class="flex flex-col gap-2">
+                            <input type="file" 
+                                   name="file" 
+                                   accept=".xlsx"
+                                   class="file-input file-input-bordered file-input-sm w-full" />
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-upload mr-2"></i>
+                                Importieren
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mitarbeiter -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Mitarbeiter</h3>
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('admin.export_table', table='workers') }}" 
+                           class="btn btn-primary btn-sm">
+                            <i class="fas fa-download mr-2"></i>
+                            Exportieren
+                        </a>
+                        <form action="{{ url_for('admin.import_table', table='workers') }}" 
+                              method="post" 
+                              enctype="multipart/form-data"
+                              class="flex flex-col gap-2">
+                            <input type="file" 
+                                   name="file" 
+                                   accept=".xlsx"
+                                   class="file-input file-input-bordered file-input-sm w-full" />
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-upload mr-2"></i>
+                                Importieren
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verbrauchsmaterial -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Verbrauchsmaterial</h3>
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('admin.export_table', table='consumables') }}" 
+                           class="btn btn-primary btn-sm">
+                            <i class="fas fa-download mr-2"></i>
+                            Exportieren
+                        </a>
+                        <form action="{{ url_for('admin.import_table', table='consumables') }}" 
+                              method="post" 
+                              enctype="multipart/form-data"
+                              class="flex flex-col gap-2">
+                            <input type="file" 
+                                   name="file" 
+                                   accept=".xlsx"
+                                   class="file-input file-input-bordered file-input-sm w-full" />
+                            <button type="submit" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-upload mr-2"></i>
+                                Importieren
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verlauf -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Verlauf</h3>
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('admin.export_table', table='history') }}" 
+                           class="btn btn-primary btn-sm">
+                            <i class="fas fa-download mr-2"></i>
+                            Exportieren
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %} 

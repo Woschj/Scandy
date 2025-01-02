@@ -4,6 +4,7 @@ from ..models.tool import Tool
 from ..models.database import Database
 from ..utils.decorators import login_required, admin_required
 import traceback
+from app.config import Config
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -215,3 +216,105 @@ def delete_tool(barcode):
     db = Database()
     result = db.soft_delete_tool(barcode)
     return jsonify(result)
+
+@bp.route('/sync', methods=['POST'])
+def sync():
+    """Empfange Client-Änderungen und sende Server-Änderungen"""
+    if not Config.SERVER_MODE:
+        return jsonify({'error': 'Not a server'}), 403
+        
+    try:
+        # Empfange Client-Änderungen
+        client_changes = request.get_json()
+        
+        # Wende Client-Änderungen an
+        Database.apply_changes(client_changes)
+        
+        # Hole Server-Änderungen
+        server_changes = Database.get_changes_since(
+            client_changes.get('last_sync', 0)
+        )
+        
+        return jsonify(server_changes)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/sync/auto', methods=['POST'])
+@admin_required
+def toggle_auto_sync():
+    """Aktiviert/Deaktiviert automatische Synchronisation"""
+    try:
+        data = request.get_json()
+        enabled = data.get('enabled', False)
+        
+        sync_manager = current_app.extensions['sync_manager']
+        
+        if enabled:
+            sync_manager.start_sync_scheduler()
+            message = 'Automatische Synchronisation aktiviert'
+        else:
+            sync_manager.stop_sync_scheduler()
+            message = 'Automatische Synchronisation deaktiviert'
+            
+        # Speichere Einstellung in der Datenbank
+        Database.query('''
+            INSERT OR REPLACE INTO settings (key, value)
+            VALUES (?, ?)
+        ''', ['auto_sync', str(int(enabled))])
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Fehler: {str(e)}'
+        }), 500
+
+@bp.route('/sync/now', methods=['POST'])
+@admin_required
+def trigger_sync():
+    """Löst manuelle Synchronisation aus"""
+    try:
+        result = Database.sync_with_server()
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Sync-Fehler: {str(e)}'
+        }), 500
+
+@bp.route('/sync/status')
+@admin_required
+def get_sync_status():
+    """Gibt den aktuellen Sync-Status zurück"""
+    try:
+        status = Database.query('''
+            SELECT last_sync, last_attempt, status, error
+            FROM sync_status
+            ORDER BY id DESC LIMIT 1
+        ''', one=True)
+        
+        auto_sync = Database.query('''
+            SELECT value FROM settings
+            WHERE key = 'auto_sync'
+        ''', one=True)
+        
+        return jsonify({
+            'success': True,
+            'last_sync': status['last_sync'] if status else None,
+            'last_attempt': status['last_attempt'] if status else None,
+            'status': status['status'] if status else 'never',
+            'error': status['error'] if status else None,
+            'auto_sync': bool(int(auto_sync['value'])) if auto_sync else False
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Fehler: {str(e)}'
+        }), 500

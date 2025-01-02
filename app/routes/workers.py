@@ -7,89 +7,50 @@ from datetime import datetime
 bp = Blueprint('workers', __name__, url_prefix='/workers')
 
 @bp.route('/')
-@admin_required
 def index():
     """Mitarbeiter-Übersicht"""
     try:
+        # Debug-Ausgabe
+        print("\n=== WORKERS INDEX ===")
+        
+        # Hole alle aktiven Mitarbeiter mit Ausleihzähler
         workers = Database.query('''
             SELECT w.*,
                    COUNT(DISTINCT l.id) as active_lendings
             FROM workers w
             LEFT JOIN lendings l ON w.barcode = l.worker_barcode AND l.returned_at IS NULL
             WHERE w.deleted = 0
-            GROUP BY w.barcode
+            GROUP BY w.id, w.barcode, w.firstname, w.lastname, w.department, w.email,
+                     w.created_at, w.modified_at, w.deleted, w.deleted_at, w.sync_status
             ORDER BY w.lastname, w.firstname
         ''')
         
-        # Hole Filter-Optionen
+        print(f"Gefundene Mitarbeiter: {len(workers)}")
+        if workers:
+            print("Erster Datensatz:", dict(workers[0]))
+        
+        # Hole alle Abteilungen für Filter
         departments = Database.query('''
-            SELECT DISTINCT department FROM workers 
+            SELECT DISTINCT department FROM workers
             WHERE deleted = 0 AND department IS NOT NULL
             ORDER BY department
         ''')
         
-        # Template-Konfiguration
-        config = {
-            'columns': [
-                {'key': 'name', 'label': 'Name'},
-                {'key': 'barcode', 'label': 'Barcode'},
-                {'key': 'department', 'label': 'Abteilung'},
-                {'key': 'lendings', 'label': 'Ausleihen'},
-                {'key': 'actions', 'label': 'Aktionen', 'align': 'right'}
-            ],
-            'filters': [
-                {
-                    'id': 'departmentFilter',
-                    'placeholder': 'Alle Abteilungen',
-                    'options': [{'value': d['department'], 'label': d['department']} for d in departments]
-                },
-                {
-                    'id': 'lendingFilter',
-                    'placeholder': 'Ausleihstatus',
-                    'options': [
-                        {'value': 'with_lendings', 'label': 'Mit Ausleihen'},
-                        {'value': 'without_lendings', 'label': 'Ohne Ausleihen'}
-                    ]
-                }
-            ],
-            'items': [{
-                'name': f'<a href="{url_for("workers.details", barcode=item["barcode"])}" class="link link-hover font-medium">{item["lastname"]}, {item["firstname"]}</a>',
-                'barcode': f'<code>{item["barcode"]}</code>',
-                'department': item['department'],
-                'lendings': f'''
-                    <span class="badge {
-                        'badge-warning' if item['active_lendings'] > 0 else 'badge-success'
-                    } gap-1">
-                        <i class="fas fa-tools"></i>
-                        {item['active_lendings']} aktiv
-                    </span>
-                ''',
-                'actions': f'''
-                    <div class="btn-group">
-                        <button class="btn btn-sm" onclick="editWorker('{item['barcode']}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-error" onclick="deleteWorker('{item['barcode']}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                ''',
-                'data_attrs': {
-                    'department': item['department'],
-                    'lending': 'with_lendings' if item['active_lendings'] > 0 else 'without_lendings'
-                }
-            } for item in workers],
-            'add_url': url_for('workers.add'),
-            'add_text': 'Neuer Mitarbeiter'
-        }
+        print(f"Gefundene Abteilungen: {[d['department'] for d in departments]}")
         
-        return render_template('shared/list_view.html', **config)
-        
+        return render_template('workers/index.html',
+                             workers=workers,
+                             departments=[d['department'] for d in departments],
+                             is_admin=session.get('is_admin', False))
+                             
     except Exception as e:
-        flash(f'Fehler beim Laden der Mitarbeiter: {str(e)}', 'error')
+        print(f"Fehler beim Laden der Mitarbeiter: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        flash('Fehler beim Laden der Mitarbeiter', 'error')
         return redirect(url_for('index'))
 
-@bp.route('/workers/add', methods=['GET', 'POST'])
+@bp.route('/add', methods=['GET', 'POST'])
 @admin_required
 def add():
     departments = [
@@ -110,7 +71,7 @@ def add():
         
         if department not in departments:
             flash('Ungültige Abteilung ausgewählt', 'error')
-            return render_template('admin/add_worker.html', departments=departments)
+            return render_template('workers/add.html', departments=departments)
         
         try:
             Database.query(
@@ -124,73 +85,63 @@ def add():
         except Exception as e:
             flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
             
-    return render_template('admin/add_worker.html', departments=departments)
+    return render_template('workers/add.html', departments=departments)
 
 @bp.route('/<barcode>')
-@login_required
 def details(barcode):
-    departments = [
-        'Medien und Digitales',
-        'Technik',
-        'Kaufmännisches',
-        'Service',
-        'APE',
-        'Mitarbeiter'
-    ]
-    
+    """Zeigt Details eines Mitarbeiters"""
     worker = Database.query('SELECT * FROM workers WHERE barcode = ? AND deleted = 0', [barcode], one=True)
+    
     if not worker:
         flash('Mitarbeiter nicht gefunden', 'error')
         return redirect(url_for('workers.index'))
-
-    # Hole aktuelle Ausleihen
-    current_lendings = Database.query('''
-        SELECT 
+        
+    # Aktuelle Ausleihen
+    active_lendings = Database.query('''
+        SELECT
             t.name as tool_name,
             t.barcode as tool_barcode,
-            strftime('%d.%m.%Y %H:%M', l.lent_at) as lent_at,
-            'Werkzeug' as item_type,
-            1 as amount_display
+            l.lent_at
         FROM lendings l
         JOIN tools t ON l.tool_barcode = t.barcode
-        WHERE l.worker_barcode = ? 
+        WHERE l.worker_barcode = ?
         AND l.returned_at IS NULL
         ORDER BY l.lent_at DESC
     ''', [barcode])
-
-    # Hole Ausleihhistorie
-    lending_history = Database.query('''
-        SELECT 
-            t.name as tool_name,
-            t.barcode as tool_barcode,
-            strftime('%d.%m.%Y %H:%M', l.lent_at) as lent_at,
-            strftime('%d.%m.%Y %H:%M', l.returned_at) as returned_at,
-            'Werkzeug' as item_type,
-            NULL as amount_display
+    
+    # Historie
+    history = Database.query('''
+        SELECT
+            t.name as item_name,
+            t.barcode as item_barcode,
+            l.lent_at,
+            l.returned_at,
+            'Werkzeug' as type,
+            NULL as quantity
         FROM lendings l
         JOIN tools t ON l.tool_barcode = t.barcode
         WHERE l.worker_barcode = ?
         AND l.returned_at IS NOT NULL
+        
         UNION ALL
-        SELECT 
-            c.name as tool_name,
-            c.barcode as tool_barcode,
-            strftime('%d.%m.%Y %H:%M', cu.used_at) as lent_at,
-            strftime('%d.%m.%Y %H:%M', cu.used_at) as returned_at,
-            'Verbrauchsmaterial' as item_type,
-            NULL as amount_display
-        FROM consumable_usage cu
-        JOIN consumables c ON cu.consumable_id = c.id
-        JOIN workers w ON cu.worker_id = w.id
-        WHERE w.barcode = ?
+        
+        SELECT
+            c.name as item_name,
+            c.barcode as item_barcode,
+            cu.used_at as lent_at,
+            cu.used_at as returned_at,
+            'Verbrauchsmaterial' as type,
+            cu.quantity
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        WHERE cu.worker_barcode = ?
         ORDER BY lent_at DESC
     ''', [barcode, barcode])
-
-    return render_template('worker_details.html', 
+    
+    return render_template('workers/details.html',
                          worker=worker,
-                         current_lendings=current_lendings,
-                         lending_history=lending_history,
-                         departments=departments)
+                         active_lendings=active_lendings,
+                         history=history)
 
 @bp.route('/<barcode>/edit', methods=['POST'])
 @admin_required

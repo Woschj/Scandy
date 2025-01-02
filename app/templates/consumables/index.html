@@ -27,9 +27,8 @@
 
 <select class="select select-bordered w-full max-w-xs" id="stockFilter">
     <option value="">Alle Bestände</option>
-    <option value="in_stock">Verfügbar</option>
-    <option value="low_stock">Niedriger Bestand</option>
-    <option value="out_of_stock">Nicht verfügbar</option>
+    <option value="low">Niedriger Bestand</option>
+    <option value="sufficient">Ausreichend</option>
 </select>
 {% endblock %}
 
@@ -45,32 +44,66 @@
 {% endblock %}
 
 {% block table_rows %}
-{% for item in items %}
+{% for item in consumables %}
 <tr class="hover data-row" 
-    data-category="{{ item.category }}"
-    data-location="{{ item.location }}"
-    data-stock="{{ 'out_of_stock' if item.stock == 0 else 'low_stock' if item.stock < item.min_stock else 'in_stock' }}">
+    data-category="{{ item.category or '' }}"
+    data-location="{{ item.location or '' }}"
+    data-stock="{{ item.stock_status }}">
     <td>
-        <a href="{{ url_for('consumables.details', barcode=item.barcode) }}" class="link link-hover font-medium">
+        <a href="{{ url_for('consumables.details', barcode=item.barcode) }}" 
+           class="link link-hover font-medium">
             {{ item.name }}
         </a>
     </td>
     <td><code>{{ item.barcode }}</code></td>
-    <td>{{ item.location }}</td>
     <td>
-        <span class="badge {{ 'badge-error' if item.stock == 0 else 'badge-warning' if item.stock < item.min_stock else 'badge-success' }} gap-1">
-            <i class="fas fa-box"></i>
-            {{ item.stock }} / {{ item.min_stock }}
+        <span class="badge badge-ghost gap-1">
+            <i class="fas fa-map-marker-alt text-info"></i>
+            {{ item.location or '-' }}
         </span>
     </td>
-    <td>{{ item.category }}</td>
+    <td>
+        {% if item.stock_status == 'critical' %}
+            <span class="badge badge-error gap-1 text-error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ item.quantity }} / {{ item.min_quantity }}
+                ({{ item.stock_percentage }}%)
+            </span>
+        {% elif item.stock_status == 'warning' %}
+            <span class="badge badge-warning gap-1 text-warning-content">
+                <i class="fas fa-exclamation"></i>
+                {{ item.quantity }} / {{ item.min_quantity }}
+                ({{ item.stock_percentage }}%)
+            </span>
+        {% else %}
+            <span class="badge badge-success gap-1 text-success-content">
+                <i class="fas fa-check"></i>
+                {{ item.quantity }} / {{ item.min_quantity }}
+                ({{ item.stock_percentage }}%)
+            </span>
+        {% endif %}
+    </td>
+    <td>
+        {% set category_colors = {
+            'Büromaterial': 'badge-primary',
+            'Werkstattbedarf': 'badge-secondary',
+            'Schutzausrüstung': 'badge-accent',
+            'Reinigung': 'badge-info'
+        } %}
+        <span class="badge {{ category_colors.get(item.category, 'badge-neutral') }} gap-1">
+            <i class="fas fa-tag"></i>
+            {{ item.category or '-' }}
+        </span>
+    </td>
     {% if is_admin %}
     <td class="text-right">
         <div class="btn-group">
-            <button class="btn btn-sm" onclick="editConsumable('{{ item.barcode }}')">
+            <a href="{{ url_for('consumables.edit', barcode=item.barcode) }}" 
+               class="btn btn-sm">
                 <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-sm btn-error" onclick="deleteConsumable('{{ item.barcode }}')">
+            </a>
+            <button class="btn btn-sm btn-error" 
+                    onclick="deleteConsumable('{{ item.barcode }}')">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -80,32 +113,53 @@
 {% endfor %}
 {% endblock %}
 
-{% block list_scripts %}
-// Suchfunktion
-document.getElementById('searchInput').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    document.querySelectorAll('.data-row').forEach(row => {
-        const searchableContent = row.textContent.toLowerCase();
-        row.style.display = searchableContent.includes(searchTerm) ? '' : 'none';
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter-Funktionalität
+    function applyFilters() {
+        const category = document.getElementById('categoryFilter').value;
+        const location = document.getElementById('locationFilter').value;
+        const stock = document.getElementById('stockFilter').value;
+        
+        document.querySelectorAll('.data-row').forEach(row => {
+            const matchesCategory = !category || row.dataset.category === category;
+            const matchesLocation = !location || row.dataset.location === location;
+            const matchesStock = !stock || row.dataset.stock === stock;
+            
+            row.style.display = (matchesCategory && matchesLocation && matchesStock) ? '' : 'none';
+        });
+    }
+
+    // Filter-Event-Listener
+    ['categoryFilter', 'locationFilter', 'stockFilter'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', applyFilters);
+        }
     });
 });
 
-// Filter-Funktionalität
-function applyFilters() {
-    const category = document.getElementById('categoryFilter').value;
-    const location = document.getElementById('locationFilter').value;
-    const stock = document.getElementById('stockFilter').value;
+// Löschfunktion
+async function deleteConsumable(barcode) {
+    if (!confirm('Möchten Sie dieses Verbrauchsmaterial wirklich löschen?')) {
+        return;
+    }
     
-    document.querySelectorAll('.data-row').forEach(row => {
-        const matchesCategory = !category || row.dataset.category === category;
-        const matchesLocation = !location || row.dataset.location === location;
-        const matchesStock = !stock || row.dataset.stock === stock;
+    try {
+        const response = await fetch(`/consumables/${barcode}/delete`, {
+            method: 'DELETE'
+        });
         
-        row.style.display = (matchesCategory && matchesLocation && matchesStock) ? '' : 'none';
-    });
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(`Fehler beim Löschen: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`Fehler: ${error.message}`);
+    }
 }
-
-document.getElementById('categoryFilter').addEventListener('change', applyFilters);
-document.getElementById('locationFilter').addEventListener('change', applyFilters);
-document.getElementById('stockFilter').addEventListener('change', applyFilters);
+</script>
 {% endblock %} 

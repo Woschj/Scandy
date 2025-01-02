@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ consumable.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">{{ consumable.name }}</h1>
+            <div class="flex gap-2">
+                <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Zurück
+                </a>
+                {% if current_user.is_admin %}
+                <button class="btn btn-primary" onclick="editConsumable('{{ consumable.barcode }}')">
+                    <i class="fas fa-edit mr-2"></i>
+                    Bearbeiten
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Basis-Informationen -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Details</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Barcode</label>
+                            <p class="font-mono">{{ consumable.barcode }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
+                            <p>{{ consumable.category or 'Keine Kategorie' }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Lagerort</label>
+                            <p>{{ consumable.location or 'Kein Lagerort' }}</p>
+                        </div>
+                        {% if consumable.description %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Beschreibung</label>
+                            <p>{{ consumable.description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bestand -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Bestand</h2>
+                    <div class="stats shadow">
+                        <div class="stat">
+                            <div class="stat-title">Aktueller Bestand</div>
+                            <div class="stat-value">{{ consumable.quantity }}</div>
+                            <div class="stat-desc">Mindestbestand: {{ consumable.min_quantity }}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Status</div>
+                            <div class="stat-value">
+                                {% if consumable.quantity <= consumable.min_quantity %}
+                                <span class="text-error">Nachbestellen</span>
+                                {% else %}
+                                <span class="text-success">Ausreichend</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

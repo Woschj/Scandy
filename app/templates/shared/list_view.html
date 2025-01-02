@@ -1,105 +1,55 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mx-auto p-4">
-    <!-- Kopfzeile mit Suche und Aktionen -->
-    <div class="flex justify-between items-center mb-4">
-        <div class="flex-1 max-w-sm">
-            <div class="form-control">
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    {% block list_header %}{% endblock %}
+
+    <!-- Suchleiste und Filter in einer Card -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <!-- Suchleiste -->
+            <div class="form-control mb-4">
                 <div class="input-group">
-                    <input type="text" id="searchInput" placeholder="Suchen..." class="input input-bordered w-full" />
+                    <input type="text" 
+                           placeholder="Suchen..." 
+                           class="input input-bordered w-full" 
+                           id="searchInput">
                     <button class="btn btn-square">
                         <i class="fas fa-search"></i>
                     </button>
                 </div>
             </div>
+
+            <!-- Filter -->
+            {% block list_filters %}{% endblock %}
         </div>
-        {% if is_admin and add_url %}
-        <div class="flex gap-2">
-            <a href="{{ add_url }}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> {{ add_text|default('Neu') }}
-            </a>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Filter-Leiste -->
-    {% if filters %}
-    <div class="flex gap-2 mb-4">
-        {% for filter in filters %}
-        <select class="select select-bordered w-full max-w-xs" id="{{ filter.id }}">
-            <option value="">{{ filter.placeholder }}</option>
-            {% for option in filter.options %}
-            <option value="{{ option.value }}">{{ option.label }}</option>
-            {% endfor %}
-        </select>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Datentabelle -->
+    <!-- Hauptinhalt in einer Card -->
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="overflow-x-auto">
-                <table class="table w-full">
-                    <thead>
-                        <tr>
-                            {% for column in columns %}
-                            <th {% if column.align %}class="text-{{ column.align }}"{% endif %}>
-                                {{ column.label }}
-                            </th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in items %}
-                        <tr class="hover data-row" 
-                            {% for key, value in item.data_attrs.items() %}
-                            data-{{ key }}="{{ value }}"
-                            {% endfor %}>
-                            {% for column in columns %}
-                            <td {% if column.align %}class="text-{{ column.align }}"{% endif %}>
-                                {{ item[column.key]|safe }}
-                            </td>
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% block list_content %}{% endblock %}
         </div>
     </div>
 </div>
 
+<!-- Scripts -->
 <script>
-// Suchfunktion
-document.getElementById('searchInput').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    document.querySelectorAll('.data-row').forEach(row => {
-        const searchableContent = row.textContent.toLowerCase();
-        row.style.display = searchableContent.includes(searchTerm) ? '' : 'none';
-    });
+// Basis-Suchfunktion
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.data-row').forEach(row => {
+                const searchableContent = row.textContent.toLowerCase();
+                row.style.display = searchableContent.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
 });
-
-// Filter-Funktionalität
-{% if filters %}
-function applyFilters() {
-    {% for filter in filters %}
-    const {{ filter.id }} = document.getElementById('{{ filter.id }}').value;
-    {% endfor %}
-    
-    document.querySelectorAll('.data-row').forEach(row => {
-        {% for filter in filters %}
-        const matches{{ filter.id }} = !{{ filter.id }} || row.dataset.{{ filter.id }} === {{ filter.id }};
-        {% endfor %}
-        
-        row.style.display = ({% for filter in filters %}matches{{ filter.id }}{% if not loop.last %} && {% endif %}{% endfor %}) ? '' : 'none';
-    });
-}
-
-{% for filter in filters %}
-document.getElementById('{{ filter.id }}').addEventListener('change', applyFilters);
-{% endfor %}
-{% endif %}
 </script>
+
+{% block list_scripts %}{% endblock %}
 {% endblock %} 

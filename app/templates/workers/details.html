@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}{{ worker.firstname }} {{ worker.lastname }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">{{ worker.firstname }} {{ worker.lastname }}</h1>
+            <div class="flex gap-2">
+                <a href="{{ url_for('workers.index') }}" class="btn btn-ghost">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Zurück
+                </a>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Basis-Informationen -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Details</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Barcode</label>
+                            <p class="font-mono">{{ worker.barcode }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Abteilung</label>
+                            <p>{{ worker.department or 'Keine Abteilung' }}</p>
+                        </div>
+                        {% if worker.email %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">E-Mail</label>
+                            <p>{{ worker.email }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aktuelle Ausleihen -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Aktuelle Ausleihen</h2>
+                    {% if active_lendings %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Werkzeug</th>
+                                    <th>Ausgeliehen seit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lending in active_lendings %}
+                                <tr>
+                                    <td>{{ lending.tool_name }}</td>
+                                    <td>{{ lending.lent_at|format_datetime }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine aktiven Ausleihen</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
+                <div class="card-body">
+                    <h2 class="card-title">Historie</h2>
+                    {% if history %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Typ</th>
+                                    <th>Gegenstand</th>
+                                    <th>Datum</th>
+                                    <th>Aktion</th>
+                                    {% if history.quantity %}
+                                    <th>Menge</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in history %}
+                                <tr>
+                                    <td>{{ item.type }}</td>
+                                    <td>{{ item.item_name }}</td>
+                                    <td>{{ item.lent_at|format_datetime }}</td>
+                                    <td>
+                                        {% if item.type == 'Werkzeug' %}
+                                            {% if item.returned_at %}
+                                            Rückgabe am {{ item.returned_at|format_datetime }}
+                                            {% else %}
+                                            Ausleihe
+                                            {% endif %}
+                                        {% else %}
+                                            Ausgabe
+                                        {% endif %}
+                                    </td>
+                                    {% if item.quantity %}
+                                    <td>{{ item.quantity }} Stk</td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Historie vorhanden</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

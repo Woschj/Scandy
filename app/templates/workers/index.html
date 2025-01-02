@@ -1,0 +1,141 @@
+{% extends "shared/list_base.html" %}
+
+{% block actions %}
+{% if is_admin %}
+<div class="flex gap-2">
+    <a href="{{ url_for('workers.add') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Neuer Mitarbeiter
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block filters %}
+<select class="select select-bordered w-full max-w-xs" id="departmentFilter">
+    <option value="">Alle Abteilungen</option>
+    {% for department in departments %}
+    <option value="{{ department }}">{{ department }}</option>
+    {% endfor %}
+</select>
+{% endblock %}
+
+{% block table_headers %}
+<th>Name</th>
+<th>Barcode</th>
+<th>Abteilung</th>
+<th>E-Mail</th>
+<th>Ausleihen</th>
+{% if is_admin %}
+<th class="text-right">Aktionen</th>
+{% endif %}
+{% endblock %}
+
+{% block table_rows %}
+{% for worker in workers %}
+<tr class="hover data-row" data-department="{{ worker.department or '' }}">
+    <td>
+        <a href="{{ url_for('workers.details', barcode=worker.barcode) }}" 
+           class="link link-hover font-medium">
+            {{ worker.lastname }}, {{ worker.firstname }}
+        </a>
+    </td>
+    <td><code>{{ worker.barcode }}</code></td>
+    <td>
+        {% set dept_colors = {
+            'Medien und Digitales': ['badge-info', 'fa-desktop', 'text-info'],
+            'Technik': ['badge-warning', 'fa-wrench', 'text-warning'],
+            'Kaufmännisches': ['badge-success', 'fa-calculator', 'text-success'],
+            'Service': ['badge-secondary', 'fa-concierge-bell', 'text-secondary'],
+            'APE': ['badge-error', 'fa-graduation-cap', 'text-error'],
+            'Mitarbeiter': ['badge-neutral', 'fa-user', 'text-base-content']
+        } %}
+        {% set dept_style = dept_colors.get(worker.department, ['badge-ghost', 'fa-building', 'text-base-content']) %}
+        <span class="badge {{ dept_style[0] }} gap-1">
+            <i class="fas {{ dept_style[1] }} {{ dept_style[2] }}"></i>
+            {{ worker.department or '-' }}
+        </span>
+    </td>
+    <td>
+        {% if worker.email %}
+        <a href="mailto:{{ worker.email }}" class="link link-hover text-info">
+            <i class="fas fa-envelope"></i>
+            {{ worker.email }}
+        </a>
+        {% else %}
+        <span class="text-base-content/50">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if worker.active_lendings > 0 %}
+            <span class="badge badge-warning gap-1">
+                <i class="fas fa-tools text-warning-content"></i>
+                {{ worker.active_lendings }} aktiv
+            </span>
+        {% else %}
+            <span class="badge badge-success gap-1">
+                <i class="fas fa-check text-success-content"></i>
+                Keine Ausleihen
+            </span>
+        {% endif %}
+    </td>
+    {% if is_admin %}
+    <td class="text-right">
+        <div class="btn-group">
+            <a href="{{ url_for('workers.edit', barcode=worker.barcode) }}" 
+               class="btn btn-sm">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button class="btn btn-sm btn-error" 
+                    onclick="deleteWorker('{{ worker.barcode }}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </td>
+    {% endif %}
+</tr>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter-Funktionalität
+    function applyFilters() {
+        const department = document.getElementById('departmentFilter').value;
+        
+        document.querySelectorAll('.data-row').forEach(row => {
+            const matchesDepartment = !department || row.dataset.department === department;
+            row.style.display = matchesDepartment ? '' : 'none';
+        });
+    }
+
+    // Filter-Event-Listener
+    const departmentFilter = document.getElementById('departmentFilter');
+    if (departmentFilter) {
+        departmentFilter.addEventListener('change', applyFilters);
+    }
+});
+
+// Löschfunktion
+async function deleteWorker(barcode) {
+    if (!confirm('Möchten Sie diesen Mitarbeiter wirklich löschen?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/workers/${barcode}/delete`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(`Fehler beim Löschen: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`Fehler: ${error.message}`);
+    }
+}
+</script>
+{% endblock %} 
