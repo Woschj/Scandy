@@ -132,7 +132,7 @@ def create_app(test_config=None):
             return redirect(url_for('auth.setup'))
         if 'user_id' not in session:
             return redirect(url_for('auth.login'))
-        return redirect(url_for('quick_scan.quick_scan'))
+        return redirect(url_for('tools.index'))  # Zur Werkzeug-Übersicht statt QuickScan
 
     # CLI-Befehle nur lokal laden
     try:

@@ -5,6 +5,10 @@ from ..models.database import Database
 from ..utils.decorators import login_required, admin_required
 import traceback
 from app.config import Config
+import barcode
+from barcode.writer import ImageWriter
+from io import BytesIO
+import base64
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -318,3 +322,116 @@ def get_sync_status():
             'success': False,
             'message': f'Fehler: {str(e)}'
         }), 500
+
+@bp.route('/barcode/<code>')
+def generate_barcode(code):
+    """Generiert einen Barcode als Bild"""
+    try:
+        code128 = barcode.get('code128', code, writer=ImageWriter())
+        buffer = BytesIO()
+        code128.write(buffer)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode()
+        return jsonify({
+            'barcode': f'data:image/png;base64,{image_base64}'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/lending/process', methods=['POST'])
+@admin_required
+def process_lending():
+    """Verarbeitet eine Ausleihe oder Rückgabe"""
+    try:
+        data = request.json
+        item_type = data.get('type')
+        item_id = data.get('item_id')
+        worker_id = data.get('worker_id')
+        action = data.get('action')
+        
+        with Database.get_db() as conn:
+            if item_type == 'tool':
+                if action == 'lend':
+                    conn.execute(
+                        '''INSERT INTO lendings 
+                           (tool_id, worker_id, lent_at) 
+                           VALUES (?, ?, CURRENT_TIMESTAMP)''',
+                        [item_id, worker_id]
+                    )
+                    conn.execute(
+                        'UPDATE tools SET status = "ausgeliehen" WHERE id = ?',
+                        [item_id]
+                    )
+                else:
+                    conn.execute(
+                        '''UPDATE lendings 
+                           SET returned_at = CURRENT_TIMESTAMP 
+                           WHERE tool_id = ? AND returned_at IS NULL''',
+                        [item_id]
+                    )
+                    conn.execute(
+                        'UPDATE tools SET status = "verfügbar" WHERE id = ?',
+                        [item_id]
+                    )
+            
+            elif item_type == 'consumable':
+                conn.execute(
+                    '''INSERT INTO consumable_usage 
+                       (consumable_id, worker_id, quantity, used_at) 
+                       VALUES (?, ?, 1, CURRENT_TIMESTAMP)''',
+                    [item_id, worker_id]
+                )
+                conn.execute(
+                    'UPDATE consumables SET quantity = quantity - 1 WHERE id = ?',
+                    [item_id]
+                )
+            
+            conn.commit()
+            return jsonify({'success': True})
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/inventory/item/<barcode>', methods=['GET'])
+@login_required
+def get_item(barcode):
+    try:
+        # Erst in Werkzeugen suchen
+        tool = Database.query('''
+            SELECT t.*, 
+                   COALESCE(t.status, 
+                     CASE WHEN l.id IS NOT NULL THEN 'ausgeliehen' 
+                     ELSE 'verfügbar' END) as status
+            FROM tools t
+            LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+            WHERE t.barcode = ? AND t.deleted = 0
+        ''', [barcode], one=True)
+        
+        if tool:
+            return jsonify({
+                'id': tool['id'],
+                'barcode': tool['barcode'],
+                'name': tool['name'],
+                'type': 'tool',
+                'status': tool['status']
+            })
+        
+        # Wenn nicht gefunden, in Verbrauchsmaterialien suchen
+        consumable = Database.query('''
+            SELECT * FROM consumables 
+            WHERE barcode = ? AND deleted = 0
+        ''', [barcode], one=True)
+        
+        if consumable:
+            return jsonify({
+                'id': consumable['id'],
+                'barcode': consumable['barcode'],
+                'name': consumable['name'],
+                'type': 'consumable',
+                'status': 'verfügbar' if consumable['quantity'] > 0 else 'nicht verfügbar'
+            })
+            
+        return jsonify({'error': 'Artikel nicht gefunden'}), 404
+        
+    except Exception as e:
+        print(f"Fehler beim Suchen des Items: {str(e)}")
+        return jsonify({'error': str(e)}), 500

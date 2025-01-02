@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Scandy{% endblock %}</title>
     
-    <!-- Tailwind und DaisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.2/dist/full.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind (Produktionsversion) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    
+    <!-- DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <!-- Custom CSS -->
+    <!-- Eigene Styles nach den Framework Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/quickscan.css') }}">
 
     <script>
         tailwind.config = {
@@ -32,13 +34,14 @@
     <div class="flex flex-col min-h-screen">
         <!-- Vertikales Seitenmenü -->
         <div class="fixed left-0 top-0 h-full w-16 bg-base-300 flex flex-col items-center py-4 gap-2 shadow-lg z-50">
-            <!-- Logo als Home-Button -->
-            <a href="{{ url_for('index') }}" 
-               class="w-12 h-12 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100">
-                <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
-                     alt="BTZ Logo" 
-                     class="w-10 h-10 object-contain">
-            </a>
+            <!-- Logo als QuickScan-Trigger -->
+            <div class="w-12 h-12 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 cursor-pointer"
+                 id="quickScanTrigger"
+                 title="Quick Scan öffnen">
+                <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
+                     alt="Scandy Logo" 
+                     class="w-8 h-8 object-contain">
+            </div>
             
             <!-- Trennlinie -->
             <div class="w-8 h-0.5 bg-base-content/20 rounded-full mb-2"></div>
@@ -67,7 +70,6 @@
 
         <!-- Navbar -->
         <div class="navbar bg-base-100 shadow-lg px-4 relative ml-16">
-            <!-- Linke Seite -->
             <div class="flex-1">
                 <h1 class="text-xl font-bold">
                     {% if 'tools' in request.endpoint %}Werkzeuge
@@ -77,16 +79,12 @@
                 </h1>
             </div>
 
-            <!-- QuickScan Button (Mittig) -->
-            <button onclick="showQuickScan()" 
-                    class="btn btn-circle btn-primary text-white absolute left-1/2 -translate-x-1/2 flex items-center justify-center overflow-hidden quickscan-button"
-                    style="z-index: 50;"
-                    aria-label="QuickScan öffnen">
-                <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
-                     alt="Scandy QuickScan" 
-                     class="quickscan-logo transition-transform duration-200 hover:scale-110"
-                     style="filter: brightness(0) invert(1); image-rendering: -webkit-optimize-contrast;">
-            </button>
+            <!-- BTZ Logo in der Mitte -->
+            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
+                     alt="BTZ Logo" 
+                     class="h-10 object-contain">
+            </div>
 
             <!-- Rechte Seite -->
             <div class="flex-none">
@@ -100,18 +98,6 @@
                        class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
                         <i class="fas fa-chart-line mr-2"></i>Dashboard
                     </a>
-                    <li class="mt-4">
-                        <h2 class="menu-title">Admin</h2>
-                        <ul>
-                            <li>
-                                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center">
-                                    <i class="fas fa-chart-bar mr-2"></i> 
-                                    Dashboard
-                                </a>
-                            </li>
-                            <!-- ... andere Admin-Links ... -->
-                        </ul>
-                    </li>
                     <a href="{{ url_for('admin.trash') }}" 
                        class="btn btn-ghost btn-circle text-error relative">
                         <i class="fas fa-trash-alt"></i>
@@ -148,77 +134,60 @@
     </div>
 
     <!-- QuickScan Modal -->
-    <dialog id="quickScanModal">
-        <div class="modal-box">
-            <!-- Header -->
-            <div class="mb-6">
-                <!-- Titel und Schließen-Button -->
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-bold text-2xl">QuickScan</h3>
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-                    </form>
-                </div>
-                
-                <!-- Scanner-Modus Auswahl -->
-                <div class="flex justify-center">
-                    <div class="join">
-                        <button class="join-item btn btn-sm btn-primary" 
-                                onclick="switchScanMode('barcode')"
-                                id="barcodeModeBtn">
-                            <i class="fas fa-barcode mr-2"></i>Barcode-Scanner
-                        </button>
-                        <button class="join-item btn btn-sm" 
-                                onclick="switchScanMode('camera')"
-                                id="cameraModeBtn">
-                            <i class="fas fa-camera mr-2"></i>Kamera-Scanner
-                        </button>
-                    </div>
-                </div>
-            </div>
+    {% include 'components/quickscan_modal.html' %}
 
-            <!-- Scan Steps -->
-            <div id="scan-steps" class="mb-6">
-                <!-- Step 1: Werkzeug -->
-                <div id="step-tool" class="scan-step">
-                    <div class="text-center mb-6">
-                        <i class="fas fa-tools text-5xl text-primary mb-4"></i>
-                        <h4 class="text-xl font-bold mb-2">Werkzeug scannen</h4>
-                        <p class="text-sm opacity-70">Bitte scannen Sie den Barcode des Werkzeugs</p>
-                    </div>
-                    <!-- Kamera-Vorschau Container -->
-                    <div id="cameraPreview" class="hidden mb-4">
-                        <video id="video" class="w-full rounded-lg"></video>
-                    </div>
-                    <div id="tool-preview" class="rounded-xl p-4">
-                        <!-- Wird dynamisch gefüllt -->
-                    </div>
-                </div>
+    <!-- Skripte bereinigen - nur einmal einbinden -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
 
-                <!-- Step 2: Mitarbeiter -->
-                <div id="step-worker" class="scan-step hidden">
-                    <div class="text-center mb-6">
-                        <i class="fas fa-user text-5xl text-primary mb-4"></i>
-                        <h4 class="text-xl font-bold mb-2">Mitarbeiter scannen</h4>
-                        <p class="text-sm opacity-70">Bitte scannen Sie den Mitarbeiterausweis</p>
-                    </div>
-                    <div id="worker-preview" class="rounded-xl p-4">
-                        <!-- Wird dynamisch gefüllt -->
-                    </div>
-                </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Logo-Klick Handler
+        const quickScanTrigger = document.getElementById('quickScanTrigger');
+        const quickScanModal = document.getElementById('quickScanModal');
+        
+        if (quickScanTrigger && quickScanModal) {
+            quickScanTrigger.addEventListener('click', function() {
+                quickScanModal.showModal();
+                // Fokus auf Input nach kurzem Delay
+                setTimeout(() => {
+                    const input = document.getElementById('itemScanInput');
+                    if (input) input.focus();
+                }, 100);
+            });
+        }
+    });
+    </script>
 
-                <!-- Step 3: Bestätigung -->
-                <div id="step-confirm" class="scan-step hidden">
-                    <!-- Wird dynamisch gefüllt -->
-                </div>
-            </div>
-
-            <!-- Scan Animation -->
-            <div class="scan-animation w-full h-2 bg-base-200 rounded-full">
-                <div class="scan-line"></div>
-            </div>
-        </div>
-    </dialog>
+    <!-- Zusätzliche Styles für Webcam-Scanning -->
+    <style>
+        .scan-line-camera {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: hsl(var(--p));
+            animation: scanAnimation 2s linear infinite;
+        }
+        
+        @keyframes scanAnimation {
+            0% {
+                top: 0;
+            }
+            50% {
+                top: 100%;
+            }
+            100% {
+                top: 0;
+            }
+        }
+        
+        #video {
+            max-height: 300px;
+            width: 100%;
+            object-fit: cover;
+        }
+    </style>
 
     <!-- QR-Code Modal -->
     <div id="qrModal" class="modal">
@@ -787,5 +756,13 @@
 
     <!-- HTML5-QR-Code-Scanner -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- QuickScan Assets -->
+    <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/quickscan.css') }}">
+
+    <!-- Toast -->
+    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
 </body>
 </html>
