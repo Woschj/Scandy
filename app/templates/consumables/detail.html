@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Breadcrumb -->
+    <div class="text-sm breadcrumbs mb-4">
+        <ul>
+            <li><a href="{{ url_for('consumables.index') }}">Verbrauchsmaterial</a></li>
+            <li>{{ consumable.name }}</li>
+        </ul>
+    </div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">{{ consumable.name }}</h1>
+        {% if session.get('is_admin') %}
+        <div class="flex gap-2">
+            <button class="btn btn-primary" onclick="toggleEdit()">
+                <i class="fas fa-edit mr-2"></i>Bearbeiten
+            </button>
+            <button class="btn btn-error" onclick="deleteConsumable()">
+                <i class="fas fa-trash mr-2"></i>Löschen
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Linke Spalte: Hauptinformationen -->
+        <div class="lg:col-span-2">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">
+                        <i class="fas fa-info-circle mr-2"></i>Details
+                    </h2>
+                    <form id="consumableForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Name</span></label>
+                            <input type="text" name="name" class="input input-bordered" 
+                                   value="{{ consumable.name }}" readonly>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Barcode</span></label>
+                            <input type="text" name="barcode" class="input input-bordered" 
+                                   value="{{ consumable.barcode }}" readonly>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Kategorie</span></label>
+                            <input type="text" name="category" class="input input-bordered" 
+                                   value="{{ consumable.category }}" readonly>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Lagerort</span></label>
+                            <input type="text" name="location" class="input input-bordered" 
+                                   value="{{ consumable.location }}" readonly>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Bestand</span></label>
+                            <input type="number" name="quantity" class="input input-bordered" 
+                                   value="{{ consumable.quantity }}" readonly>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Mindestbestand</span></label>
+                            <input type="number" name="min_quantity" class="input input-bordered" 
+                                   value="{{ consumable.min_quantity }}" readonly>
+                        </div>
+
+                        <div class="form-control md:col-span-2">
+                            <label class="label"><span class="label-text">Beschreibung</span></label>
+                            <textarea name="description" class="textarea textarea-bordered h-24" 
+                                      readonly>{{ consumable.description }}</textarea>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rechte Spalte: Status & Statistiken -->
+        <div class="space-y-6">
+            <!-- Status Card -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-line mr-2"></i>Status
+                    </h2>
+                    <div class="stats stats-vertical shadow w-full">
+                        <div class="stat">
+                            <div class="stat-title">Aktueller Bestand</div>
+                            <div class="stat-value text-{{ 'success' if consumable.quantity >= consumable.min_quantity else 'error' }}">
+                                {{ consumable.quantity }}
+                            </div>
+                            <div class="stat-desc">
+                                Mindestbestand: {{ consumable.min_quantity }}
+                            </div>
+                        </div>
+                        
+                        <div class="stat">
+                            <div class="stat-title">Entnahmen</div>
+                            <div class="stat-value">{{ consumable.usage_history|length }}</div>
+                            <div class="stat-desc">Gesamt</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code Card -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body items-center">
+                    <h2 class="card-title">
+                        <i class="fas fa-qrcode mr-2"></i>Barcode
+                    </h2>
+                    <div id="barcodeContainer" class="p-4 bg-white rounded-lg">
+                        <!-- Barcode wird hier eingefügt -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historie -->
+    <div class="mt-6">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-history mr-2"></i>Entnahme-Historie
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Mitarbeiter</th>
+                                <th>Menge</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usage in consumable.usage_history %}
+                            <tr>
+                                <td>{{ usage.used_at.strftime('%d.%m.%Y') }}</td>
+                                <td>{{ usage.worker_name }}</td>
+                                <td>{{ usage.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript für Bearbeitung und Barcode -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Barcode generieren
+    fetch(`/api/barcode/${encodeURIComponent('{{ consumable.barcode }}')}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('barcodeContainer').innerHTML = `
+                <img src="${data.barcode}" alt="Barcode" class="max-w-full">
+            `;
+        });
+});
+
+function toggleEdit() {
+    const form = document.getElementById('consumableForm');
+    const inputs = form.querySelectorAll('input, textarea');
+    const isReadOnly = inputs[0].readOnly;
+    
+    inputs.forEach(input => {
+        input.readOnly = !isReadOnly;
+    });
+    
+    if (!isReadOnly) {
+        // Save changes
+        const formData = new FormData(form);
+        fetch('{{ url_for("consumables.update", id=consumable.id) }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.toast.show('Änderungen gespeichert', 'success');
+                location.reload();
+            } else {
+                window.toast.show('Fehler beim Speichern', 'error');
+            }
+        });
+    }
+}
+
+function deleteConsumable() {
+    if (confirm('Verbrauchsmaterial wirklich löschen?')) {
+        fetch('{{ url_for("consumables.delete", id=consumable.id) }}', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{{ url_for("consumables.index") }}';
+            } else {
+                window.toast.show('Fehler beim Löschen', 'error');
+            }
+        });
+    }
+}
+</script>
+{% endblock %} 

@@ -46,7 +46,7 @@
             <!-- Trennlinie -->
             <div class="w-8 h-0.5 bg-base-content/20 rounded-full mb-2"></div>
             
-            <!-- Inventar-Menü -->
+            <!-- Navigation Items -->
             <a href="{{ url_for('tools.index') }}" 
                class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300 
                       {% if 'tools' in request.endpoint %}bg-primary text-primary-content{% else %}hover:bg-base-100{% endif %}">
@@ -54,7 +54,7 @@
             </a>
             
             <a href="{{ url_for('consumables.index') }}" 
-               class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300
+               class="w-12 h-12 rounded-3xl hover:rounded-xl flex items-center justify-center transition-all duration-300 
                       {% if 'consumables' in request.endpoint %}bg-primary text-primary-content{% else %}hover:bg-base-100{% endif %}">
                 <i class="fas fa-box-open text-xl"></i>
             </a>
@@ -73,17 +73,19 @@
             <div class="flex-1">
                 <h1 class="text-xl font-bold">
                     {% if 'tools' in request.endpoint %}Werkzeuge
-                    {% elif 'consumables' in request.endpoint %}Verbrauchsmaterial
                     {% elif 'workers' in request.endpoint %}Mitarbeiter
+                    {% elif 'consumables' in request.endpoint %}Verbrauchsmaterial
                     {% else %}Dashboard{% endif %}
                 </h1>
             </div>
 
-            <!-- BTZ Logo in der Mitte -->
+            <!-- BTZ Logo in der Mitte als Link zur Startseite -->
             <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
-                     alt="BTZ Logo" 
-                     class="h-10 object-contain">
+                <a href="{{ url_for('main.index') }}" class="hover:opacity-80 transition-opacity">
+                    <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
+                         alt="BTZ Logo" 
+                         class="h-10 object-contain">
+                </a>
             </div>
 
             <!-- Rechte Seite -->

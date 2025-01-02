@@ -50,8 +50,7 @@
     data-location="{{ tool.location or '' }}"
     data-status="{{ 'lent' if tool.lent_to else 'available' }}">
     <td>
-        <a href="{{ url_for('tools.details', barcode=tool.barcode) }}" 
-           class="link link-hover font-medium">
+        <a href="{{ url_for('tools.detail', uuid=tool.uuid) }}" class="link">
             {{ tool.name }}
         </a>
     </td>

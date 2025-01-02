@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <!-- Hero-Sektion -->
+    <div class="hero bg-base-100 rounded-box shadow-xl mb-8">
+        <div class="hero-content text-center">
+            <div class="max-w-2xl">
+                <h1 class="text-4xl font-bold mb-4">Willkommen bei Scandy</h1>
+                <p class="text-xl mb-6">Ihr digitales Werkzeug- und Inventarmanagement</p>
+                {% if not session.get('user_id') %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Anmelden
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Schnellstart-Karten -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- QuickScan -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-qrcode text-primary mr-2"></i>
+                    QuickScan
+                </h2>
+                <p>Schnelles Ausleihen und Zurückgeben von Werkzeugen mit dem Barcode-Scanner.</p>
+                <div class="card-actions justify-end">
+                    <button class="btn btn-primary" onclick="document.getElementById('quickScanModal').showModal()">
+                        <i class="fas fa-camera mr-2"></i>Scanner öffnen
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Werkzeugverwaltung -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-tools text-secondary mr-2"></i>
+                    Werkzeuge
+                </h2>
+                <p>Verwalten Sie Ihr Werkzeuginventar und behalten Sie den Überblick über Ausleihen.</p>
+                <div class="card-actions justify-end">
+                    <a href="{{ url_for('tools.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-list mr-2"></i>Zur Übersicht
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Verbrauchsmaterialien -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-box-open text-accent mr-2"></i>
+                    Verbrauchsmaterial
+                </h2>
+                <p>Verwalten Sie Ihre Verbrauchsmaterialien und behalten Sie den Bestand im Blick.</p>
+                <div class="card-actions justify-end">
+                    <a href="{{ url_for('consumables.index') }}" class="btn btn-accent">
+                        <i class="fas fa-boxes mr-2"></i>Zum Bestand
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hilfe & Anleitungen -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Kurzanleitung -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-book-open text-info mr-2"></i>
+                    Kurzanleitung
+                </h2>
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4">
+                        <div class="rounded-full bg-info/10 p-3">
+                            <i class="fas fa-1 text-info"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Werkzeug ausleihen</h3>
+                            <p>Öffnen Sie den QuickScan und scannen Sie nacheinander den Mitarbeiter- und Werkzeug-Barcode.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="rounded-full bg-info/10 p-3">
+                            <i class="fas fa-2 text-info"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Werkzeug zurückgeben</h3>
+                            <p>Scannen Sie einfach den Werkzeug-Barcode erneut, um die Rückgabe zu registrieren.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="rounded-full bg-info/10 p-3">
+                            <i class="fas fa-3 text-info"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold">Übersicht behalten</h3>
+                            <p>In der Werkzeugübersicht sehen Sie alle aktiven Ausleihen und den Status jedes Werkzeugs.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wichtige Hinweise -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-exclamation-circle text-warning mr-2"></i>
+                    Wichtige Hinweise
+                </h2>
+                <div class="space-y-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Bitte melden Sie beschädigte Werkzeuge umgehend beim Vorgesetzten.</span>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-clock"></i>
+                        <span>Werkzeuge sollten am Ende des Arbeitstages zurückgegeben werden.</span>
+                    </div>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Bei Fragen steht Ihnen das Team gerne zur Verfügung.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

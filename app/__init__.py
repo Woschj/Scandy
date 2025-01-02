@@ -114,25 +114,20 @@ def create_app(test_config=None):
         })
 
     # Blueprints registrieren
-    from app.routes import auth, admin, tools, workers, consumables, api, inventory, quick_scan, history
+    from app.routes import auth, admin, tools, workers, consumables, api, quick_scan, history, main
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(admin.bp)
     app.register_blueprint(tools.bp)
     app.register_blueprint(workers.bp)
-    app.register_blueprint(consumables.bp)  # Ohne zusätzlichen Prefix
+    app.register_blueprint(consumables.bp)
     app.register_blueprint(api.bp)
     app.register_blueprint(quick_scan.bp)
     app.register_blueprint(history.bp)
+    app.register_blueprint(main.bp)
 
-    # Standardroute
-    @app.route('/')
-    def index():
-        if needs_setup():
-            return redirect(url_for('auth.setup'))
-        if 'user_id' not in session:
-            return redirect(url_for('auth.login'))
-        return redirect(url_for('tools.index'))  # Zur Werkzeug-Übersicht statt QuickScan
+    # Setze die Index-Route als Startseite
+    app.add_url_rule('/', endpoint='index', view_func=main.index)
 
     # CLI-Befehle nur lokal laden
     try:
