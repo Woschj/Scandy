@@ -1,7 +1,7 @@
 {% extends "shared/list_base.html" %}
 
 {% block actions %}
-{% if is_admin %}
+{% if session.get('is_admin') %}
 <div class="flex gap-2">
     <a href="{{ url_for('consumables.add') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Neues Verbrauchsmaterial
@@ -38,7 +38,7 @@
 <th>Standort</th>
 <th>Bestand</th>
 <th>Kategorie</th>
-{% if is_admin %}
+{% if session.get('is_admin') %}
 <th class="text-right">Aktionen</th>
 {% endif %}
 {% endblock %}
@@ -48,10 +48,9 @@
 <tr class="hover data-row" 
     data-category="{{ item.category or '' }}"
     data-location="{{ item.location or '' }}"
-    data-stock="{{ item.stock_status }}">
+    data-status="{{ item.stock_status }}">
     <td>
-        <a href="{{ url_for('consumables.details', barcode=item.barcode) }}" 
-           class="link link-hover font-medium">
+        <a href="{{ url_for('consumables.detail', uuid=item.uuid) }}" class="link">
             {{ item.name }}
         </a>
     </td>
@@ -64,46 +63,35 @@
     </td>
     <td>
         {% if item.stock_status == 'critical' %}
-            <span class="badge badge-error gap-1 text-error-content">
+            <span class="badge badge-error gap-1">
                 <i class="fas fa-exclamation-triangle"></i>
-                {{ item.quantity }} / {{ item.min_quantity }}
-                ({{ item.stock_percentage }}%)
+                {{ item.quantity }}/{{ item.min_quantity }}
             </span>
         {% elif item.stock_status == 'warning' %}
-            <span class="badge badge-warning gap-1 text-warning-content">
+            <span class="badge badge-warning gap-1">
                 <i class="fas fa-exclamation"></i>
-                {{ item.quantity }} / {{ item.min_quantity }}
-                ({{ item.stock_percentage }}%)
+                {{ item.quantity }}/{{ item.min_quantity }}
             </span>
         {% else %}
-            <span class="badge badge-success gap-1 text-success-content">
+            <span class="badge badge-success gap-1">
                 <i class="fas fa-check"></i>
-                {{ item.quantity }} / {{ item.min_quantity }}
-                ({{ item.stock_percentage }}%)
+                {{ item.quantity }}/{{ item.min_quantity }}
             </span>
         {% endif %}
     </td>
     <td>
-        {% set category_colors = {
-            'Büromaterial': 'badge-primary',
-            'Werkstattbedarf': 'badge-secondary',
-            'Schutzausrüstung': 'badge-accent',
-            'Reinigung': 'badge-info'
-        } %}
-        <span class="badge {{ category_colors.get(item.category, 'badge-neutral') }} gap-1">
+        <span class="badge badge-neutral gap-1">
             <i class="fas fa-tag"></i>
             {{ item.category or '-' }}
         </span>
     </td>
-    {% if is_admin %}
+    {% if session.get('is_admin') %}
     <td class="text-right">
         <div class="btn-group">
-            <a href="{{ url_for('consumables.edit', barcode=item.barcode) }}" 
-               class="btn btn-sm">
+            <button class="btn btn-sm" onclick="editConsumable('{{ item.uuid }}')">
                 <i class="fas fa-edit"></i>
-            </a>
-            <button class="btn btn-sm btn-error" 
-                    onclick="deleteConsumable('{{ item.barcode }}')">
+            </button>
+            <button class="btn btn-sm btn-error" onclick="deleteConsumable('{{ item.uuid }}')">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -141,13 +129,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Löschfunktion
-async function deleteConsumable(barcode) {
+async function deleteConsumable(uuid) {
     if (!confirm('Möchten Sie dieses Verbrauchsmaterial wirklich löschen?')) {
         return;
     }
     
     try {
-        const response = await fetch(`/consumables/${barcode}/delete`, {
+        const response = await fetch(`/consumables/${uuid}/delete`, {
             method: 'DELETE'
         });
         

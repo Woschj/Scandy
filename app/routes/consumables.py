@@ -5,12 +5,12 @@ from datetime import datetime
 
 bp = Blueprint('consumables', __name__, url_prefix='/consumables')
 
-@bp.route('/<string:barcode>')
+@bp.route('/<string:uuid>')
 @login_required
-def detail(barcode):
+def detail(uuid):
     """Zeigt die Detailansicht eines Verbrauchsmaterials"""
     try:
-        # Hole Verbrauchsmaterial
+        # Hole Verbrauchsmaterial mit UUID statt Barcode
         consumable = Database.query('''
             SELECT c.*, 
                    CASE 
@@ -19,13 +19,13 @@ def detail(barcode):
                        ELSE 'leer'
                    END as status
             FROM consumables c
-            WHERE c.barcode = ? AND c.deleted = 0
-        ''', [barcode], one=True)
+            WHERE c.uuid = ? AND c.deleted = 0
+        ''', [uuid], one=True)
         
         if not consumable:
             return redirect(url_for('consumables.index'))
             
-        # Hole Nutzungshistorie
+        # Hole Nutzungshistorie (weiterhin mit Barcode, da dieser für die Verknüpfung genutzt wird)
         usage_history = Database.query('''
             SELECT cu.*,
                    w.firstname || ' ' || w.lastname as worker_name,
@@ -34,7 +34,7 @@ def detail(barcode):
             JOIN workers w ON cu.worker_barcode = w.barcode
             WHERE cu.consumable_barcode = ?
             ORDER BY cu.used_at DESC
-        ''', [barcode])
+        ''', [consumable['barcode']])
         
         # Füge Historie zum Verbrauchsmaterial hinzu
         consumable['usage_history'] = usage_history

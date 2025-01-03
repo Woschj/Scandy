@@ -5,124 +5,141 @@
 {% block content %}
 <!-- Hauptdashboard -->
 <div id="main-tab">
-    <!-- Server & Sync in eigener Reihe -->
-    <div class="grid grid-cols-1 gap-6 mb-8">
+    <!-- Server & Sync kompakter -->
+    <div class="mb-8">
         <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-                <h2 class="card-title">
-                    <i class="fas fa-sync"></i>
-                    Server & Sync
-                </h2>
-                <div class="stats stats-vertical shadow">
-                    <div class="stat">
-                        <div class="stat-title">Modus</div>
-                        <div class="stat-value text-base-content">
-                            {% if Config.SERVER_MODE %}
-                            <span class="badge badge-primary">Server</span>
-                            {% else %}
-                            <span class="badge">Client</span>
-                            {% endif %}
-                        </div>
-                        {% if Config.SERVER_MODE %}
-                        <div class="stat-desc">Server-URL: http://{{ Config.SERVER_HOST }}:{{ Config.SERVER_PORT }}</div>
-                        {% elif Config.SERVER_URL %}
-                        <div class="stat-desc">Server: {{ Config.SERVER_URL }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="stat">
-                        <div class="stat-actions">
-                            <a href="{{ url_for('admin.server_settings') }}" 
-                               class="btn btn-primary btn-block">
-                                <i class="fas fa-cog mr-2"></i>
-                                Einstellungen
-                            </a>
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <i class="fas fa-sync text-lg"></i>
+                        <div>
+                            <h2 class="font-bold">Server & Sync</h2>
+                            <div class="text-sm">
+                                {% if Config.SERVER_MODE %}
+                                <span class="badge badge-primary">Server</span>
+                                <span class="text-sm ml-2">http://{{ Config.SERVER_HOST }}:{{ Config.SERVER_PORT }}</span>
+                                {% else %}
+                                <span class="badge">Client</span>
+                                {% if Config.SERVER_URL %}
+                                <span class="text-sm ml-2">{{ Config.SERVER_URL }}</span>
+                                {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
+                    <a href="{{ url_for('admin.server_settings') }}" 
+                       class="btn btn-primary btn-sm">
+                        <i class="fas fa-cog mr-2"></i>
+                        Einstellungen
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Statistik-Karten -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Werkzeuge -->
+    <!-- Neue Statistik-Karten -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Werkzeug-Statistiken -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <h2 class="card-title">Werkzeuge</h2>
-                <div class="stats stats-vertical shadow">
-                    <div class="stat">
-                        <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.tools.total }}</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-title">Status</div>
-                        <a href="{{ url_for('tools.index') }}?status=verfügbar"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-success flex items-center gap-2">
-                                <i class="fas fa-check"></i>
-                                {{ stats.tools.available }} verfügbar
-                            </span>
-                        </a>
-                        <a href="{{ url_for('tools.index') }}?status=verliehen"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-warning flex items-center gap-2">
-                                <i class="fas fa-exchange-alt"></i>
-                                {{ stats.tools.lent }} verliehen
-                            </span>
-                        </a>
-                    </div>
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-tools text-primary mr-2"></i>
+                        Werkzeuge
+                    </h2>
+                    <span class="badge badge-primary">{{ stats.tools.total }} Gesamt</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Mitarbeiter -->
-        <div class="card bg-base-100 shadow-xl">
-            <div class="card-body">
-                <h2 class="card-title">Mitarbeiter</h2>
-                <div class="stats stats-vertical shadow">
-                    <div class="stat">
-                        <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.workers.total }}</div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Verfügbar</span>
+                        <span class="badge badge-success gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ stats.tools.available }}
+                        </span>
                     </div>
-                    <div class="stat">
-                        <div class="stat-title">Status</div>
-                        <span class="stat-desc flex justify-between items-center p-2">
-                            <span class="text-success flex items-center gap-2">
-                                <i class="fas fa-user"></i>
-                                {{ stats.workers.active }} aktiv
-                            </span>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Ausgeliehen</span>
+                        <span class="badge badge-warning gap-2">
+                            <i class="fas fa-hand-holding"></i>
+                            {{ stats.tools.lent }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Defekt</span>
+                        <span class="badge badge-error gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ stats.tools.defect }}
                         </span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Verbrauchsmaterial -->
+        <!-- Verbrauchsmaterial-Statistiken -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <h2 class="card-title">Verbrauchsmaterial</h2>
-                <div class="stats stats-vertical shadow">
-                    <div class="stat">
-                        <div class="stat-title">Gesamt</div>
-                        <div class="stat-value text-base-content">{{ stats.consumables.total }}</div>
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-box-open text-secondary mr-2"></i>
+                        Verbrauchsmaterial
+                    </h2>
+                    <span class="badge badge-secondary">{{ stats.consumables.total }} Artikel</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Ausreichend</span>
+                        <span class="badge badge-success gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ stats.consumables.sufficient }}
+                        </span>
                     </div>
-                    <div class="stat">
-                        <div class="stat-title">Bestand</div>
-                        <a href="{{ url_for('consumables.index') }}?stock=sufficient"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-success flex items-center gap-2">
-                                <i class="fas fa-check"></i>
-                                {{ stats.consumables.sufficient }} ausreichend
-                            </span>
-                        </a>
-                        <a href="{{ url_for('consumables.index') }}?stock=low"
-                           class="stat-desc flex justify-between items-center hover:bg-base-200 p-2 rounded-lg cursor-pointer">
-                            <span class="text-warning flex items-center gap-2">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                {{ stats.consumables.low }} nachbestellen
-                            </span>
-                        </a>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Nachbestellen</span>
+                        <span class="badge badge-warning gap-2">
+                            <i class="fas fa-exclamation"></i>
+                            {{ stats.consumables.warning }}
+                        </span>
                     </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Kritisch</span>
+                        <span class="badge badge-error gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ stats.consumables.critical }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mitarbeiter-Statistiken -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-users text-accent mr-2"></i>
+                        Mitarbeiter
+                    </h2>
+                    <span class="badge badge-accent">{{ stats.workers.total }} Gesamt</span>
+                </div>
+                <div class="space-y-3">
+                    <!-- Abteilungsverteilung -->
+                    <div class="text-sm font-bold mb-2">Nach Abteilung:</div>
+                    {% for dept in stats.workers.by_department %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">{{ dept.name }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-ghost">{{ dept.count }}</span>
+                            <div class="radial-progress text-accent" style="--value:{{ dept.percentage }}; --size:1.5rem">
+                                <span class="text-xs">{{ dept.percentage }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if stats.workers.by_department|length == 0 %}
+                    <div class="text-sm text-base-content/60 text-center">
+                        Keine Mitarbeiter zugewiesen
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -190,7 +207,7 @@
         </div>
     </div>
 
-    <!-- Nach den Statistik-Karten -->
+    <!-- Vereinfachter Import/Export-Bereich -->
     <div class="mt-8">
         <h2 class="text-xl font-semibold mb-4">Daten Export/Import</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -204,18 +221,20 @@
                             <i class="fas fa-download mr-2"></i>
                             Exportieren
                         </a>
+                        <button onclick="document.getElementById('toolsImport').click()" 
+                                class="btn btn-secondary btn-sm">
+                            <i class="fas fa-upload mr-2"></i>
+                            Importieren
+                        </button>
                         <form action="{{ url_for('admin.import_table', table='tools') }}" 
                               method="post" 
                               enctype="multipart/form-data"
-                              class="flex flex-col gap-2">
+                              class="hidden">
                             <input type="file" 
+                                   id="toolsImport"
                                    name="file" 
                                    accept=".xlsx"
-                                   class="file-input file-input-bordered file-input-sm w-full" />
-                            <button type="submit" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-upload mr-2"></i>
-                                Importieren
-                            </button>
+                                   onchange="this.form.submit()" />
                         </form>
                     </div>
                 </div>
@@ -231,18 +250,20 @@
                             <i class="fas fa-download mr-2"></i>
                             Exportieren
                         </a>
+                        <button onclick="document.getElementById('workersImport').click()" 
+                                class="btn btn-secondary btn-sm">
+                            <i class="fas fa-upload mr-2"></i>
+                            Importieren
+                        </button>
                         <form action="{{ url_for('admin.import_table', table='workers') }}" 
                               method="post" 
                               enctype="multipart/form-data"
-                              class="flex flex-col gap-2">
+                              class="hidden">
                             <input type="file" 
+                                   id="workersImport"
                                    name="file" 
                                    accept=".xlsx"
-                                   class="file-input file-input-bordered file-input-sm w-full" />
-                            <button type="submit" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-upload mr-2"></i>
-                                Importieren
-                            </button>
+                                   onchange="this.form.submit()" />
                         </form>
                     </div>
                 </div>
@@ -258,18 +279,20 @@
                             <i class="fas fa-download mr-2"></i>
                             Exportieren
                         </a>
+                        <button onclick="document.getElementById('consumablesImport').click()" 
+                                class="btn btn-secondary btn-sm">
+                            <i class="fas fa-upload mr-2"></i>
+                            Importieren
+                        </button>
                         <form action="{{ url_for('admin.import_table', table='consumables') }}" 
                               method="post" 
                               enctype="multipart/form-data"
-                              class="flex flex-col gap-2">
+                              class="hidden">
                             <input type="file" 
+                                   id="consumablesImport"
                                    name="file" 
                                    accept=".xlsx"
-                                   class="file-input file-input-bordered file-input-sm w-full" />
-                            <button type="submit" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-upload mr-2"></i>
-                                Importieren
-                            </button>
+                                   onchange="this.form.submit()" />
                         </form>
                     </div>
                 </div>

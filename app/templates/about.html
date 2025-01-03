@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Über Scandy{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h1 class="text-3xl font-bold mb-8">Scandy - Digitale Werkzeugverwaltung</h1>
+
+            <!-- Einführung -->
+            <div class="prose max-w-none mb-12">
+                <p class="text-lg">
+                    Scandy ist eine Anwendung zur digitalen Verwaltung von Werkzeugen und Verbrauchsmaterialien. 
+                    Sie ermöglicht es, den Überblick über ausgeliehene Werkzeuge zu behalten, Bestände zu verwalten 
+                    und Prozesse zu dokumentieren.
+                </p>
+            </div>
+
+            <!-- Hauptfunktionen -->
+            <div class="bg-base-200 p-8 rounded-3xl mb-12">
+                <h2 class="text-2xl font-bold mb-6">Hauptfunktionen im Überblick</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card bg-white">
+                        <div class="card-body">
+                            <h3 class="card-title text-primary">
+                                <i class="fas fa-qrcode mr-2"></i>
+                                QuickScan
+                            </h3>
+                            <p class="text-sm">
+                                Schnelles Ausleihen und Zurückgeben von Werkzeugen durch einfaches Scannen von Barcodes.
+                                Kein manuelles Eintragen nötig.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card bg-white">
+                        <div class="card-body">
+                            <h3 class="card-title text-primary">
+                                <i class="fas fa-tools mr-2"></i>
+                                Werkzeugverwaltung
+                            </h3>
+                            <p class="text-sm">
+                                Komplette Übersicht aller Werkzeuge, deren Status und Standort. 
+                                Inklusive Wartungshistorie und Defektmeldungen.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card bg-white">
+                        <div class="card-body">
+                            <h3 class="card-title text-primary">
+                                <i class="fas fa-sync mr-2"></i>
+                                Synchronisation
+                            </h3>
+                            <p class="text-sm">
+                                Automatischer Abgleich zwischen mehreren Geräten. 
+                                Alle Änderungen sind sofort überall verfügbar.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detaillierte Prozessabläufe -->
+            <div class="space-y-12">
+                <!-- QuickScan Prozess -->
+                <div class="bg-base-200 p-8 rounded-3xl">
+                    <h2 class="text-2xl font-bold mb-6">Der QuickScan-Prozess</h2>
+                    <div class="prose max-w-none mb-6">
+                        <p>
+                            Der QuickScan ist das Herzstück von Scandy. Er ermöglicht das schnelle und sichere 
+                            Ausleihen und Zurückgeben von Werkzeugen in wenigen Sekunden.
+                        </p>
+                    </div>
+                    <pre class="mermaid mb-6">
+                        %%{init: {
+                            'theme': 'base',
+                            'themeVariables': {
+                                'primaryColor': '#ffffff',
+                                'primaryTextColor': '#334155',
+                                'primaryBorderColor': '#e2e8f0',
+                                'lineColor': '#94a3b8'
+                            }
+                        }}%%
+                        flowchart TB
+                            Start([QuickScan öffnen]) --> Scan1[Mitarbeiter scannen]
+                            Scan1 --> Check1{Berechtigt?}
+                            Check1 -->|Ja| Scan2[Werkzeug scannen]
+                            Check1 -->|Nein| Error1[Keine Berechtigung]
+                            Scan2 --> Check2{Verfügbar?}
+                            Check2 -->|Ja| Save[Ausleihe speichern]
+                            Check2 -->|Nein| Error2[Nicht verfügbar]
+                            Save --> Sync[Andere Geräte informieren]
+                            Sync --> Done([Fertig])
+
+                            style Start fill:#fff,stroke:#334155,stroke-width:2px
+                            style Done fill:#fff,stroke:#334155,stroke-width:2px
+                            style Error1 fill:#fee2e2,stroke:#ef4444,color:#ef4444
+                            style Error2 fill:#fee2e2,stroke:#ef4444,color:#ef4444
+                            style Save fill:#ecfdf5,stroke:#10b981,color:#10b981
+                            style Sync fill:#ecfdf5,stroke:#10b981,color:#10b981
+                    </pre>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card bg-white">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm">Beim Ausleihen</h3>
+                                <ol class="list-decimal list-inside text-sm space-y-2">
+                                    <li>QuickScan über Logo oder Tastenkombination öffnen</li>
+                                    <li>Mitarbeiter-Ausweis scannen</li>
+                                    <li>System prüft Berechtigung</li>
+                                    <li>Werkzeug scannen</li>
+                                    <li>System prüft Verfügbarkeit</li>
+                                    <li>Ausleihe wird gespeichert</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="card bg-white">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm">Beim Zurückgeben</h3>
+                                <ol class="list-decimal list-inside text-sm space-y-2">
+                                    <li>QuickScan öffnen</li>
+                                    <li>Werkzeug scannen</li>
+                                    <li>System erkennt aktive Ausleihe</li>
+                                    <li>Rückgabe wird gespeichert</li>
+                                    <li>Werkzeug ist wieder verfügbar</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datenbankstruktur -->
+                <div class="bg-base-200 p-8 rounded-3xl">
+                    <h2 class="text-2xl font-bold mb-6">Datenorganisation</h2>
+                    <pre class="mermaid mb-6">
+                        %%{init: {
+                            'theme': 'base',
+                            'themeVariables': {
+                                'primaryColor': '#ffffff',
+                                'primaryTextColor': '#334155',
+                                'primaryBorderColor': '#e2e8f0'
+                            }
+                        }}%%
+                        erDiagram
+                            TOOLS ||--o{ LENDINGS : "wird ausgeliehen"
+                            WORKERS ||--o{ LENDINGS : "leiht aus"
+                            TOOLS {
+                                string barcode PK
+                                string name
+                                string category
+                                string location
+                                string status
+                                boolean deleted
+                            }
+                            WORKERS {
+                                string barcode PK
+                                string firstname
+                                string lastname
+                                string department
+                                boolean deleted
+                            }
+                            LENDINGS {
+                                integer id PK
+                                string tool_barcode FK
+                                string worker_barcode FK
+                                datetime lent_at
+                                datetime returned_at
+                            }
+                    </pre>
+                    <div class="prose max-w-none">
+                        <h3 class="text-xl font-bold mb-4">Wie die Daten zusammenhängen</h3>
+                        <p class="mb-4">
+                            Die Datenbank besteht aus drei Haupttabellen, die miteinander verknüpft sind:
+                        </p>
+                        <ul class="list-disc list-inside space-y-2">
+                            <li>
+                                <strong>Werkzeuge (tools)</strong>: Hier werden alle Werkzeuge mit ihren 
+                                Eigenschaften gespeichert. Jedes Werkzeug hat einen eindeutigen Barcode.
+                            </li>
+                            <li>
+                                <strong>Mitarbeiter (workers)</strong>: Enthält alle Mitarbeiterdaten und 
+                                deren Berechtigungen. Auch hier dient ein Barcode zur Identifikation.
+                            </li>
+                            <li>
+                                <strong>Ausleihen (lendings)</strong>: Dokumentiert, wer wann welches 
+                                Werkzeug ausgeliehen und zurückgegeben hat.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Technische Details für Entwickler -->
+                <div class="bg-base-200 p-8 rounded-3xl">
+                    <h2 class="text-2xl font-bold mb-6">Technische Details</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card bg-white">
+                            <div class="card-body">
+                                <h3 class="card-title">
+                                    <i class="fas fa-sitemap mr-2"></i>
+                                    Anwendungsstruktur
+                                </h3>
+                                <p class="text-sm mb-4">
+                                    Die Anwendung ist modular aufgebaut und verwendet das Blueprint-System von Flask:
+                                </p>
+                                <ul class="list-disc list-inside text-sm space-y-2">
+                                    <li><code>tools</code>: Werkzeugverwaltung</li>
+                                    <li><code>workers</code>: Mitarbeiterverwaltung</li>
+                                    <li><code>admin</code>: Administrationsbereich</li>
+                                    <li><code>auth</code>: Authentifizierung</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card bg-white">
+                            <div class="card-body">
+                                <h3 class="card-title">
+                                    <i class="fas fa-code mr-2"></i>
+                                    Entwicklungsdetails
+                                </h3>
+                                <p class="text-sm mb-4">
+                                    Technologien und Frameworks:
+                                </p>
+                                <ul class="list-disc list-inside text-sm space-y-2">
+                                    <li>Backend: Python mit Flask</li>
+                                    <li>Frontend: HTML, TailwindCSS, DaisyUI</li>
+                                    <li>Datenbank: SQLite mit Auto-Sync</li>
+                                    <li>Barcode: HTML5-QR-Code-Scanner</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+    mermaid.initialize({ 
+        theme: 'base',
+        themeVariables: {
+            fontFamily: 'ui-sans-serif, system-ui',
+            fontSize: '14px',
+            primaryColor: '#fff',
+            primaryTextColor: '#334155',
+            primaryBorderColor: '#e2e8f0',
+            lineColor: '#94a3b8',
+            secondaryColor: '#f8fafc'
+        },
+        flowchart: {
+            curve: 'basis',
+            padding: 20,
+            nodeSpacing: 50,
+            rankSpacing: 50,
+            cornerRadius: 12
+        },
+        sequence: {
+            mirrorActors: false,
+            bottomMarginAdj: 10,
+            messageAlign: 'center',
+            boxMargin: 10,
+            noteMargin: 10
+        },
+        er: {
+            entityPadding: 20,
+            fontSize: 14
+        }
+    });
+</script>
+{% endblock %} 

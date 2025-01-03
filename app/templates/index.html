@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Startseite{% endblock %}
+
 {% block content %}
 <div class="container mx-auto p-4">
     <!-- Hero-Sektion -->
@@ -17,52 +19,129 @@
         </div>
     </div>
 
-    <!-- Schnellstart-Karten -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <!-- QuickScan -->
+    <!-- Statistik-Karten -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Werkzeug-Statistiken -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <h2 class="card-title">
-                    <i class="fas fa-qrcode text-primary mr-2"></i>
-                    QuickScan
-                </h2>
-                <p>Schnelles Ausleihen und Zurückgeben von Werkzeugen mit dem Barcode-Scanner.</p>
-                <div class="card-actions justify-end">
-                    <button class="btn btn-primary" onclick="document.getElementById('quickScanModal').showModal()">
-                        <i class="fas fa-camera mr-2"></i>Scanner öffnen
-                    </button>
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-tools text-primary mr-2"></i>
+                        Werkzeuge
+                    </h2>
+                    <span class="badge badge-primary">{{ tool_stats.total }} Gesamt</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Verfügbar</span>
+                        <span class="badge badge-success gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ tool_stats.available }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Ausgeliehen</span>
+                        <span class="badge badge-warning gap-2">
+                            <i class="fas fa-hand-holding"></i>
+                            {{ tool_stats.lent }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Defekt</span>
+                        <span class="badge badge-error gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ tool_stats.defect }}
+                        </span>
+                    </div>
+                    <div class="divider my-2"></div>
+                    <div class="text-sm font-bold">Top Kategorien:</div>
+                    {% for category in tool_stats.top_categories %}
+                    <div class="flex justify-between items-center text-sm">
+                        <span>{{ category.name }}</span>
+                        <span class="badge badge-ghost">{{ category.count }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Werkzeugverwaltung -->
+        <!-- Verbrauchsmaterial-Statistiken -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <h2 class="card-title">
-                    <i class="fas fa-tools text-secondary mr-2"></i>
-                    Werkzeuge
-                </h2>
-                <p>Verwalten Sie Ihr Werkzeuginventar und behalten Sie den Überblick über Ausleihen.</p>
-                <div class="card-actions justify-end">
-                    <a href="{{ url_for('tools.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-list mr-2"></i>Zur Übersicht
-                    </a>
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-box-open text-secondary mr-2"></i>
+                        Verbrauchsmaterial
+                    </h2>
+                    <span class="badge badge-secondary">{{ consumable_stats.total }} Artikel</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Ausreichend</span>
+                        <span class="badge badge-success gap-2">
+                            <i class="fas fa-check"></i>
+                            {{ consumable_stats.sufficient }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Nachbestellen</span>
+                        <span class="badge badge-warning gap-2">
+                            <i class="fas fa-exclamation"></i>
+                            {{ consumable_stats.warning }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">Kritisch</span>
+                        <span class="badge badge-error gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            {{ consumable_stats.critical }}
+                        </span>
+                    </div>
+                    <div class="divider my-2"></div>
+                    <div class="text-sm font-bold">Niedrigster Bestand:</div>
+                    {% for item in consumable_stats.low_stock %}
+                    <div class="flex justify-between items-center text-sm">
+                        <span>{{ item.name }}</span>
+                        <span class="badge badge-error">{{ item.quantity }}/{{ item.min_quantity }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Verbrauchsmaterialien -->
+        <!-- Mitarbeiter-Statistiken -->
         <div class="card bg-base-100 shadow-xl">
             <div class="card-body">
-                <h2 class="card-title">
-                    <i class="fas fa-box-open text-accent mr-2"></i>
-                    Verbrauchsmaterial
-                </h2>
-                <p>Verwalten Sie Ihre Verbrauchsmaterialien und behalten Sie den Bestand im Blick.</p>
-                <div class="card-actions justify-end">
-                    <a href="{{ url_for('consumables.index') }}" class="btn btn-accent">
-                        <i class="fas fa-boxes mr-2"></i>Zum Bestand
-                    </a>
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="card-title">
+                        <i class="fas fa-users text-accent mr-2"></i>
+                        Mitarbeiter
+                    </h2>
+                    <span class="badge badge-accent">{{ worker_stats.total }} Gesamt</span>
+                </div>
+                <div class="space-y-3">
+                    <!-- Abteilungsverteilung -->
+                    <div class="text-sm font-bold mb-2">Nach Abteilung:</div>
+                    {% for dept in worker_stats.by_department %}
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">{{ dept.name }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-ghost">{{ dept.count }}</span>
+                            <div class="radial-progress text-accent" style="--value:{{ dept.percentage }}; --size:1.5rem">
+                                <span class="text-xs">{{ dept.percentage }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="divider my-2"></div>
+                    <!-- Aktive Ausleihen -->
+                    <div class="text-sm font-bold">Aktive Ausleihen:</div>
+                    {% for worker in worker_stats.top_borrowers %}
+                    <div class="flex justify-between items-center text-sm">
+                        <span>{{ worker.name }}</span>
+                        <span class="badge badge-warning">{{ worker.active_lendings }}</span>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

@@ -31,7 +31,18 @@ def dashboard():
             'tools': {
                 'total': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0', one=True)['count'],
                 'lent': Database.query('SELECT COUNT(*) as count FROM lendings WHERE returned_at IS NULL', one=True)['count'],
-                'available': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND barcode NOT IN (SELECT tool_barcode FROM lendings WHERE returned_at IS NULL)', one=True)['count']
+                'available': Database.query('''
+                    SELECT COUNT(*) as count 
+                    FROM tools 
+                    WHERE deleted = 0 
+                    AND status != 'defect' 
+                    AND barcode NOT IN (
+                        SELECT tool_barcode 
+                        FROM lendings 
+                        WHERE returned_at IS NULL
+                    )
+                ''', one=True)['count'],
+                'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defect'", one=True)['count']
             },
             'workers': {
                 'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count'],
@@ -39,8 +50,9 @@ def dashboard():
             },
             'consumables': {
                 'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
-                'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity > min_quantity', one=True)['count'],
-                'low': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity <= min_quantity', one=True)['count']
+                'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity', one=True)['count'],
+                'warning': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5', one=True)['count'],
+                'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
             }
         }
         
@@ -65,10 +77,43 @@ def dashboard():
             LIMIT 10
         ''')
         
+        # Mitarbeiter-Statistiken überarbeitet
+        worker_stats = {
+            'total': Database.query("SELECT COUNT(*) as count FROM workers WHERE deleted = 0", one=True)['count'],
+            'by_department': Database.query("""
+                WITH dept_counts AS (
+                    SELECT 
+                        CASE 
+                            WHEN department IS NULL OR department = '' THEN 'Keine Abteilung'
+                            ELSE department 
+                        END as name,
+                        COUNT(*) as count
+                    FROM workers 
+                    WHERE deleted = 0
+                    GROUP BY department
+                    HAVING name IS NOT NULL
+                )
+                SELECT 
+                    name, 
+                    count,
+                    ROUND(CAST(count AS FLOAT) * 100 / (
+                        SELECT COUNT(*) FROM workers WHERE deleted = 0
+                    ), 1) as percentage
+                FROM dept_counts
+                ORDER BY 
+                    CASE name 
+                        WHEN 'Keine Abteilung' THEN 2
+                        ELSE 1 
+                    END,
+                    count DESC
+            """)
+        }
+        
         return render_template('admin/dashboard.html',
                              stats=stats,
                              current_lendings=current_lendings,
-                             consumable_usages=consumable_usages)
+                             consumable_usages=consumable_usages,
+                             worker_stats=worker_stats)
                             
     except Exception as e:
         flash(f'Fehler beim Laden des Dashboards: {str(e)}', 'error')
