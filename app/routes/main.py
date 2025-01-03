@@ -49,6 +49,6 @@ def index():
 
 @bp.route('/about')
 def about():
-    """Zeigt die About-Seite mit dynamisch generierter Systemarchitektur"""
-    system_structure = get_system_structure()
-    return render_template('about.html', structure=system_structure) 
+    """Zeigt die About-Seite mit Systemdokumentation"""
+    # Entferne alle dynamischen Variablen aus dem Template
+    return render_template('about.html') 

@@ -13,12 +13,6 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Zurück
                 </a>
-                {% if current_user.is_admin %}
-                <button class="btn btn-primary" onclick="editConsumable('{{ consumable.barcode }}')">
-                    <i class="fas fa-edit mr-2"></i>
-                    Bearbeiten
-                </button>
-                {% endif %}
             </div>
         </div>
 
@@ -34,44 +28,72 @@
                             <p class="font-mono">{{ consumable.barcode }}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
-                            <p>{{ consumable.category or 'Keine Kategorie' }}</p>
+                            <label class="text-sm font-medium text-base-content/60">Aktueller Bestand</label>
+                            <p>{{ consumable.quantity }} Stück</p>
                         </div>
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Lagerort</label>
-                            <p>{{ consumable.location or 'Kein Lagerort' }}</p>
-                        </div>
-                        {% if consumable.description %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Beschreibung</label>
-                            <p>{{ consumable.description }}</p>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Bestand -->
+            <!-- Letzte Entnahmen -->
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
-                    <h2 class="card-title">Bestand</h2>
-                    <div class="stats shadow">
-                        <div class="stat">
-                            <div class="stat-title">Aktueller Bestand</div>
-                            <div class="stat-value">{{ consumable.quantity }}</div>
-                            <div class="stat-desc">Mindestbestand: {{ consumable.min_quantity }}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-title">Status</div>
-                            <div class="stat-value">
-                                {% if consumable.quantity <= consumable.min_quantity %}
-                                <span class="text-error">Nachbestellen</span>
-                                {% else %}
-                                <span class="text-success">Ausreichend</span>
-                                {% endif %}
-                            </div>
-                        </div>
+                    <h2 class="card-title">Letzte Entnahmen</h2>
+                    {% if recent_usage %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Mitarbeiter</th>
+                                    <th>Menge</th>
+                                    <th>Datum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in recent_usage %}
+                                <tr>
+                                    <td>{{ usage.worker_name }}</td>
+                                    <td>{{ usage.quantity }} Stk</td>
+                                    <td>{{ usage.used_at|format_datetime }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Entnahmen vorhanden</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verbrauchshistorie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
+                <div class="card-body">
+                    <h2 class="card-title">Verbrauchshistorie</h2>
+                    {% if usage_history %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Mitarbeiter</th>
+                                    <th>Menge</th>
+                                    <th>Datum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in usage_history %}
+                                <tr>
+                                    <td>{{ usage.worker_name }}</td>
+                                    <td>{{ usage.quantity }} Stk</td>
+                                    <td>{{ usage.used_at|format_datetime }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Verbrauchshistorie vorhanden</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

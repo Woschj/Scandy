@@ -1,17 +1,121 @@
-<div class="card bg-base-100 shadow-xl">
-    <div class="card-body">
-        <h2 class="card-title">{{ tool.name }}</h2>
-        <!-- ... andere Details ... -->
-        
-        {% if is_admin %}
-        <div class="card-actions justify-end">
-            <button class="btn btn-primary" onclick="editTool('{{ tool.barcode }}')">
-                <i class="fas fa-edit"></i> Bearbeiten
-            </button>
-            <button class="btn btn-error" onclick="deleteTool('{{ tool.barcode }}')">
-                <i class="fas fa-trash"></i> Löschen
-            </button>
+{% extends "base.html" %}
+
+{% block title %}{{ tool.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">{{ tool.name }}</h1>
+            <div class="flex gap-2">
+                <a href="{{ url_for('tools.index') }}" class="btn btn-ghost">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Zurück
+                </a>
+            </div>
         </div>
-        {% endif %}
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Basis-Informationen -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Details</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Barcode</label>
+                            <p class="font-mono">{{ tool.barcode }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Status</label>
+                            <p>
+                                {% if tool.current_status == 'defect' %}
+                                    <span class="badge badge-error gap-1">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Defekt
+                                    </span>
+                                {% elif tool.current_status == 'lent' %}
+                                    <span class="badge badge-warning gap-1">
+                                        <i class="fas fa-hand-holding"></i>
+                                        Ausgeliehen
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-success gap-1">
+                                        <i class="fas fa-check"></i>
+                                        Verfügbar
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        {% if tool.location %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Standort</label>
+                            <p>{{ tool.location }}</p>
+                        </div>
+                        {% endif %}
+                        {% if tool.category %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
+                            <p>{{ tool.category }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aktuelle Ausleihe -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Aktuelle Ausleihe</h2>
+                    {% if current_lending %}
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Ausgeliehen an</label>
+                            <p>{{ current_lending.worker_name }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Seit</label>
+                            <p>{{ current_lending.lent_at|format_datetime }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Aktuell nicht ausgeliehen</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ausleih-Historie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
+                <div class="card-body">
+                    <h2 class="card-title">Ausleih-Historie</h2>
+                    {% if lending_history %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Mitarbeiter</th>
+                                    <th>Ausgeliehen am</th>
+                                    <th>Zurückgegeben am</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lending in lending_history %}
+                                <tr>
+                                    <td>{{ lending.worker_name }}</td>
+                                    <td>{{ lending.lent_at|format_datetime }}</td>
+                                    <td>{{ lending.returned_at|format_datetime if lending.returned_at else 'Noch ausgeliehen' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Ausleih-Historie vorhanden</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-</div> 
+</div>
+{% endblock %} 

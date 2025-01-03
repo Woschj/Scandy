@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Quick-Scan Karte -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-qrcode text-primary"></i>
+                    Quick-Scan
+                </h2>
+                <p>Schnelles Scannen von Werkzeugen und Materialien</p>
+                <div class="card-actions justify-end">
+                    <a href="{{ url_for('quick_scan.quick_scan') }}" class="btn btn-primary">
+                        <i class="fas fa-camera mr-2"></i>
+                        Scanner öffnen
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if is_admin %}
+        <!-- Verwaltung Karte -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-cog text-primary"></i>
+                    Verwaltung
+                </h2>
+                <div class="space-y-4">
+                    <!-- Abteilungen -->
+                    <div>
+                        <h3 class="font-medium mb-2">Abteilungen</h3>
+                        <form method="POST" action="{{ url_for('admin.add_department') }}" class="flex gap-2 mb-4">
+                            <input type="text" name="name" placeholder="Neue Abteilung" 
+                                   class="input input-bordered input-sm flex-1" required>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </form>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="table table-compact w-full">
+                                <tbody>
+                                    {% for dept in departments %}
+                                    <tr>
+                                        <td>{{ dept }}</td>
+                                        <td class="text-right">
+                                            <button class="btn btn-ghost btn-xs text-error" 
+                                                    onclick="deleteDepartment('{{ dept }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Andere Verwaltungsfunktionen -->
+                    <div class="divider"></div>
+                    <div class="flex flex-col gap-2">
+                        <a href="{{ url_for('admin.manual_lending') }}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-hand-holding mr-2"></i>
+                            Manuelle Ausleihe
+                        </a>
+                        <a href="{{ url_for('admin.server_settings') }}" class="btn btn-sm btn-outline">
+                            <i class="fas fa-server mr-2"></i>
+                            Server-Einstellungen
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Weitere Karten... -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+async function deleteDepartment(name) {
+    if (!confirm(`Möchten Sie die Abteilung "${name}" wirklich löschen?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/departments/${encodeURIComponent(name)}/delete`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(`Fehler beim Löschen: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`Fehler: ${error.message}`);
+    }
+}
+</script>
+{% endblock %} 

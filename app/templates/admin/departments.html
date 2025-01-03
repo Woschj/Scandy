@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Abteilungen verwalten{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Abteilungen verwalten</h1>
+        </div>
+
+        <!-- Neue Abteilung -->
+        <div class="card bg-base-100 shadow-xl mb-6">
+            <div class="card-body">
+                <h2 class="card-title">Neue Abteilung</h2>
+                <form method="POST" action="{{ url_for('admin.add_department') }}" class="flex gap-4">
+                    <div class="form-control flex-1">
+                        <input type="text" name="name" placeholder="Name der Abteilung" 
+                               class="input input-bordered" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus mr-2"></i>
+                        Hinzufügen
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Liste der Abteilungen -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title mb-4">Vorhandene Abteilungen</h2>
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Anzahl Mitarbeiter</th>
+                                <th class="text-right">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dept in departments %}
+                            <tr>
+                                <td>{{ dept.name }}</td>
+                                <td>{{ dept.worker_count }}</td>
+                                <td class="text-right">
+                                    <button class="btn btn-sm btn-error"
+                                            onclick="deleteDepartment('{{ dept.id }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+async function deleteDepartment(id) {
+    if (!confirm('Möchten Sie diese Abteilung wirklich löschen?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/admin/departments/${id}/delete`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(`Fehler beim Löschen: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`Fehler: ${error.message}`);
+    }
+}
+</script>
+{% endblock %}
+
+{% endblock %} 
