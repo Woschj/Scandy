@@ -8,24 +8,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- Debug-Ausgabe -->
-<div class="bg-gray-100 p-4 mb-4">
-    <h3>Debug Info:</h3>
-    <p>Tools: {{ tools|length }}</p>
-    <ul>
-    {% for tool in tools %}
-        <li>{{ tool }}</li>
-    {% endfor %}
-    </ul>
-    
-    <p>Workers: {{ workers|length }}</p>
-    <ul>
-    {% for worker in workers %}
-        <li>{{ worker }}</li>
-    {% endfor %}
-    </ul>
-</div>
-
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Linke Spalte: Item-Auswahl -->
     <div class="card bg-base-100 shadow-xl">

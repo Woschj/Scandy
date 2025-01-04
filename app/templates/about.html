@@ -4,966 +4,653 @@
 
 {% block content %}
 <div class="container mx-auto p-4">
-    <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
-            <h1 class="text-3xl font-bold mb-8">Scandy - Werkzeug- und Materialverwaltung</h1>
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-2">Scandy</h1>
+        <p class="text-lg opacity-75">Werkzeug- und Materialverwaltungssystem</p>
+        <p class="mt-4 max-w-2xl mx-auto text-base-content/70">
+            Scandy vereinfacht die Verwaltung von Werkzeugen und Materialien durch Barcode-Scanning. 
+            Diese Anleitung erklärt alle wichtigen Funktionen und hilft Ihnen beim Einstieg.
+        </p>
+    </div>
 
-            <!-- Systemübersicht -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Systemübersicht</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
+    <div class="grid grid-cols-1 gap-8">
+        <!-- Schnelleinstieg -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-rocket mr-2"></i>
+                    Schnelleinstieg
+                </h2>
+                <div class="alert alert-info mb-4">
                     <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Hier sehen Sie den grundlegenden Ablauf der wichtigsten Funktionen in Scandy:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Ausleihe und Rückgabe von Werkzeugen</li>
-                                <li>Materialentnahme und Bestandsführung</li>
-                                <li>Verwaltung durch den Administrator</li>
-                            </ul>
-                        </p>
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <span class="font-bold">Tipp:</span> 
+                        Öffnen Sie die Quick-Scan Funktion über den Button in der Navigation. 
+                        Hier können Sie direkt Werkzeuge ausleihen/zurückgeben oder Material entnehmen.
                     </div>
                 </div>
 
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Ablaufdiagramm -->
-                    <div class="card bg-base-100 shadow-lg">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Erste Schritte -->
+                    <div class="card bg-base-200">
                         <div class="card-body">
-                            <h3 class="card-title">Hauptprozesse</h3>
-                            <div class="mermaid">
-                                flowchart TD
-                                    %% Hauptnavigation
-                                    Start([Start]) --> Nav[Navigation]
-                                    Nav --> |QuickScan| QS[QuickScan Dialog]
-                                    Nav --> |Menü| Menu[Hauptmenü]
-                                    
-                                    %% QuickScan Prozess
-                                    subgraph Scan [QuickScan Prozess]
-                                        QS --> |Barcode| CodeType{Art des Codes?}
-                                        CodeType --> |Werkzeug| Tool[Werkzeug]
-                                        CodeType --> |Material| Mat[Material]
-                                        CodeType --> |Mitarbeiter| Work[Mitarbeiter]
-                                    end
-                                    
-                                    %% Werkzeug-Workflow
-                                    subgraph Tool [Werkzeug-Prozess]
-                                        Tool --> |Status prüfen| Status{Ausgeliehen?}
-                                        Status --> |Nein| Lend[Ausleihen]
-                                        Status --> |Ja| Return[Zurückgeben]
-                                        Lend --> WorkerScan[Mitarbeiter scannen]
-                                        Return --> Done([Fertig])
-                                        WorkerScan --> Done
-                                    end
-                                    
-                                    %% Material-Workflow
-                                    subgraph Mat [Material-Prozess]
-                                        Mat --> Amount[Menge eingeben]
-                                        Amount --> MatWorker[Mitarbeiter scannen]
-                                        MatWorker --> MatDone([Fertig])
-                                    end
-                                    
-                                    %% Menü-Navigation
-                                    subgraph Menu [Hauptmenü]
-                                        Menu --> Tools[Werkzeuge]
-                                        Menu --> Workers[Mitarbeiter]
-                                        Menu --> Materials[Verbrauchsmaterial]
-                                        Menu --> |Admin Login| Admin[Papierkorb]
-                                        
-                                        Tools --> List[Liste anzeigen]
-                                        List --> Details[Details anzeigen]
-                                        List --> |Admin| Delete[Löschen]
-                                        Delete --> Trash[Papierkorb]
-                                    end
-
-                                    %% Styling
-                                    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-                                    classDef decision fill:#bbf,stroke:#333,stroke-width:2px
-                                    class Status,CodeType decision
-                                    class Scan,Tool,Mat process
-                            </div>
+                            <h3 class="card-title text-sm mb-4">
+                                <i class="fas fa-walking mr-2"></i>
+                                Erste Schritte
+                            </h3>
+                            <ol class="text-sm space-y-4">
+                                <li class="flex items-start">
+                                    <span class="badge badge-primary mr-2">1</span>
+                                    <div>
+                                        <p class="font-bold">Navigation kennenlernen</p>
+                                        <p class="opacity-75">Die Hauptnavigation enthält alle wichtigen Funktionen:
+                                            Werkzeuge, Material, Mitarbeiter und Quick-Scan.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="badge badge-primary mr-2">2</span>
+                                    <div>
+                                        <p class="font-bold">Barcode Scanner testen</p>
+                                        <p class="opacity-75">Testen Sie den Scanner mit einem beliebigen Barcode.
+                                            Die App erkennt automatisch, ob es sich um ein Werkzeug, Material oder einen Mitarbeiter handelt.</p>
+                                    </div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="badge badge-primary mr-2">3</span>
+                                    <div>
+                                        <p class="font-bold">Listen durchsuchen</p>
+                                        <p class="opacity-75">Verschaffen Sie sich einen Überblick über vorhandene
+                                            Werkzeuge und Materialien in den jeweiligen Listen.</p>
+                                    </div>
+                                </li>
+                            </ol>
                         </div>
                     </div>
 
-                    <!-- Legende -->
-                    <div class="alert alert-info mt-4">
-                        <i class="fas fa-info-circle"></i>
-                        <div>
-                            <h4 class="font-bold">Legende</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>Ovale Formen: Start/Ende eines Prozesses</li>
-                                    <li>Rechtecke: Aktionen/Seiten</li>
-                                    <li>Rauten: Entscheidungen</li>
-                                </ul>
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>Durchgezogene Linien: Normaler Ablauf</li>
-                                    <li>Gestrichelte Linien: Alternative Wege</li>
-                                    <li>Farbige Elemente: Prozessgruppen</li>
-                                </ul>
+                    <!-- Häufige Aktionen -->
+                    <div class="card bg-base-200">
+                        <div class="card-body">
+                            <h3 class="card-title text-sm mb-4">
+                                <i class="fas fa-star mr-2"></i>
+                                Häufige Aktionen
+                            </h3>
+                            <div class="space-y-4 text-sm">
+                                <div class="flex items-start">
+                                    <i class="fas fa-tools text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <p class="font-bold">Werkzeug ausleihen</p>
+                                        <p class="opacity-75">Scannen Sie zuerst das Werkzeug, dann Ihren Mitarbeiterausweis.
+                                            Die Ausleihe wird automatisch gespeichert.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <i class="fas fa-undo text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <p class="font-bold">Werkzeug zurückgeben</p>
+                                        <p class="opacity-75">Scannen Sie einfach das ausgeliehene Werkzeug.
+                                            Bei Beschädigung können Sie dies direkt melden.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <i class="fas fa-box text-primary mt-1 mr-3"></i>
+                                    <div>
+                                        <p class="font-bold">Material entnehmen</p>
+                                        <p class="opacity-75">Scannen Sie das Material, geben Sie die Menge ein
+                                            und scannen Sie Ihren Ausweis zur Bestätigung.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </div>
 
-            <!-- QuickScan -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">QuickScan</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            QuickScan ermöglicht das schnelle Scannen von Barcodes für:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Werkzeugausleihe und -rückgabe</li>
-                                <li>Materialentnahme</li>
-                                <li>Bestandsprüfung</li>
-                            </ul>
-                            Nach dem Scannen zeigt das System die verfügbaren Aktionen für den erkannten Code.
-                        </p>
-                    </div>
-                </div>
+        <!-- Hauptfunktionen -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h2 class="card-title mb-6">
+                    <i class="fas fa-book mr-2"></i>
+                    Hauptfunktionen im Detail
+                </h2>
 
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Prozessablauf -->
-                    <div class="mb-8">
-                        <h3 class="text-xl font-bold mb-4">Prozessablauf</h3>
-                        <div class="steps steps-vertical">
-                            <div class="step step-primary">
-                                <div class="step-content">
-                                    <h4 class="font-bold">1. QuickScan öffnen</h4>
-                                    <p class="text-sm">
-                                        Klick auf den QuickScan-Button in der Navigation oder 
-                                        Drücken der Taste F2
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="step step-primary">
-                                <div class="step-content">
-                                    <h4 class="font-bold">2. Barcode scannen</h4>
-                                    <p class="text-sm">
-                                        Scannen Sie einen Barcode oder geben Sie ihn manuell ein
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="step step-primary">
-                                <div class="step-content">
-                                    <h4 class="font-bold">3. Aktion auswählen</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                        <div class="alert alert-info">
-                                            <div>
-                                                <h5 class="font-bold">Werkzeug</h5>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Ausleihen (wenn verfügbar)</li>
-                                                    <li>Zurückgeben (wenn ausgeliehen)</li>
-                                                </ul>
-                                            </div>
+                <!-- Werkzeugverwaltung -->
+                <div class="mb-8">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-tools mr-2"></i>
+                        Werkzeugverwaltung
+                    </h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card bg-base-200">
+                            <div class="card-body">
+                                <h4 class="font-bold mb-2">Ausleihe & Rückgabe</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Ausleihe:</p>
+                                            <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                <li>Quick-Scan öffnen</li>
+                                                <li>Werkzeug scannen</li>
+                                                <li>Status wird automatisch geprüft</li>
+                                                <li>Bei "Verfügbar": Mitarbeiterausweis scannen</li>
+                                                <li>Ausleihe wird bestätigt</li>
+                                            </ol>
                                         </div>
-                                        <div class="alert alert-info">
-                                            <div>
-                                                <h5 class="font-bold">Material</h5>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Menge eingeben</li>
-                                                    <li>Entnahme bestätigen</li>
-                                                </ul>
-                                            </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Rückgabe:</p>
+                                            <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                <li>Quick-Scan öffnen</li>
+                                                <li>Ausgeliehenes Werkzeug scannen</li>
+                                                <li>Optional: Defekt melden und Grund angeben</li>
+                                                <li>Rückgabe wird automatisch gespeichert</li>
+                                            </ol>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="step step-primary">
-                                <div class="step-content">
-                                    <h4 class="font-bold">4. Mitarbeiter scannen</h4>
-                                    <p class="text-sm">
-                                        Scannen Sie den Mitarbeiter-Barcode zur Zuordnung der Aktion
-                                    </p>
+                        <div class="card bg-base-200">
+                            <div class="card-body">
+                                <h4 class="font-bold mb-2">Status & Verwaltung</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Statusanzeigen:</p>
+                                            <div class="mt-2 space-y-2">
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-success mr-2">Verfügbar</div>
+                                                    <span>Werkzeug kann ausgeliehen werden</span>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-warning mr-2">Ausgeliehen</div>
+                                                    <span>Aktuell in Benutzung</span>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-error mr-2">Defekt</div>
+                                                    <span>Nicht verfügbar/In Reparatur</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Detailansicht:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Aktuelle Ausleihe anzeigen</li>
+                                                <li>Ausleihhistorie einsehen</li>
+                                                <li>Defekte und Reparaturen nachverfolgen</li>
+                                                <li>Standort und Kategorie anzeigen</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Mögliche Fehlerfälle -->
-                    <div class="alert alert-warning mt-4">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <div>
-                            <h4 class="font-bold">Mögliche Fehlermeldungen</h4>
-                            <ul class="list-disc list-inside text-sm">
-                                <li>Barcode nicht gefunden</li>
-                                <li>Werkzeug bereits ausgeliehen</li>
-                                <li>Mitarbeiter nicht gefunden</li>
-                                <li>Materialbestand nicht ausreichend</li>
-                            </ul>
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <!-- Datenbankstruktur -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Datenbankstruktur</h2>
+                <!-- Materialverwaltung -->
+                <div class="mb-8">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-box mr-2"></i>
+                        Materialverwaltung
+                    </h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card bg-base-200">
+                            <div class="card-body">
+                                <h4 class="font-bold mb-2">Materialentnahme</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Entnahmeprozess:</p>
+                                            <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                <li>Quick-Scan öffnen</li>
+                                                <li>Material scannen</li>
+                                                <li>Aktueller Bestand wird angezeigt</li>
+                                                <li>Gewünschte Menge eingeben</li>
+                                                <li>Mitarbeiterausweis scannen</li>
+                                                <li>Entnahme wird dokumentiert</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Wichtige Hinweise:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Nur verfügbare Mengen können entnommen werden</li>
+                                                <li>Bei kritischem Bestand erfolgt eine Warnung</li>
+                                                <li>Entnahmen werden pro Mitarbeiter protokolliert</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Die Datenbank ist wie ein digitales Lagerhaus, das alle wichtigen Informationen speichert:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Werkzeuge: Was haben wir, wo ist es, wer hat es ausgeliehen?</li>
-                                <li>Mitarbeiter: Wer darf was ausleihen, welche Abteilung?</li>
-                                <li>Material: Welcher Bestand, wann nachbestellen?</li>
-                            </ul>
-                            Alle diese Informationen sind miteinander verknüpft, sodass wir immer genau wissen, 
-                            wer was wann ausgeliehen oder entnommen hat.
-                        </p>
+                        <div class="card bg-base-200">
+                            <div class="card-body">
+                                <h4 class="font-bold mb-2">Bestandsmanagement</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Bestandsanzeigen:</p>
+                                            <div class="mt-2 space-y-2">
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-success mr-2">Normal</div>
+                                                    <span>Ausreichender Bestand</span>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-warning mr-2">Niedrig</div>
+                                                    <span>Nachbestellung empfohlen</span>
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <div class="badge badge-error mr-2">Kritisch</div>
+                                                    <span>Sofortige Nachbestellung nötig</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Detailansicht:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Aktueller Bestand</li>
+                                                <li>Mindestbestand</li>
+                                                <li>Entnahmehistorie</li>
+                                                <li>Verbrauchsstatistiken</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Tabellen -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <!-- Haupttabellen -->
-                        <div class="card bg-base-100 shadow-lg">
+                <!-- Mitarbeiterverwaltung -->
+                <div>
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-users mr-2"></i>
+                        Mitarbeiterverwaltung
+                    </h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card bg-base-200">
                             <div class="card-body">
-                                <h3 class="card-title">Haupttabellen</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="table table-compact w-full">
-                                        <thead>
-                                            <tr>
-                                                <th>Tabelle</th>
-                                                <th>Hauptfelder</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>tools</td>
-                                                <td>
-                                                    <ul class="list-disc list-inside text-sm">
-                                                        <li>barcode (TEXT, UNIQUE)</li>
-                                                        <li>name (TEXT)</li>
-                                                        <li>status (TEXT)</li>
-                                                        <li>location (TEXT)</li>
-                                                        <li>deleted (INTEGER)</li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>workers</td>
-                                                <td>
-                                                    <ul class="list-disc list-inside text-sm">
-                                                        <li>barcode (TEXT, UNIQUE)</li>
-                                                        <li>firstname (TEXT)</li>
-                                                        <li>lastname (TEXT)</li>
-                                                        <li>department (TEXT)</li>
-                                                        <li>deleted (INTEGER)</li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td>consumables</td>
-                                                <td>
-                                                    <ul class="list-disc list-inside text-sm">
-                                                        <li>barcode (TEXT, UNIQUE)</li>
-                                                        <li>name (TEXT)</li>
-                                                        <li>quantity (INTEGER)</li>
-                                                        <li>deleted (INTEGER)</li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <h4 class="font-bold mb-2">Persönliche Übersicht</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Aktuelle Ausleihen:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Liste aller ausgeliehenen Werkzeuge</li>
+                                                <li>Ausleihdatum und -dauer</li>
+                                                <li>Direkte Rückgabemöglichkeit</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Materialentnahmen:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Übersicht aller Entnahmen</li>
+                                                <li>Datum und Mengen</li>
+                                                <li>Verbrauchshistorie</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Verknüpfungstabellen -->
-                        <div class="card bg-base-100 shadow-lg">
+                        <div class="card bg-base-200">
                             <div class="card-body">
-                                <h3 class="card-title">Verknüpfungstabellen</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="table table-compact w-full">
-                                        <tbody>
-                                            <tr>
-                                                <td>lendings</td>
-                                                <td>
-                                                    <ul class="list-disc list-inside text-sm">
-                                                        <li>id (INTEGER PRIMARY KEY)</li>
-                                                        <li>tool_barcode (TEXT, FK)</li>
-                                                        <li>worker_barcode (TEXT, FK)</li>
-                                                        <li>lent_at (TIMESTAMP)</li>
-                                                        <li>returned_at (TIMESTAMP)</li>
-                                                    </ul>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <h4 class="font-bold mb-2">Mitarbeiterdetails</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Persönliche Daten:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Name und Personalnummer</li>
+                                                <li>Abteilungszugehörigkeit</li>
+                                                <li>Barcode-ID für Scannung</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Aktivitätshistorie:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Vergangene Ausleihen</li>
+                                                <li>Materialverbrauch</li>
+                                                <li>Gemeldete Defekte</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Beziehungen -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Datenbankbeziehungen</h3>
-                            <div class="mermaid">
-                                erDiagram
-                                    TOOLS ||--o{ LENDINGS : has
-                                    WORKERS ||--o{ LENDINGS : borrows
-                                    WORKERS ||--o{ CONSUMABLE_USAGE : uses
-                                    CONSUMABLES ||--o{ CONSUMABLE_USAGE : tracked_in
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Soft Delete -->
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
+        <!-- Tipps und Tricks -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h2 class="card-title mb-4">
+                    <i class="fas fa-lightbulb mr-2"></i>
+                    Tipps und Tricks
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="alert bg-base-200">
                         <div>
-                            <h4 class="font-bold">Soft Delete</h4>
-                            <p class="text-sm">
-                                Datensätze werden nicht physisch gelöscht, sondern nur als gelöscht markiert (deleted = 1).
-                                Dies ermöglicht die Wiederherstellung und Nachverfolgung.
+                            <i class="fas fa-search text-primary mb-2"></i>
+                            <p class="font-bold">Schnelle Suche</p>
+                            <p class="text-sm opacity-75">
+                                Nutzen Sie die Suchfunktion in den Listen, um schnell bestimmte
+                                Werkzeuge oder Materialien zu finden.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="alert bg-base-200">
+                        <div>
+                            <i class="fas fa-filter text-primary mb-2"></i>
+                            <p class="font-bold">Filter effektiv nutzen</p>
+                            <p class="text-sm opacity-75">
+                                Kombinieren Sie verschiedene Filter, um genau die Einträge
+                                zu finden, die Sie suchen.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="alert bg-base-200">
+                        <div>
+                            <i class="fas fa-history text-primary mb-2"></i>
+                            <p class="font-bold">Historie im Blick</p>
+                            <p class="text-sm opacity-75">
+                                Prüfen Sie regelmäßig die Historie, um den Überblick über
+                                Ihre Aktivitäten zu behalten.
                             </p>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </div>
 
-            <!-- Blueprints & Routen -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Blueprints & Routen</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Die App ist in verschiedene Funktionsbereiche aufgeteilt:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Werkzeuge: Verwaltung und Ausleihe von Werkzeugen</li>
-                                <li>Mitarbeiter: Übersicht und Ausleihhistorie</li>
-                                <li>Material: Bestandsführung und Entnahmen</li>
-                                <li>Admin: Papierkorb und Einstellungen</li>
-                            </ul>
-                        </p>
-                    </div>
-                </div>
+        <!-- Administration & Technik -->
+        <div class="card bg-base-100 shadow-lg">
+            <div class="card-body">
+                <h2 class="card-title mb-6">
+                    <i class="fas fa-cogs mr-2"></i>
+                    Administration & Technische Details
+                </h2>
 
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Blueprint Übersicht -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Hauptbereiche</h3>
-                            <div class="overflow-x-auto">
-                                <table class="table table-compact w-full">
-                                    <thead>
-                                        <tr>
-                                            <th>Bereich</th>
-                                            <th>URL</th>
-                                            <th>Funktionen</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>tools</td>
-                                            <td>/tools</td>
-                                            <td>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Liste aller Werkzeuge</li>
-                                                    <li>Werkzeugdetails</li>
-                                                    <li>Ausleihhistorie anzeigen</li>
-                                                    <li>Löschen (nur als Admin)</li>
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>workers</td>
-                                            <td>/workers</td>
-                                            <td>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Liste aller Mitarbeiter</li>
-                                                    <li>Mitarbeiterdetails</li>
-                                                    <li>Löschen von Mitarbeitern</li>
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>consumables</td>
-                                            <td>/consumables</td>
-                                            <td>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Liste aller Materialien</li>
-                                                    <li>Materialdetails</li>
-                                                    <li>Löschen von Material</li>
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>admin</td>
-                                            <td>/admin</td>
-                                            <td>
-                                                <ul class="list-disc list-inside text-sm">
-                                                    <li>Papierkorb</li>
-                                                    <li>Wiederherstellung von Einträgen</li>
-                                                </ul>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Beispiel-Routen -->
+                <!-- Administration -->
+                <div class="mb-8">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-user-shield mr-2"></i>
+                        Administration
+                    </h3>
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- Index Route -->
-                        <div class="card bg-base-100 shadow-lg">
+                        <div class="card bg-base-200">
                             <div class="card-body">
-                                <h3 class="card-title text-sm">Übersichtsseite</h3>
-                                <div class="mockup-code text-xs">
-                                    <pre><code>@bp.route('/')
-def index():
-    """Zeigt die Startseite mit Statistiken"""
-    tool_stats = {
-        'total': Database.query(
-            'SELECT COUNT(*) FROM tools WHERE deleted = 0', 
-            one=True)['count'],
-        'lent': Database.query(
-            'SELECT COUNT(*) FROM lendings WHERE returned_at IS NULL', 
-            one=True)['count']
-    }
-    return render_template('index.html', stats=tool_stats)</code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Details Route -->
-                        <div class="card bg-base-100 shadow-lg">
-                            <div class="card-body">
-                                <h3 class="card-title text-sm">Detailseite</h3>
-                                <div class="mockup-code text-xs">
-                                    <pre><code>@bp.route('/<barcode>')
-def details(barcode):
-    """Zeigt Details zu einem Barcode"""
-    item = Database.query('''
-        SELECT * FROM tools 
-        WHERE barcode = ? AND deleted = 0
-    ''', [barcode], one=True)
-    return render_template('details.html', item=item)</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Template System -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Template System</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Die Benutzeroberfläche basiert auf wiederverwendbaren Bausteinen:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Einheitliches Layout durch base.html als Grundgerüst</li>
-                                <li>Gemeinsame Komponenten wie Navigation und Listen</li>
-                                <li>DaisyUI für vorgefertigte Designelemente</li>
-                                <li>Tailwind CSS für grundlegendes Styling</li>
-                            </ul>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Template Hierarchie -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Template Struktur</h3>
-                            <div class="mockup-code">
-                                <pre><code>templates/
-├── base.html              # Grundgerüst
-├── components/
-│   ├── navigation.html    # Hauptnavigation
-│   ├── quickscan.html     # QuickScan Dialog
-│   └── toast.html         # Benachrichtigungen
-├── tools/
-│   ├── index.html        # Werkzeugübersicht
-│   └── details.html      # Werkzeugdetails
-├── workers/
-│   ├── index.html        # Mitarbeiterübersicht
-│   └── details.html      # Mitarbeiterdetails
-└── admin/
-    └── trash.html        # Papierkorb</code></pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Beispiel base.html -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Base Template</h3>
-                            <div class="mockup-code text-xs">
-                                <pre><code>{% raw %}<!DOCTYPE html>
-<html>
-<head>
-    <title>{% block title %}{% endblock %}</title>
-    <link href="/static/css/main.css" rel="stylesheet">
-</head>
-<body>
-    {% include 'components/navigation.html' %}
-    
-    <main class="container mx-auto p-4">
-        {% block content %}{% endblock %}
-    </main>
-
-    {% include 'components/quickscan.html' %}
-    {% include 'components/toast.html' %}
-</body>
-</html>{% endraw %}</code></pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Komponenten -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <!-- Navigation -->
-                        <div class="card bg-base-100 shadow-lg">
-                            <div class="card-body">
-                                <h3 class="card-title text-sm">Navigation</h3>
-                                <div class="mockup-code text-xs">
-                                    <pre><code>{% raw %}<nav class="navbar bg-base-100">
-    <div class="flex-1">
-        <a href="/" class="btn btn-ghost">
-            Scandy
-        </a>
-    </div>
-    <div class="flex-none">
-        <button onclick="quickscan.show()"
-                class="btn btn-primary">
-            QuickScan
-        </button>
-    </div>
-</nav>{% endraw %}</code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Toast -->
-                        <div class="card bg-base-100 shadow-lg">
-                            <div class="card-body">
-                                <h3 class="card-title text-sm">Toast Benachrichtigungen</h3>
-                                <div class="mockup-code text-xs">
-                                    <pre><code>{% raw %}<div id="toast" 
-     class="toast toast-end">
-    <div class="alert alert-{{ type }}">
-        <span>{{ message }}</span>
-    </div>
-</div>{% endraw %}</code></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Authentifizierung -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Authentifizierung & Administration</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Die Verwaltung des Systems erfolgt über einen zentralen Administrator-Zugang:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Ein geschützter Admin-Bereich für den Papierkorb</li>
-                                <li>Wiederherstellung gelöschter Einträge</li>
-                                <li>Löschen von Einträgen aus Listen</li>
-                            </ul>
-                            Der normale Betrieb (Ausleihen, Rückgaben, etc.) erfolgt ohne Login.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Login System -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Admin Login</h3>
-                            <div class="mockup-code text-xs">
-                                <pre><code>@bp.route('/admin/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        user = Database.query('''
-            SELECT * FROM users 
-            WHERE username = ?
-        ''', [username], one=True)
-        
-        if user and check_password_hash(
-            user['password'], password):
-            session['is_admin'] = True
-            return redirect(url_for('admin.index'))</code></pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Admin Funktionen -->
-                    <div class="card bg-base-100 shadow-lg">
-                        <div class="card-body">
-                            <h3 class="card-title">Admin-Funktionen</h3>
-                            <div class="overflow-x-auto">
-                                <table class="table table-compact w-full">
-                                    <thead>
-                                        <tr>
-                                            <th>Funktion</th>
-                                            <th>Beschreibung</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Papierkorb</td>
-                                            <td>Zugriff auf gelöschte Einträge mit Wiederherstellungsoption</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Desktop-App -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Desktop-Anwendung</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Scandy läuft als lokale Webanwendung auf Ihrem Computer:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Flask-Server im Hintergrund</li>
-                                <li>Zugriff über den Browser</li>
-                                <li>SQLite als lokale Datenbank</li>
-                                <li>Unterstützung für USB-Barcodescanner</li>
-                            </ul>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Server Setup -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Server-Komponenten</h3>
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <!-- Flask Server -->
-                                <div>
-                                    <h4 class="font-bold mb-3">Flask Server</h4>
-                                    <div class="mockup-code text-xs">
-                                        <pre><code>from flask import Flask
-from app import create_app
-
-app = create_app()
-
-if __name__ == '__main__':
-    app.run(host='127.0.0.1', 
-            port=5000)</code></pre>
+                                <h4 class="font-bold mb-2">Werkzeug- und Materialverwaltung</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Neue Einträge anlegen:</p>
+                                            <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                <li>Über "Neu" in der jeweiligen Liste</li>
+                                                <li>Barcode scannen oder manuell eingeben</li>
+                                                <li>Pflichtfelder ausfüllen (Name, Kategorie, etc.)</li>
+                                                <li>Optional: Standort und Beschreibung</li>
+                                                <li>Bei Material: Mindestbestand festlegen</li>
+                                            </ol>
+                                        </div>
                                     </div>
-                                </div>
-
-                                <!-- Datenbank -->
-                                <div>
-                                    <h4 class="font-bold mb-3">Datenbank-Verbindung</h4>
-                                    <div class="mockup-code text-xs">
-                                        <pre><code>import sqlite3
-from flask import g
-
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(
-            'scandy.db',
-            detect_types=
-                sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = 
-            sqlite3.Row
-    return g.db</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Funktionen -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <!-- Barcode Scanner -->
-                        <div class="card bg-base-100 shadow-lg">
-                            <div class="card-body">
-                                <h3 class="card-title text-sm">Barcode Scanner</h3>
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>Unterstützung für USB-Scanner</li>
-                                    <li>Funktioniert als Tastatureingabe</li>
-                                    <li>Keine spezielle Treiber nötig</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Lokale Datenbank -->
-                        <div class="card bg-base-100 shadow-lg">
-                            <div class="card-body">
-                                <h3 class="card-title text-sm">Lokale Datenbank</h3>
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>SQLite Datenbank</li>
-                                    <li>Lokale Datenhaltung</li>
-                                    <li>Keine Installation nötig</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Server Starten -->
-                    <div class="alert alert-info">
-                        <i class="fas fa-play"></i>
-                        <div>
-                            <h4 class="font-bold">Server starten</h4>
-                            <div class="mockup-code text-xs mt-2">
-                                <pre><code># Aktiviere virtuelle Umgebung
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-
-# Starte Server
-python server.py</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Installation -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Installation & Entwicklung</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
-                    <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Für die Installation von Scandy benötigen Sie:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Python 3.8 oder höher</li>
-                                <li>Pip für die Paketverwaltung</li>
-                                <li>SQLite für die Datenbank</li>
-                            </ul>
-                            Die Anwendung läuft dann als lokaler Webserver auf Ihrem Computer.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Voraussetzungen -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Systemvoraussetzungen</h3>
-                            <div>
-                                <!-- Python -->
-                                <div>
-                                    <h4 class="font-bold mb-3">Benötigte Pakete</h4>
-                                    <div class="mockup-code text-xs">
-                                        <pre><code># requirements.txt
-Flask
-Werkzeug
-Flask-Session</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Installationsschritte -->
-                    <div class="card bg-base-100 shadow-lg mb-8">
-                        <div class="card-body">
-                            <h3 class="card-title">Installation</h3>
-                            <div class="steps steps-vertical">
-                                <!-- Python Setup -->
-                                <div class="step step-primary">
-                                    <div class="step-content">
-                                        <h4 class="font-bold">1. Python-Umgebung einrichten</h4>
-                                        <div class="mockup-code text-xs mt-2">
-                                            <pre><code>python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-pip install -r requirements.txt</code></pre>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Bestände verwalten:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Bestandskorrekturen durchführen</li>
+                                                <li>Mindestbestände anpassen</li>
+                                                <li>Kategorien und Standorte pflegen</li>
+                                                <li>Defekte Werkzeuge markieren</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Server starten -->
-                                <div class="step step-primary">
-                                    <div class="step-content">
-                                        <h4 class="font-bold">2. Server starten</h4>
-                                        <div class="mockup-code text-xs mt-2">
-                                            <pre><code>python server.py</code></pre>
+                        <div class="card bg-base-200">
+                            <div class="card-body">
+                                <h4 class="font-bold mb-2">Mitarbeiterverwaltung</h4>
+                                <div class="space-y-4 text-sm">
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Mitarbeiter anlegen:</p>
+                                            <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                <li>Über "Neu" in der Mitarbeiterliste</li>
+                                                <li>Persönliche Daten eingeben</li>
+                                                <li>Abteilung zuweisen</li>
+                                                <li>Barcode generieren oder zuweisen</li>
+                                                <li>Optional: Berechtigungen festlegen</li>
+                                            </ol>
                                         </div>
-                                        <p class="text-sm mt-2">
-                                            Die Datenbank wird beim ersten Start automatisch initialisiert.
-                                        </p>
+                                    </div>
+                                    <div class="alert bg-base-100">
+                                        <div>
+                                            <p class="font-bold">Verwaltungsfunktionen:</p>
+                                            <ul class="list-disc list-inside space-y-2 mt-2">
+                                                <li>Mitarbeiterdaten aktualisieren</li>
+                                                <li>Abteilungen verwalten</li>
+                                                <li>Berechtigungen anpassen</li>
+                                                <li>Aktivitäten überwachen</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technische Details -->
+                <div>
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-code mr-2"></i>
+                        Technische Funktionsweise
+                    </h3>
+                    
+                    <!-- Systemarchitektur -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-4">Systemarchitektur</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="card bg-base-200">
+                                <div class="card-body">
+                                    <h5 class="font-bold mb-2">Frontend</h5>
+                                    <div class="space-y-4 text-sm">
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Technologien:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>HTML Templates mit Jinja2</li>
+                                                    <li>TailwindCSS für Styling</li>
+                                                    <li>JavaScript für Interaktionen</li>
+                                                    <li>DaisyUI für UI-Komponenten</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Funktionen:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>Responsive Design</li>
+                                                    <li>Barcode-Scanner Integration</li>
+                                                    <li>Dynamische Formulare</li>
+                                                    <li>Echtzeit-Validierung</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card bg-base-200">
+                                <div class="card-body">
+                                    <h5 class="font-bold mb-2">Backend</h5>
+                                    <div class="space-y-4 text-sm">
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Technologien:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>Python Flask Framework</li>
+                                                    <li>SQLite Datenbank</li>
+                                                    <li>Flask-Login für Authentifizierung</li>
+                                                    <li>Werkzeug für Utilities</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Features:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>RESTful API Endpoints</li>
+                                                    <li>Sichere Authentifizierung</li>
+                                                    <li>Transaktionssicherheit</li>
+                                                    <li>Fehlerbehandlung</li>
+                                                </ul>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Entwicklung -->
-                    <div class="alert alert-info">
-                        <i class="fas fa-code"></i>
-                        <div>
-                            <h4 class="font-bold">Entwicklungsumgebung</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <div>
-                                    <h5 class="font-bold text-sm">Backend</h5>
-                                    <ul class="list-disc list-inside text-sm">
-                                        <li>Python Debugger verfügbar</li>
-                                        <li>SQLite Browser</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <h5 class="font-bold text-sm">Frontend</h5>
-                                    <ul class="list-disc list-inside text-sm">
-                                        <li>Browser DevTools</li>
-                                        <li>Tailwind CSS</li>
-                                    </ul>
-                                </div>
-                            </div>
+                    <!-- Datenbank -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-4">Datenbankstruktur</h4>
+                        <div class="overflow-x-auto">
+                            <table class="table table-compact w-full">
+                                <thead>
+                                    <tr>
+                                        <th>Tabelle</th>
+                                        <th>Beschreibung</th>
+                                        <th>Wichtige Felder</th>
+                                        <th>Beziehungen</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                    <tr>
+                                        <td class="font-bold">tools</td>
+                                        <td>Werkzeugverwaltung</td>
+                                        <td>barcode (PK), name, status, location</td>
+                                        <td>1:n zu lendings</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-bold">consumables</td>
+                                        <td>Materialverwaltung</td>
+                                        <td>barcode (PK), name, quantity, min_quantity</td>
+                                        <td>1:n zu consumable_usages</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-bold">workers</td>
+                                        <td>Mitarbeiterverwaltung</td>
+                                        <td>barcode (PK), firstname, lastname, department</td>
+                                        <td>1:n zu lendings, consumable_usages</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-bold">lendings</td>
+                                        <td>Ausleihvorgänge</td>
+                                        <td>id (PK), tool_barcode (FK), worker_barcode (FK), lent_at, returned_at</td>
+                                        <td>n:1 zu tools, workers</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-bold">consumable_usages</td>
+                                        <td>Materialentnahmen</td>
+                                        <td>id (PK), consumable_barcode (FK), worker_barcode (FK), quantity, used_at</td>
+                                        <td>n:1 zu consumables, workers</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            <!-- Systemübersicht -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-bold mb-6">Systemübersicht</h2>
-                
-                <!-- Einfache Zusammenfassung -->
-                <div class="alert alert-info mb-6">
-                    <i class="fas fa-lightbulb"></i>
+                    <!-- Prozesse -->
                     <div>
-                        <h4 class="font-bold">Kurz erklärt</h4>
-                        <p class="text-sm">
-                            Hier sehen Sie den grundlegenden Ablauf der wichtigsten Funktionen in Scandy:
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Ausleihe und Rückgabe von Werkzeugen</li>
-                                <li>Materialentnahme und Bestandsführung</li>
-                                <li>Verwaltung durch den Administrator</li>
-                            </ul>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="bg-base-200 p-8 rounded-3xl">
-                    <!-- Ablaufdiagramm -->
-                    <div class="card bg-base-100 shadow-lg">
-                        <div class="card-body">
-                            <h3 class="card-title">Hauptprozesse</h3>
-                            <div class="mermaid">
-                                flowchart TD
-                                    %% Hauptnavigation
-                                    Start([Start]) --> Nav[Navigation]
-                                    Nav --> |QuickScan| QS[QuickScan Dialog]
-                                    Nav --> |Menü| Menu[Hauptmenü]
-                                    
-                                    %% QuickScan Prozess
-                                    subgraph Scan [QuickScan Prozess]
-                                        QS --> |Barcode| CodeType{Art des Codes?}
-                                        CodeType --> |Werkzeug| Tool[Werkzeug]
-                                        CodeType --> |Material| Mat[Material]
-                                        CodeType --> |Mitarbeiter| Work[Mitarbeiter]
-                                    end
-                                    
-                                    %% Werkzeug-Workflow
-                                    subgraph Tool [Werkzeug-Prozess]
-                                        Tool --> |Status prüfen| Status{Ausgeliehen?}
-                                        Status --> |Nein| Lend[Ausleihen]
-                                        Status --> |Ja| Return[Zurückgeben]
-                                        Lend --> WorkerScan[Mitarbeiter scannen]
-                                        Return --> Done([Fertig])
-                                        WorkerScan --> Done
-                                    end
-                                    
-                                    %% Material-Workflow
-                                    subgraph Mat [Material-Prozess]
-                                        Mat --> Amount[Menge eingeben]
-                                        Amount --> MatWorker[Mitarbeiter scannen]
-                                        MatWorker --> MatDone([Fertig])
-                                    end
-                                    
-                                    %% Menü-Navigation
-                                    subgraph Menu [Hauptmenü]
-                                        Menu --> Tools[Werkzeuge]
-                                        Menu --> Workers[Mitarbeiter]
-                                        Menu --> Materials[Verbrauchsmaterial]
-                                        Menu --> |Admin Login| Admin[Papierkorb]
-                                        
-                                        Tools --> List[Liste anzeigen]
-                                        List --> Details[Details anzeigen]
-                                        List --> |Admin| Delete[Löschen]
-                                        Delete --> Trash[Papierkorb]
-                                    end
-
-                                    %% Styling
-                                    classDef process fill:#f9f,stroke:#333,stroke-width:2px
-                                    classDef decision fill:#bbf,stroke:#333,stroke-width:2px
-                                    class Status,CodeType decision
-                                    class Scan,Tool,Mat process
+                        <h4 class="font-bold mb-4">Technische Prozesse</h4>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="card bg-base-200">
+                                <div class="card-body">
+                                    <h5 class="font-bold mb-2">Datenverarbeitung</h5>
+                                    <div class="space-y-4 text-sm">
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Transaktionsablauf:</p>
+                                                <ol class="list-decimal list-inside space-y-2 mt-2">
+                                                    <li>HTTP Request empfangen</li>
+                                                    <li>Daten validieren</li>
+                                                    <li>Transaktion starten</li>
+                                                    <li>Datenbankoperationen ausführen</li>
+                                                    <li>Transaktion bestätigen/abbrechen</li>
+                                                    <li>Response senden</li>
+                                                </ol>
+                                            </div>
+                                        </div>
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Fehlerbehandlung:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>Validierungsfehler abfangen</li>
+                                                    <li>Transaktionen rollback</li>
+                                                    <li>Fehler protokollieren</li>
+                                                    <li>Benutzerfreundliche Meldungen</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Legende -->
-                    <div class="alert alert-info mt-4">
-                        <i class="fas fa-info-circle"></i>
-                        <div>
-                            <h4 class="font-bold">Legende</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>Ovale Formen: Start/Ende eines Prozesses</li>
-                                    <li>Rechtecke: Aktionen/Seiten</li>
-                                    <li>Rauten: Entscheidungen</li>
-                                </ul>
-                                <ul class="list-disc list-inside text-sm">
-                                    <li>Durchgezogene Linien: Normaler Ablauf</li>
-                                    <li>Gestrichelte Linien: Alternative Wege</li>
-                                    <li>Farbige Elemente: Prozessgruppen</li>
-                                </ul>
+                            <div class="card bg-base-200">
+                                <div class="card-body">
+                                    <h5 class="font-bold mb-2">Sicherheit</h5>
+                                    <div class="space-y-4 text-sm">
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Authentifizierung:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>Session-basierte Authentifizierung</li>
+                                                    <li>Rollenbasierte Zugriffsrechte</li>
+                                                    <li>Sichere Passwort-Hashes</li>
+                                                    <li>CSRF-Schutz</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="alert bg-base-100">
+                                            <div>
+                                                <p class="font-bold">Datensicherheit:</p>
+                                                <ul class="list-disc list-inside space-y-2 mt-2">
+                                                    <li>SQL-Injection Schutz</li>
+                                                    <li>XSS-Prevention</li>
+                                                    <li>Input Validierung</li>
+                                                    <li>Regelmäßige Backups</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
-
-            [Fortsetzung folgt...]
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %} 

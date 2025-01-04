@@ -40,12 +40,14 @@
         <!-- Vertikales Seitenmenü -->
         <div class="fixed left-0 top-0 h-full w-16 bg-base-300 flex flex-col items-center py-4 gap-2 shadow-lg z-50">
             <!-- Logo als QuickScan-Trigger -->
-            <div class="w-12 h-12 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 cursor-pointer"
+            <div class="w-16 h-16 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 cursor-pointer relative"
                  id="quickScanTrigger"
                  title="Quick Scan öffnen">
                 <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
                      alt="Scandy Logo" 
-                     class="w-8 h-8 object-contain">
+                     class="w-14 h-14 object-contain">
+                <!-- Scanner Animation -->
+                <div class="absolute w-full h-0.5 bg-primary/50 -top-1 left-0 animate-scanner"></div>
             </div>
             
             <!-- Trennlinie -->
@@ -71,11 +73,6 @@
                 <i class="fas fa-users text-xl"></i>
             </a>
             {% endif %}
-
-            <a href="{{ url_for('main.about') }}" 
-               class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'main.about' %}btn-active{% endif %}">
-                <i class="fas fa-info-circle mr-2"></i>Über Scandy
-            </a>
         </div>
 
         <!-- Navbar -->
@@ -85,6 +82,7 @@
                     {% if 'tools' in request.endpoint %}Werkzeuge
                     {% elif 'workers' in request.endpoint %}Mitarbeiter
                     {% elif 'consumables' in request.endpoint %}Verbrauchsmaterial
+                    {% elif request.endpoint == 'main.about' %}Über Scandy
                     {% else %}Dashboard{% endif %}
                 </h1>
             </div>
@@ -109,6 +107,10 @@
                     <a href="{{ url_for('admin.dashboard') }}" 
                        class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
                         <i class="fas fa-chart-line mr-2"></i>Dashboard
+                    </a>
+                    <a href="{{ url_for('main.about') }}" 
+                       class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'main.about' %}btn-active{% endif %}">
+                        <i class="fas fa-info-circle mr-2"></i>Über Scandy
                     </a>
                     <a href="{{ url_for('admin.trash') }}" 
                        class="btn btn-ghost btn-circle text-error relative">
@@ -776,5 +778,23 @@
     <!-- Toast -->
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
+
+    <!-- Styles für die Scanner-Animation -->
+    <style>
+        @keyframes scanner {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(56px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+        .animate-scanner {
+            animation: scanner 2s linear infinite;
+        }
+    </style>
 </body>
 </html>
