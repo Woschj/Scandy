@@ -1,0 +1,53 @@
+<!-- ... bestehender Code ... -->
+<table class="table w-full">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Barcode</th>
+            <th>Kategorie</th>
+            <th>Standort</th>
+            <th class="w-36">Status</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tool in tools %}
+        <tr>
+            <td>{{ tool.name }}</td>
+            <td>{{ tool.barcode }}</td>
+            <td>{{ tool.category }}</td>
+            <td>{{ tool.location }}</td>
+            <td>
+                <div class="flex items-center gap-2 whitespace-nowrap">
+                    {% if tool.status == 'Verfügbar' %}
+                    <span class="badge badge-success gap-1 min-w-[120px]">
+                        <i class="fas fa-check"></i>
+                        Verfügbar
+                    </span>
+                    {% elif tool.status == 'Ausgeliehen' %}
+                    <span class="badge badge-warning gap-1 min-w-[120px]">
+                        <i class="fas fa-exchange-alt"></i>
+                        Ausgeliehen
+                    </span>
+                    {% else %}
+                    <span class="badge badge-error gap-1 min-w-[120px]">
+                        <i class="fas fa-times"></i>
+                        Defekt
+                    </span>
+                    {% endif %}
+                    {% if tool.lent_to and tool.status == 'Ausgeliehen' %}
+                    <span class="text-xs text-gray-600 truncate max-w-[100px]" title="{{ tool.lent_to }}">
+                        {{ tool.lent_to }}
+                    </span>
+                    {% endif %}
+                </div>
+            </td>
+            <td>
+                <a href="{{ url_for('inventory.tool_details', barcode=tool.barcode) }}" 
+                   class="btn btn-sm">Details</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<!-- ... bestehender Code ... -->

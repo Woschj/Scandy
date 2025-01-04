@@ -3032,3 +3032,76 @@ Unbehandelter Fehler: 'dict object' has no attribute 'consumable_trend'
 Unbehandelter Fehler: 'dict object' has no attribute 'consumable_trend'
 Unbehandelter Fehler: name 'logger' is not defined
 Unbehandelter Fehler: 405 Method Not Allowed: The method is not allowed for the requested URL.
+Unbehandelter Fehler: Could not build url for endpoint 'tools.details' with values ['barcode']. Did you mean 'tools.detail' instead?
+Unbehandelter Fehler: Could not build url for endpoint 'tools.details' with values ['barcode']. Did you mean 'tools.detail' instead?
+Unbehandelter Fehler: Could not build url for endpoint 'tools.details' with values ['barcode']. Did you mean 'tools.detail' instead?
+Unbehandelter Fehler: Could not build url for endpoint 'tools.details' with values ['barcode']. Did you mean 'tools.detail' instead?
+Unbehandelter Fehler: Could not build url for endpoint 'tools.details' with values ['barcode']. Did you mean 'tools.detail' instead?
+Unbehandelter Fehler: components/quickscan_modal.html
+Exception on /auth/login [GET]
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\routes\auth.py", line 46, in login
+    return render_template('auth/login.html')
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\auth\login.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\base.html", line 153, in top-level template code
+    {% include 'components/quickscan_modal.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: components/quickscan_modal.html
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\app.py", line 809, in handle_user_exception
+    return self.ensure_sync(handler)(e)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\__init__.py", line 170, in handle_exception
+    return render_template('error.html',
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+                         message="Ein unerwarteter Fehler ist aufgetreten.",
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         details=str(e)), 500
+                         ^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\error.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\app\templates\base.html", line 153, in top-level template code
+    {% include 'components/quickscan_modal.html' %}
+    ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 65, in get_source
+    return self._get_source_fast(environment, template)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\wosch\Documents\GitHub\scan\Scandy\venv\Lib\site-packages\flask\templating.py", line 99, in _get_source_fast
+    raise TemplateNotFound(template)
+jinja2.exceptions.TemplateNotFound: components/quickscan_modal.html
