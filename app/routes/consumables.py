@@ -187,3 +187,103 @@ def add():
     return render_template('consumables/add.html',
                          categories=[c['category'] for c in categories],
                          locations=[l['location'] for l in locations])
+
+@bp.route('/<barcode>/adjust-stock', methods=['POST'])
+@login_required
+def adjust_stock(barcode):
+    """Passt den Bestand eines Verbrauchsmaterials an"""
+    try:
+        quantity = request.form.get('quantity', type=int)
+        
+        if quantity is None:
+            return jsonify({'success': False, 'message': 'Menge muss angegeben werden'}), 400
+            
+        with Database.get_db() as conn:
+            # Aktuellen Bestand abrufen
+            current = conn.execute('''
+                SELECT quantity FROM consumables 
+                WHERE barcode = ? AND deleted = 0
+            ''', [barcode]).fetchone()
+            
+            if not current:
+                return jsonify({'success': False, 'message': 'Verbrauchsmaterial nicht gefunden'}), 404
+            
+            # Bestand aktualisieren
+            conn.execute('''
+                UPDATE consumables 
+                SET quantity = ?,
+                    modified_at = CURRENT_TIMESTAMP
+                WHERE barcode = ?
+            ''', [quantity, barcode])
+            
+            # Änderung protokollieren
+            conn.execute('''
+                INSERT INTO consumable_usages 
+                (consumable_barcode, worker_barcode, quantity, used_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ''', [barcode, 'admin', quantity - current['quantity']])
+            
+            conn.commit()
+            
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        print(f"Fehler bei der Bestandsanpassung: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/<barcode>', methods=['GET', 'POST'])
+@login_required
+def details(barcode):
+    """Details eines Verbrauchsmaterials anzeigen und bearbeiten"""
+    try:
+        if request.method == 'POST':
+            data = request.form
+            
+            with Database.get_db() as conn:
+                conn.execute('''
+                    UPDATE consumables 
+                    SET name = ?,
+                        category = ?,
+                        location = ?,
+                        description = ?,
+                        min_quantity = ?,
+                        modified_at = CURRENT_TIMESTAMP
+                    WHERE barcode = ? AND deleted = 0
+                ''', [
+                    data.get('name'),
+                    data.get('category'),
+                    data.get('location'),
+                    data.get('description'),
+                    data.get('min_quantity', type=int),
+                    barcode
+                ])
+                conn.commit()
+            
+            return jsonify({'success': True})
+        
+        # GET-Anfrage: Details anzeigen
+        with Database.get_db() as conn:
+            consumable = conn.execute('''
+                SELECT * FROM consumables 
+                WHERE barcode = ? AND deleted = 0
+            ''', [barcode]).fetchone()
+            
+            if not consumable:
+                return jsonify({'success': False, 'message': 'Verbrauchsmaterial nicht gefunden'}), 404
+            
+            # Nutzungshistorie laden
+            usage_history = conn.execute('''
+                SELECT cu.*, w.firstname || ' ' || w.lastname as worker_name
+                FROM consumable_usages cu
+                LEFT JOIN workers w ON cu.worker_barcode = w.barcode
+                WHERE cu.consumable_barcode = ?
+                ORDER BY cu.used_at DESC
+            ''', [barcode]).fetchall()
+            
+            return render_template('consumables/details.html',
+                               consumable=consumable,
+                               usage_history=usage_history)
+                               
+    except Exception as e:
+        print(f"Fehler bei Verbrauchsmaterial-Details: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500

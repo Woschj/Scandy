@@ -25,7 +25,12 @@
             <!-- Basis-Informationen -->
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
-                    <h2 class="card-title">Details</h2>
+                    <div class="flex justify-between items-start">
+                        <h2 class="card-title">Details</h2>
+                        <button onclick="editWorker()" class="btn btn-ghost btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
                     <div class="space-y-4">
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Barcode</label>
@@ -35,25 +40,13 @@
                             <label class="text-sm font-medium text-base-content/60">Name</label>
                             <p>{{ worker.firstname }} {{ worker.lastname }}</p>
                         </div>
-                        {% if worker.department %}
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Abteilung</label>
-                            <p>{{ worker.department }}</p>
+                            <p>{{ worker.department or '-' }}</p>
                         </div>
-                        {% endif %}
-                        {% if worker.email %}
                         <div>
                             <label class="text-sm font-medium text-base-content/60">E-Mail</label>
-                            <p>
-                                <a href="mailto:{{ worker.email }}" class="link link-primary">
-                                    {{ worker.email }}
-                                </a>
-                            </p>
-                        </div>
-                        {% endif %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Letzte Änderung</label>
-                            <p>{{ worker.modified_at|format_datetime }}</p>
+                            <p>{{ worker.email or '-' }}</p>
                         </div>
                     </div>
                 </div>
@@ -99,71 +92,30 @@
                 </div>
             </div>
 
-            <!-- Verbrauchsmaterial-Entnahmen -->
-            <div class="card bg-base-100 shadow-xl">
+            <!-- Ausleihhistorie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
                 <div class="card-body">
-                    <h2 class="card-title">Letzte Materialentnahmen</h2>
-                    {% if recent_usages %}
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Material</th>
-                                    <th>Menge</th>
-                                    <th>Datum</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for usage in recent_usages %}
-                                <tr>
-                                    <td>
-                                        <a href="{{ url_for('consumables.detail', barcode=usage.consumable_barcode) }}" class="link link-primary">
-                                            {{ usage.consumable_name }}
-                                        </a>
-                                    </td>
-                                    <td>{{ usage.quantity }} Stück</td>
-                                    <td>{{ usage.used_at|format_datetime }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-base-content/60">Keine Materialentnahmen</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Ausleih-Historie -->
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Ausleih-Historie</h2>
+                    <h2 class="card-title">Ausleihhistorie</h2>
                     {% if lending_history %}
                     <div class="overflow-x-auto">
-                        <table class="table w-full">
+                        <table class="table table-zebra w-full">
                             <thead>
                                 <tr>
+                                    <th>Datum</th>
                                     <th>Werkzeug</th>
-                                    <th>Von</th>
-                                    <th>Bis</th>
-                                    <th>Dauer</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for lending in lending_history %}
                                 <tr>
-                                    <td>
-                                        <a href="{{ url_for('tools.detail', barcode=lending.tool_barcode) }}" class="link link-primary">
-                                            {{ lending.tool_name }}
-                                        </a>
-                                    </td>
                                     <td>{{ lending.lent_at|format_datetime }}</td>
-                                    <td>{{ lending.returned_at|format_datetime if lending.returned_at else 'Noch ausgeliehen' }}</td>
+                                    <td>{{ lending.tool_name }}</td>
                                     <td>
                                         {% if lending.returned_at %}
-                                            {{ (lending.returned_at|to_datetime - lending.lent_at|to_datetime)|format_duration }}
+                                            <span class="badge badge-success">Zurückgegeben am {{ lending.returned_at|format_datetime }}</span>
                                         {% else %}
-                                            Läuft
+                                            <span class="badge badge-warning">Ausgeliehen</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -172,7 +124,38 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-base-content/60">Keine Ausleih-Historie vorhanden</p>
+                    <p class="text-base-content/60">Keine Ausleihvorgänge vorhanden</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Verbrauchsmaterial-Historie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
+                <div class="card-body">
+                    <h2 class="card-title">Verbrauchsmaterial-Historie</h2>
+                    {% if usage_history %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Material</th>
+                                    <th>Menge</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in usage_history %}
+                                <tr>
+                                    <td>{{ usage.used_at|format_datetime }}</td>
+                                    <td>{{ usage.consumable_name }}</td>
+                                    <td>{{ usage.quantity }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Materialentnahmen vorhanden</p>
                     {% endif %}
                 </div>
             </div>

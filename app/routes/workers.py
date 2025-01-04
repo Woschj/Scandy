@@ -87,61 +87,68 @@ def add():
             
     return render_template('workers/add.html', departments=departments)
 
-@bp.route('/<barcode>')
+@bp.route('/<barcode>', methods=['GET', 'POST'])
+@login_required
 def details(barcode):
-    """Zeigt Details eines Mitarbeiters"""
-    worker = Database.query('SELECT * FROM workers WHERE barcode = ? AND deleted = 0', [barcode], one=True)
-    
-    if not worker:
-        flash('Mitarbeiter nicht gefunden', 'error')
-        return redirect(url_for('workers.index'))
+    """Details eines Mitarbeiters anzeigen und bearbeiten"""
+    try:
+        if request.method == 'POST':
+            data = request.form
+            
+            with Database.get_db() as conn:
+                conn.execute('''
+                    UPDATE workers 
+                    SET firstname = ?,
+                        lastname = ?,
+                        department = ?,
+                        modified_at = CURRENT_TIMESTAMP
+                    WHERE barcode = ? AND deleted = 0
+                ''', [
+                    data.get('firstname'),
+                    data.get('lastname'),
+                    data.get('department'),
+                    barcode
+                ])
+                conn.commit()
+            
+            return jsonify({'success': True})
         
-    # Aktuelle Ausleihen
-    active_lendings = Database.query('''
-        SELECT
-            t.name as tool_name,
-            t.barcode as tool_barcode,
-            l.lent_at
-        FROM lendings l
-        JOIN tools t ON l.tool_barcode = t.barcode
-        WHERE l.worker_barcode = ?
-        AND l.returned_at IS NULL
-        ORDER BY l.lent_at DESC
-    ''', [barcode])
-    
-    # Historie
-    history = Database.query('''
-        SELECT
-            t.name as item_name,
-            t.barcode as item_barcode,
-            l.lent_at,
-            l.returned_at,
-            'Werkzeug' as type,
-            NULL as quantity
-        FROM lendings l
-        JOIN tools t ON l.tool_barcode = t.barcode
-        WHERE l.worker_barcode = ?
-        AND l.returned_at IS NOT NULL
-        
-        UNION ALL
-        
-        SELECT
-            c.name as item_name,
-            c.barcode as item_barcode,
-            cu.used_at as lent_at,
-            cu.used_at as returned_at,
-            'Verbrauchsmaterial' as type,
-            cu.quantity
-        FROM consumable_usages cu
-        JOIN consumables c ON cu.consumable_barcode = c.barcode
-        WHERE cu.worker_barcode = ?
-        ORDER BY lent_at DESC
-    ''', [barcode, barcode])
-    
-    return render_template('workers/details.html',
-                         worker=worker,
-                         active_lendings=active_lendings,
-                         history=history)
+        # GET-Anfrage: Details anzeigen
+        with Database.get_db() as conn:
+            worker = conn.execute('''
+                SELECT * FROM workers 
+                WHERE barcode = ? AND deleted = 0
+            ''', [barcode]).fetchone()
+            
+            if not worker:
+                return jsonify({'success': False, 'message': 'Mitarbeiter nicht gefunden'}), 404
+            
+            # Ausleihhistorie laden
+            lending_history = conn.execute('''
+                SELECT l.*, t.name as tool_name
+                FROM lendings l
+                JOIN tools t ON l.tool_barcode = t.barcode AND t.deleted = 0
+                WHERE l.worker_barcode = ?
+                ORDER BY l.lent_at DESC
+            ''', [barcode]).fetchall()
+            
+            # Verbrauchsmaterial-Historie laden
+            usage_history = conn.execute('''
+                SELECT cu.*, c.name as consumable_name
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode AND c.deleted = 0
+                WHERE cu.worker_barcode = ?
+                ORDER BY cu.used_at DESC
+            ''', [barcode]).fetchall()
+            
+            return render_template('workers/details.html',
+                               worker=worker,
+                               lending_history=lending_history,
+                               usage_history=usage_history)
+                               
+    except Exception as e:
+        print(f"Fehler bei Mitarbeiter-Details: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/<barcode>/edit', methods=['POST'])
 @admin_required

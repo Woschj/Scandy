@@ -34,8 +34,12 @@
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Status</label>
                             <p class="flex items-center gap-2">
-                                <span class="badge {% if tool.status == 'verfügbar' %}badge-success{% elif tool.status == 'ausgeliehen' %}badge-warning{% else %}badge-error{% endif %}">
-                                    {{ tool.status }}
+                                <span class="badge 
+                                    {%- if tool.status == 'verfügbar' %} badge-success
+                                    {%- elif tool.status == 'ausgeliehen' %} badge-warning
+                                    {%- elif tool.status == 'defekt' %} badge-error
+                                    {%- endif -%}">
+                                    {{ tool.status|title }}
                                 </span>
                                 <button onclick="openStatusModal()" class="btn btn-sm btn-ghost">
                                     <i class="fas fa-edit"></i>
@@ -195,6 +199,7 @@
                     <select name="status" class="select select-bordered" required>
                         <option value="verfügbar">Verfügbar</option>
                         <option value="defekt">Defekt</option>
+                        <option value="ausgeliehen">Verliehen</option>
                     </select>
                 </div>
                 
