@@ -133,10 +133,16 @@ def manual_lending():
         action = request.form.get('action')  # 'lend' oder 'return'
         quantity = request.form.get('quantity', type=int)
         
-        if not tool_barcode or not worker_barcode:
+        if not tool_barcode:
             return jsonify({
                 'success': False, 
-                'message': 'Werkzeug und Mitarbeiter müssen ausgewählt sein'
+                'message': 'Werkzeug muss ausgewählt sein'
+            }), 400
+            
+        if action == 'lend' and not worker_barcode:
+            return jsonify({
+                'success': False, 
+                'message': 'Mitarbeiter muss ausgewählt sein'
             }), 400
         
         try:
@@ -180,7 +186,7 @@ def manual_lending():
                     'message': 'Verbrauchsmaterial erfolgreich ausgegeben'
                 })
             
-            # Werkzeug-Logik (unverändert)
+            # Werkzeug-Logik
             if action == 'lend':
                 # Prüfe ob das Werkzeug bereits ausgeliehen ist
                 existing_lending = Database.query('''
@@ -195,27 +201,55 @@ def manual_lending():
                         'message': 'Dieses Werkzeug ist bereits ausgeliehen'
                     }), 400
                 
+                # Neue Ausleihe erstellen
                 Database.query('''
-                    INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
-                    VALUES (?, ?, datetime('now'))
+                    INSERT INTO lendings (tool_barcode, worker_barcode, lent_at, modified_at, sync_status)
+                    VALUES (?, ?, datetime('now'), datetime('now'), 'pending')
                 ''', [tool_barcode, worker_barcode])
+                
+                # Status des Werkzeugs aktualisieren
+                Database.query('''
+                    UPDATE tools 
+                    SET status = 'ausgeliehen',
+                        modified_at = datetime('now'),
+                        sync_status = 'pending'
+                    WHERE barcode = ?
+                ''', [tool_barcode])
                 
                 return jsonify({
                     'success': True, 
                     'message': 'Werkzeug erfolgreich ausgeliehen'
                 })
-            else:
-                Database.query('''
+            else:  # action == 'return'
+                # Rückgabe verarbeiten
+                result = Database.query('''
                     UPDATE lendings 
-                    SET returned_at = datetime('now')
+                    SET returned_at = datetime('now'),
+                        modified_at = datetime('now'),
+                        sync_status = 'pending'
                     WHERE tool_barcode = ? 
                     AND returned_at IS NULL
                 ''', [tool_barcode])
                 
-                return jsonify({
-                    'success': True, 
-                    'message': 'Werkzeug erfolgreich zurückgegeben'
-                })
+                if result:
+                    # Status des Werkzeugs aktualisieren
+                    Database.query('''
+                        UPDATE tools 
+                        SET status = 'verfügbar',
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE barcode = ?
+                    ''', [tool_barcode])
+                    
+                    return jsonify({
+                        'success': True, 
+                        'message': 'Werkzeug erfolgreich zurückgegeben'
+                    })
+                else:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Keine aktive Ausleihe für dieses Werkzeug gefunden'
+                    }), 400
                 
         except Exception as e:
             print("Fehler bei der Ausleihe:", str(e))
@@ -228,11 +262,12 @@ def manual_lending():
     tools = Database.query('''
         SELECT t.*,
                 CASE 
-                    WHEN l.returned_at IS NULL THEN 'lent'
+                    WHEN l.id IS NOT NULL THEN 'lent'
                     WHEN t.status = 'defect' THEN 'defect'
                     ELSE 'available'
                 END as current_status,
-                w.firstname || ' ' || w.lastname as lent_to
+                w.firstname || ' ' || w.lastname as lent_to,
+                l.id as lending_id
         FROM tools t
         LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
         LEFT JOIN workers w ON l.worker_barcode = w.barcode
@@ -247,20 +282,37 @@ def manual_lending():
         SELECT * FROM consumables WHERE deleted = 0
     ''')
 
+    # Aktuelle Ausleihen (Werkzeuge und Verbrauchsmaterial)
     current_lendings = Database.query('''
         SELECT 
-            l.*,
+            l.id,
             t.name as item_name,
-            w.firstname || ' ' || w.lastname as worker_name,
-            'Werkzeug' as category,
             t.barcode as item_barcode,
+            w.firstname || ' ' || w.lastname as worker_name,
             w.barcode as worker_barcode,
-            l.lent_at as action_date
+            'Werkzeug' as category,
+            l.lent_at as action_date,
+            NULL as amount
         FROM lendings l
         JOIN tools t ON l.tool_barcode = t.barcode
         JOIN workers w ON l.worker_barcode = w.barcode
         WHERE l.returned_at IS NULL
-        ORDER BY l.lent_at DESC
+        
+        UNION ALL
+        
+        SELECT 
+            cu.id,
+            c.name as item_name,
+            c.barcode as item_barcode,
+            w.firstname || ' ' || w.lastname as worker_name,
+            w.barcode as worker_barcode,
+            'Verbrauchsmaterial' as category,
+            cu.used_at as action_date,
+            cu.quantity as amount
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        JOIN workers w ON cu.worker_barcode = w.barcode
+        ORDER BY action_date DESC
     ''')
     
     categories = Database.query('''

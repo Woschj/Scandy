@@ -30,12 +30,12 @@
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Status</label>
                             <p>
-                                {% if tool.current_status == 'defect' %}
+                                {% if tool.status == 'defekt' %}
                                     <span class="badge badge-error gap-1">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         Defekt
                                     </span>
-                                {% elif tool.current_status == 'lent' %}
+                                {% elif tool.status == 'ausgeliehen' %}
                                     <span class="badge badge-warning gap-1">
                                         <i class="fas fa-hand-holding"></i>
                                         Ausgeliehen

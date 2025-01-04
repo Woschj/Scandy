@@ -59,7 +59,8 @@ def detail(barcode):
                        WHEN t.status = 'defect' THEN 'defekt'
                        WHEN l.id IS NOT NULL THEN 'ausgeliehen'
                        ELSE 'verfügbar'
-                   END as status
+                   END as status,
+                   l.id as lending_id
             FROM tools t
             LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
                 AND l.returned_at IS NULL
@@ -83,7 +84,7 @@ def detail(barcode):
         
         # Aktuelle Ausleihe
         current_lending = None
-        if tool['status'] == 'ausgeliehen':
+        if tool['lending_id'] is not None:
             current_lending = {
                 'worker_name': tool['current_worker'],
                 'lent_at': tool['lent_at']

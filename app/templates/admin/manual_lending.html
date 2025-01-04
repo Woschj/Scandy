@@ -529,6 +529,30 @@ window.ManualLending = ManualLending;
 document.addEventListener('DOMContentLoaded', () => {
     ManualLending.init();
 });
+
+function returnTool(barcode) {
+    const formData = new FormData();
+    formData.append('tool_barcode', barcode);
+    formData.append('action', 'return');
+    formData.append('worker_barcode', ''); // Leerer String für Rückgabe
+    
+    fetch('/admin/manual-lending', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert(result.message || 'Ein Fehler ist aufgetreten');
+        }
+    })
+    .catch(error => {
+        console.error('Fehler bei der Rückgabe:', error);
+        alert(`Fehler bei der Rückgabe: ${error.message}`);
+    });
+}
 </script>
 
 <style>

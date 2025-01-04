@@ -137,56 +137,26 @@
             }
         },
 
-        async returnItem(itemBarcode) {
-            debug('RETURN', 'ReturnItem called with barcode:', itemBarcode);
-            
+        async returnItem(barcode) {
             try {
-                debug('RETURN', 'Sending return request...');
-                const response = await fetch('/admin/process_return', {
+                const formData = new FormData();
+                formData.append('tool_barcode', barcode);
+                formData.append('action', 'return');
+
+                const response = await fetch('/admin/manual-lending', {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        item_barcode: itemBarcode
-                    })
+                    body: formData
                 });
 
-                debug('RETURN', 'Return response received:', {
-                    status: response.status,
-                    statusText: response.statusText
-                });
-
-                const textResponse = await response.text();
-                debug('RETURN', 'Raw return response:', textResponse);
-
-                let result;
-                try {
-                    result = JSON.parse(textResponse);
-                    debug('RETURN', 'Parsed return response:', result);
-                } catch (parseError) {
-                    debug('RETURN', 'Return JSON Parse Error:', parseError);
-                    throw new Error(`Ungültiges Rückgabe-Format: ${textResponse}`);
+                const result = await response.json();
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    alert(result.message || 'Ein Fehler ist aufgetreten');
                 }
-
-                if (!response.ok) {
-                    debug('RETURN', 'Return request failed:', result);
-                    throw new Error(result.message || 'Fehler bei der Rückgabe');
-                }
-
-                debug('RETURN', 'Return completed successfully');
-                return result;
-
             } catch (error) {
-                debug('RETURN', 'Error in returnItem:', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
-                throw error;
+                console.error('Fehler bei der Rückgabe:', error);
+                throw new Error(`Fehler bei der Rückgabe: ${error.message}`);
             }
         },
 
