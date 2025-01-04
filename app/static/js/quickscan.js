@@ -21,38 +21,53 @@
             this.scanMode = 'scanner';
             this.codeReader = new ZXing.BrowserMultiFormatReader();
             this.isScanning = false;
+            this.isProcessing = false;
             
             this.scannedData = {
                 item: null,
                 worker: null,
-                action: null
+                confirmationCode: null
             };
             
             this.setupEventListeners();
+            console.log('QuickScan initialisiert');
         }
 
         setupEventListeners() {
             // Scanner Input Events
-            document.getElementById('itemScanInput').addEventListener('keyup', (e) => {
-                if (e.key === 'Enter' && e.target.value) {
-                    this.handleItemScan(e.target.value);
-                }
-            });
+            const itemInput = document.getElementById('itemScanInput');
+            if (itemInput) {
+                itemInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter' && e.target.value) {
+                        this.handleItemScan(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+            }
 
-            document.getElementById('workerScanInput').addEventListener('keyup', (e) => {
-                if (e.key === 'Enter' && e.target.value) {
-                    this.handleWorkerScan(e.target.value);
-                }
-            });
+            const workerInput = document.getElementById('workerScanInput');
+            if (workerInput) {
+                workerInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter' && e.target.value) {
+                        this.handleWorkerScan(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+            }
 
             // Modal Events
             this.modal.addEventListener('close', () => {
                 this.resetScan();
                 this.stopWebcam();
             });
+
+            // Modus-Umschaltung Events
+            document.getElementById('scannerModeBtn')?.addEventListener('click', () => this.switchMode('scanner'));
+            document.getElementById('webcamModeBtn')?.addEventListener('click', () => this.switchMode('webcam'));
         }
 
         async switchMode(mode) {
+            console.log('Wechsle zu Modus:', mode);
             this.scanMode = mode;
             
             // Update Button States
@@ -74,7 +89,10 @@
                 if (scannerMode) {
                     scannerMode.classList.remove('hidden');
                     const input = document.getElementById('itemScanInput');
-                    if (input) input.focus();
+                    if (input) {
+                        input.value = '';
+                        input.focus();
+                    }
                 }
                 this.stopWebcam();
             }
@@ -119,6 +137,10 @@
                             await this.handleItemScan(result.text);
                         } else if (this.currentStep === 3) {
                             await this.handleWorkerScan(result.text);
+                        } else if (this.currentStep === 4) {
+                            if (result.text === this.scannedData.finalConfirmationCode) {
+                                await this.processLending();
+                            }
                         }
                     }
                 } catch (error) {
@@ -130,16 +152,50 @@
 
         async handleItemScan(barcode) {
             try {
-                const response = await fetch(`/api/inventory/item/${barcode}`);
-                const item = await response.json();
+                // Prüfe ob es ein Bestätigungscode ist
+                if (barcode.startsWith('CONFIRM-')) {
+                    if (barcode === this.scannedData.confirmationCode) {
+                        this.moveToStep(3);
+                        // Fokus auf Worker-Scan setzen
+                        const workerInput = document.getElementById('workerScanInput');
+                        if (workerInput) {
+                            workerInput.disabled = false;
+                            workerInput.focus();
+                        }
+                        return;
+                    } else if (barcode === this.scannedData.finalConfirmationCode) {
+                        this.processLending();
+                        return;
+                    } else {
+                        throw new Error('Ungültiger Bestätigungscode');
+                    }
+                }
+
+                // Normaler Item-Scan
+                console.log('Verarbeite Item-Scan:', barcode);
+                const response = await fetch(`/api/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        barcode: barcode,
+                        step: 'tool'
+                    })
+                });
                 
-                if (item.error) throw new Error(item.error);
+                const data = await response.json();
                 
-                this.scannedData.item = item;
-                this.updateItemInfo(item);
-                this.moveToStep(2);
+                if (!response.ok) {
+                    throw new Error(data.error || 'Artikel nicht gefunden');
+                }
+                
+                if (!data.success && data.error) {
+                    throw new Error(data.error);
+                }
+                
+                this.scannedData.item = data.item;
+                this.updateItemInfo(data.item);
             } catch (error) {
-                this.showError('Item nicht gefunden');
+                this.showError(error.message);
             }
         }
 
@@ -154,35 +210,121 @@
             
             // Update Step 2 Info
             document.getElementById('confirmItemName').textContent = item.name;
+            const action = item.status === 'ausgeliehen' ? 'Rückgabe' : 'Ausleihe';
             document.getElementById('confirmItemStatus').textContent = 
-                `${item.type === 'tool' ? 'Werkzeug' : 'Verbrauchsmaterial'} - ${item.status || 'Verfügbar'}`;
+                `${item.type === 'tool' ? 'Werkzeug' : 'Verbrauchsmaterial'} - ${action}`;
+
+            // Generiere und zeige Bestätigungsbarcode
+            this.generateConfirmationBarcode(item, action);
         }
 
-        confirmAction(action) {
-            if (!this.scannedData.item) return;
-            
-            this.scannedData.action = action;
-            this.moveToStep(3);
-            
-            // Enable worker scan input
-            const workerInput = document.getElementById('workerScanInput');
-            workerInput.disabled = false;
-            workerInput.focus();
+        async generateConfirmationBarcode(item, action) {
+            try {
+                const confirmationCode = `CONFIRM-${Date.now()}`;
+                this.scannedData.confirmationCode = confirmationCode;
+                this.scannedData.action = action.toLowerCase();
+
+                // Zeige Barcode und Anweisungen
+                const confirmArea = document.getElementById('step2');
+                confirmArea.innerHTML = `
+                    <div class="bg-base-200 rounded-lg p-4">
+                        <div class="alert alert-info shadow-sm text-sm py-2 mb-3">
+                            <div class="flex flex-col">
+                                <span id="confirmItemName" class="font-medium">${item.name}</span>
+                                <span id="confirmItemStatus" class="text-xs">
+                                    ${action} durchführen
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <div class="bg-white p-4 rounded-lg mb-2">
+                                <svg id="confirmationBarcode"></svg>
+                            </div>
+                            <p class="text-sm text-center mb-4">
+                                Scannen Sie diesen Barcode oder drücken Sie Enter um die ${action} zu bestätigen
+                            </p>
+                            <div class="form-control">
+                                <input type="text" 
+                                       id="confirmInput"
+                                       class="input input-bordered w-full text-center" 
+                                       placeholder="Enter drücken zum Bestätigen"
+                                       autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Generiere Barcode mit JsBarcode
+                JsBarcode("#confirmationBarcode", confirmationCode, {
+                    format: "code128",
+                    width: 2,
+                    height: 100,
+                    displayValue: true,
+                    text: `${action} bestätigen`,
+                    fontOptions: "bold",
+                    textAlign: "center",
+                    textPosition: "bottom",
+                    textMargin: 2,
+                    fontSize: 14,
+                    background: "#ffffff",
+                    lineColor: "#000000",
+                    margin: 10
+                });
+
+                // Event-Listener für Enter-Taste
+                const confirmInput = document.getElementById('confirmInput');
+                if (confirmInput) {
+                    confirmInput.addEventListener('keyup', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.moveToStep(3);
+                            // Fokus auf Worker-Scan setzen
+                            const workerInput = document.getElementById('workerScanInput');
+                            if (workerInput) {
+                                workerInput.disabled = false;
+                                workerInput.focus();
+                            }
+                        }
+                    });
+                    // Setze Fokus nach kurzem Delay
+                    setTimeout(() => {
+                        confirmInput.focus();
+                    }, 100);
+                }
+
+                this.moveToStep(2);
+            } catch (error) {
+                this.showError('Fehler beim Generieren des Bestätigungscodes: ' + error.message);
+            }
         }
 
         async handleWorkerScan(barcode) {
             try {
-                const response = await fetch(`/api/workers/${barcode}`);
-                const worker = await response.json();
+                console.log('Verarbeite Worker-Scan:', barcode);
+                const response = await fetch(`/api/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        barcode: barcode,
+                        step: 'worker'
+                    })
+                });
                 
-                if (worker.error) throw new Error(worker.error);
+                const data = await response.json();
                 
-                this.scannedData.worker = worker;
-                this.updateWorkerInfo(worker);
-                this.moveToStep(4);
-                await this.generateFinalBarcode();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Mitarbeiter nicht gefunden');
+                }
+                
+                if (!data.success && data.error) {
+                    throw new Error(data.error);
+                }
+                
+                this.scannedData.worker = data.worker;
+                this.updateWorkerInfo(data.worker);
+                this.showFinalConfirmation();
             } catch (error) {
-                this.showError('Mitarbeiter nicht gefunden');
+                this.showError(error.message);
             }
         }
 
@@ -194,87 +336,197 @@
                 worker.department || 'Keine Abteilung';
         }
 
-        async generateFinalBarcode() {
-            const confirmCode = `CONFIRM-${Date.now()}`;
-            const response = await fetch(`/api/barcode/${confirmCode}`);
-            const data = await response.json();
-            
-            document.getElementById('finalConfirmation').innerHTML = `
-                <img src="${data.barcode}" alt="Bestätigungs-Barcode">
+        showFinalConfirmation() {
+            const action = this.scannedData.item.status === 'ausgeliehen' ? 'Rückgabe' : 'Ausleihe';
+            const confirmationCode = `CONFIRM-FINAL-${Date.now()}`;
+            this.scannedData.finalConfirmationCode = confirmationCode;
+
+            // Zeige finale Bestätigung
+            const confirmArea = document.getElementById('step4');
+            confirmArea.innerHTML = `
+                <div class="bg-base-200 rounded-lg p-4">
+                    <div class="alert ${action === 'Rückgabe' ? 'alert-warning' : 'alert-info'} shadow-sm text-sm py-2 mb-3">
+                        <div class="flex flex-col gap-2">
+                            <h3 class="font-bold">Finale Bestätigung - ${action}</h3>
+                            <div class="divider my-0"></div>
+                            <div>
+                                <p class="font-medium">Werkzeug/Material:</p>
+                                <p>${this.scannedData.item.name}</p>
+                                <p class="text-xs opacity-70">Barcode: ${this.scannedData.item.barcode}</p>
+                                <p class="text-xs opacity-70">Status: ${this.scannedData.item.status}</p>
+                            </div>
+                            <div class="divider my-0"></div>
+                            <div>
+                                <p class="font-medium">Mitarbeiter:</p>
+                                <p>${this.scannedData.worker.firstname} ${this.scannedData.worker.lastname}</p>
+                                <p class="text-xs opacity-70">${this.scannedData.worker.department || ''}</p>
+                                <p class="text-xs opacity-70">Barcode: ${this.scannedData.worker.barcode}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="bg-white p-4 rounded-lg mb-2">
+                            <svg id="finalConfirmationBarcode"></svg>
+                        </div>
+                        <p class="text-sm text-center mb-4">
+                            Scannen Sie diesen Barcode oder drücken Sie Enter um die ${action} abzuschließen
+                        </p>
+                        <div class="form-control">
+                            <input type="text" 
+                                   id="finalConfirmInput"
+                                   class="input input-bordered w-full text-center" 
+                                   placeholder="Enter drücken zum Bestätigen"
+                                   autocomplete="off">
+                        </div>
+                    </div>
+                </div>
             `;
-            
-            document.getElementById('finalSummary').textContent = `
-                ${this.scannedData.item.name} wird ${this.scannedData.action === 'lend' ? 'ausgeliehen an' : 'genutzt von'}
-                ${this.scannedData.worker.firstname} ${this.scannedData.worker.lastname}
-            `;
+
+            // Generiere Barcode
+            JsBarcode("#finalConfirmationBarcode", confirmationCode, {
+                format: "code128",
+                width: 2,
+                height: 100,
+                displayValue: true,
+                text: `${action} abschließen`,
+                fontOptions: "bold",
+                textAlign: "center",
+                textPosition: "bottom",
+                textMargin: 2,
+                fontSize: 14,
+                background: "#ffffff",
+                lineColor: "#000000",
+                margin: 10
+            });
+
+            // Event-Listener für Enter-Taste
+            const finalConfirmInput = document.getElementById('finalConfirmInput');
+            if (finalConfirmInput) {
+                finalConfirmInput.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.processLending();
+                    }
+                });
+                // Setze Fokus nach kurzem Delay
+                setTimeout(() => {
+                    finalConfirmInput.focus();
+                }, 100);
+            }
+
+            this.moveToStep(4);
         }
 
         moveToStep(step) {
+            console.log('Wechsle zu Schritt:', step);
             this.currentStep = step;
             
-            // Update Progress Steps in der Leiste oben
+            // Update Progress Steps
             document.querySelectorAll('.steps-horizontal .step').forEach((el, index) => {
                 el.classList.toggle('step-primary', index < step);
             });
             
-            // Aktiven Step anzeigen, andere ausblenden
+            // Show/Hide Steps
             ['step1', 'step2', 'step3', 'step4'].forEach((stepId, index) => {
                 const stepElement = document.getElementById(stepId);
                 if (stepElement) {
                     stepElement.classList.toggle('hidden', index + 1 !== step);
-                    stepElement.style.opacity = index + 1 === step ? '1' : '0.5';
                 }
             });
             
-            // Fokus und Input-Status setzen
-            if (step === 1) {
-                const input = document.getElementById('itemScanInput');
-                if (input) {
-                    input.disabled = false;
-                    input.focus();
+            // Focus Management
+            setTimeout(() => {
+                if (step === 1) {
+                    const input = document.getElementById('itemScanInput');
+                    if (input) {
+                        input.disabled = false;
+                        input.focus();
+                    }
+                } else if (step === 2) {
+                    const input = document.getElementById('confirmInput');
+                    if (input) {
+                        input.disabled = false;
+                        input.focus();
+                    }
+                } else if (step === 3) {
+                    const input = document.getElementById('workerScanInput');
+                    if (input) {
+                        input.disabled = false;
+                        input.focus();
+                    }
+                } else if (step === 4) {
+                    const input = document.getElementById('finalConfirmInput');
+                    if (input) {
+                        input.disabled = false;
+                        input.focus();
+                    }
                 }
-            } else if (step === 3) {
-                const input = document.getElementById('workerScanInput');
-                if (input) {
-                    input.disabled = false;
-                    input.focus();
-                }
-            }
+            }, 100);
         }
 
-        async finalizeScan() {
-            if (!this.scannedData.item || !this.scannedData.worker) return;
+        async processLending() {
+            if (this.isProcessing) {
+                console.log('Verarbeitung läuft bereits...');
+                return;
+            }
+
+            if (!this.scannedData.item || !this.scannedData.worker) {
+                this.showError('Unvollständige Daten für Ausleihe');
+                return;
+            }
             
             try {
-                const response = await fetch('/api/lending/process', {
+                this.isProcessing = true;
+                console.log('Verarbeite Ausleihe/Rückgabe:', {
+                    tool: this.scannedData.item,
+                    worker: this.scannedData.worker
+                });
+
+                const response = await fetch('/api/quickscan/process_lending', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({
-                        item_id: this.scannedData.item.id,
-                        worker_id: this.scannedData.worker.id,
-                        type: this.scannedData.item.type,
-                        action: this.scannedData.action
+                        tool_barcode: this.scannedData.item.barcode,
+                        worker_barcode: this.scannedData.worker.barcode
                     })
                 });
                 
-                const result = await response.json();
-                if (result.error) throw new Error(result.error);
+                const data = await response.json();
                 
-                this.showSuccess('Vorgang erfolgreich abgeschlossen');
+                if (!response.ok) {
+                    throw new Error(data.error || 'Fehler beim Verarbeiten');
+                }
+                
+                if (!data.success && data.error) {
+                    throw new Error(data.error);
+                }
+                
+                this.showSuccess(data.message || 'Vorgang erfolgreich abgeschlossen');
                 this.modal.close();
-                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } catch (error) {
-                this.showError('Fehler beim Abschließen: ' + error.message);
+                this.showError(error.message);
+                this.isProcessing = false;
             }
         }
 
         resetScan() {
             this.currentStep = 1;
-            this.scannedData = { item: null, worker: null, action: null };
+            this.isProcessing = false;
+            this.scannedData = { 
+                item: null, 
+                worker: null, 
+                confirmationCode: null,
+                finalConfirmationCode: null 
+            };
             this.moveToStep(1);
             
-            // Reset all inputs and info displays
-            ['itemScanInput', 'workerScanInput'].forEach(id => {
+            // Reset inputs
+            ['itemScanInput', 'workerScanInput', 'confirmInput', 'finalConfirmInput'].forEach(id => {
                 const input = document.getElementById(id);
                 if (input) {
                     input.value = '';
@@ -282,6 +534,7 @@
                 }
             });
             
+            // Reset info displays
             ['scannedItemInfo', 'scannedWorkerInfo'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
@@ -289,55 +542,16 @@
         }
 
         showError(message) {
-            window.toast.show(message, 'error');
+            console.error('Fehler:', message);
+            window.toast?.show(message, 'error') || alert(message);
         }
 
         showSuccess(message) {
-            window.toast.show(message, 'success');
-        }
-
-        async processLending() {
-            if (!this.scannedData.item || !this.scannedData.worker) {
-                this.showError('Unvollständige Daten für Ausleihe');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/lending/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content
-                    },
-                    body: JSON.stringify({
-                        item_id: this.scannedData.item.barcode,
-                        worker_id: this.scannedData.worker.barcode,
-                        type: this.scannedData.item.type,
-                        action: this.scannedData.action
-                    })
-                });
-                
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error || 'Fehler beim Verarbeiten');
-                
-                this.showSuccess('Vorgang erfolgreich abgeschlossen');
-                this.modal.close();
-                // Seite neu laden um Liste zu aktualisieren
-                window.location.reload();
-                
-            } catch (error) {
-                this.showError(`Fehler: ${error.message}`);
-            }
+            console.log('Erfolg:', message);
+            window.toast?.show(message, 'success') || alert(message);
         }
     }
 
     // Initialisierung
-    document.addEventListener('DOMContentLoaded', () => {
-        window.quickScan = new QuickScan();
-    }); 
-}
-
-// Initialisierung
-document.addEventListener('DOMContentLoaded', () => {
     window.quickScan = new QuickScan();
-}); 
+})(); 

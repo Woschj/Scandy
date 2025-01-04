@@ -3031,3 +3031,4 @@ Unbehandelter Fehler: 'dict object' has no attribute 'consumable_trend'
 Unbehandelter Fehler: 'dict object' has no attribute 'consumable_trend'
 Unbehandelter Fehler: 'dict object' has no attribute 'consumable_trend'
 Unbehandelter Fehler: name 'logger' is not defined
+Unbehandelter Fehler: 405 Method Not Allowed: The method is not allowed for the requested URL.

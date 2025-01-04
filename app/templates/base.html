@@ -149,6 +149,7 @@
     </div>
 
     <!-- QuickScan Modal -->
+    {% if request.endpoint != 'quick_scan.quick_scan' %}
     {% include 'components/quickscan_modal.html' %}
 
     <!-- Skripte bereinigen - nur einmal einbinden -->
@@ -174,6 +175,7 @@
         }
     });
     </script>
+    {% endif %}
 
     <!-- Zusätzliche Styles für Webcam-Scanning -->
     <style>
