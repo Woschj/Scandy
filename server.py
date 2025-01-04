@@ -3,39 +3,29 @@ import logging
 from app.models.database import Database, init_db
 
 def list_app_files():
-    """Listet alle für die App relevanten Dateien auf"""
-    app_files = []
+    logging.info("=================")
+    logging.info("Durchsuche App-Dateien...")
     
-    # Durchsuche das app-Verzeichnis rekursiv
-    for root, dirs, files in os.walk('app'):
-        # Ignoriere __pycache__ Verzeichnisse
-        if '__pycache__' in root:
-            continue
-            
+    for root, dirs, files in os.walk("app"):
         for file in files:
-            # Nur Python, SQL, HTML und JavaScript Dateien
-            if file.endswith(('.py', '.sql', '.html', '.js')):
-                full_path = os.path.join(root, file)
-                app_files.append(full_path)
+            if file.endswith((".py", ".html")):
+                logging.info(f"Datei: {os.path.join(root, file)}")
     
-    logging.info("\n=== APP DATEIEN ===")
-    for file in sorted(app_files):
-        logging.info(f"📄 {file}")
-    logging.info("=================\n")
+    logging.info("=================")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Logging konfigurieren
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(levelname)s - %(message)s'
     )
-    
-    # App-Dateien auflisten
-    list_app_files()
     
     logging.info("Starte Entwicklungsserver...")
     
-    # Server starten
+    # Dateien auflisten
+    list_app_files()
+    
+    # Flask-App importieren und starten
     from app import create_app
     app = create_app()
-    app.run(debug=True) 
+    app.run(debug=True, host='0.0.0.0', port=5000) 

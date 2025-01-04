@@ -280,6 +280,48 @@
             </div>
         </div>
     </div>
+
+    <!-- Backup-Verwaltung -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold">Backup-Verwaltung</h2>
+            <form action="{{ url_for('admin.create_backup') }}" method="POST">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    Backup erstellen
+                </button>
+            </form>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-auto">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="px-4 py-2 text-left">Backup</th>
+                        <th class="px-4 py-2 text-left">Erstellt am</th>
+                        <th class="px-4 py-2 text-left">Größe</th>
+                        <th class="px-4 py-2 text-left">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for backup in stats.backups %}
+                    <tr class="border-b">
+                        <td class="px-4 py-2">{{ backup.name }}</td>
+                        <td class="px-4 py-2">{{ backup.created|format_datetime }}</td>
+                        <td class="px-4 py-2">{{ (backup.size / 1024)|round(1) }} KB</td>
+                        <td class="px-4 py-2">
+                            <form action="{{ url_for('admin.restore_backup', filename=backup.name) }}" method="POST" class="inline">
+                                <button type="submit" onclick="return confirm('Sind Sie sicher, dass Sie dieses Backup wiederherstellen möchten? Alle aktuellen Daten werden überschrieben.')" 
+                                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm">
+                                    Wiederherstellen
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

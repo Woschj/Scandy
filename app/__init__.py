@@ -13,6 +13,22 @@ from flask_compress import Compress
 from app.models.settings import Settings
 from app.sync_manager import SyncManager
 from app.utils.auth_utils import needs_setup
+from apscheduler.schedulers.background import BackgroundScheduler
+from pathlib import Path
+import sys
+
+# Backup-System importieren
+sys.path.append(str(Path(__file__).parent.parent))
+from backup import DatabaseBackup
+
+class Config:
+    @staticmethod
+    def init_server():
+        pass
+
+    @staticmethod
+    def init_client(server_url=None):
+        pass
 
 def create_app(test_config=None):
     app = Flask(__name__)
@@ -310,5 +326,14 @@ def create_app(test_config=None):
     # Jinja Filter registrieren
     from app.utils.filters import register_filters
     register_filters(app)
+
+    # Backup-System initialisieren
+    backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
+    
+    # Scheduler für automatische Backups einrichten
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(backup.create_backup, 'cron', hour=7, minute=0)  # 7:00 Uhr
+    scheduler.add_job(backup.create_backup, 'cron', hour=19, minute=0) # 19:00 Uhr
+    scheduler.start()
 
     return app

@@ -6,6 +6,8 @@ import logging
 import requests
 from app.config import Config
 import json
+from pathlib import Path
+import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -901,6 +903,34 @@ class Database:
             raise
         finally:
             conn.close()
+
+    @staticmethod
+    def restore_from_backup(backup_path):
+        """Stellt die Datenbank aus einem Backup wieder her"""
+        db_path = Path(__file__).parent.parent / 'scandy.db'
+        
+        # Sicherungskopie der aktuellen Datenbank erstellen
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        current_backup = db_path.parent / f'pre_restore_backup_{timestamp}.db'
+        
+        try:
+            # Aktuelle Datenbank sichern
+            shutil.copy2(db_path, current_backup)
+            
+            # Backup wiederherstellen
+            shutil.copy2(backup_path, db_path)
+            logging.info(f"Datenbank erfolgreich wiederhergestellt von: {backup_path}")
+            return True
+        except Exception as e:
+            logging.error(f"Fehler beim Wiederherstellen des Backups: {str(e)}")
+            # Versuche die Sicherungskopie wiederherzustellen
+            if current_backup.exists():
+                shutil.copy2(current_backup, db_path)
+            raise e
+        finally:
+            # Aufräumen
+            if current_backup.exists():
+                current_backup.unlink()
 
 def init_db():
     """Initialisiert die Datenbank"""

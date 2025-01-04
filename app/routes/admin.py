@@ -7,7 +7,7 @@ from flask import current_app
 from app.utils.db_schema import SchemaManager
 import colorsys
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.models.models import Tool, Consumable, Worker
 import sqlite3
 from app.utils.error_handler import handle_errors, safe_db_query
@@ -18,14 +18,119 @@ from app.config import Config
 import pandas as pd
 from io import BytesIO
 import openpyxl
+from pathlib import Path
+from backup import DatabaseBackup
+
+# Logger einrichten
+logger = logging.getLogger(__name__)
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
+backup_manager = DatabaseBackup(app_path=Path(__file__).parent.parent.parent)
+
+def get_recent_activity():
+    """Hole die letzten Aktivitäten"""
+    return Database.query('''
+        SELECT 
+            'Ausleihe' as type,
+            t.name as item_name,
+            w.firstname || ' ' || w.lastname as worker_name,
+            l.lent_at as action_date
+        FROM lendings l
+        JOIN tools t ON l.tool_barcode = t.barcode
+        JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE l.returned_at IS NULL
+        
+        UNION ALL
+        
+        SELECT 
+            'Verbrauch' as type,
+            c.name as item_name,
+            w.firstname || ' ' || w.lastname as worker_name,
+            cu.used_at as action_date
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        JOIN workers w ON cu.worker_barcode = w.barcode
+        ORDER BY action_date DESC
+        LIMIT 5
+    ''')
+
+def get_material_usage():
+    """Hole die Materialnutzung"""
+    return Database.query('''
+        SELECT 
+            c.name,
+            SUM(cu.quantity) as total_quantity
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        GROUP BY c.name
+        ORDER BY total_quantity DESC
+        LIMIT 5
+    ''')
+
+def get_warnings():
+    """Hole aktuelle Warnungen"""
+    return Database.query('''
+        SELECT 
+            'Werkzeug defekt' as type,
+            name as message,
+            'error' as severity
+        FROM tools 
+        WHERE status = 'defect' AND deleted = 0
+        
+        UNION ALL
+        
+        SELECT 
+            'Material niedrig' as type,
+            name || ' (Bestand: ' || quantity || ')' as message,
+            CASE 
+                WHEN quantity < min_quantity * 0.5 THEN 'error'
+                ELSE 'warning'
+            END as severity
+        FROM consumables
+        WHERE quantity < min_quantity AND deleted = 0
+        ORDER BY severity DESC
+        LIMIT 5
+    ''')
 
 @bp.route('/')
 @admin_required
 def dashboard():
     """Admin Dashboard"""
     try:
+        # Backup-Liste abrufen
+        backups = backup_manager.list_backups()
+        
+        # Hole zuerst die Verbrauchstrend-Daten
+        consumable_trend_data = get_consumable_trend()
+        
+        # Formatiere die Daten für das Chart
+        consumable_trend = {
+            'labels': [],
+            'datasets': []
+        }
+        
+        # Gruppiere die Daten nach Material
+        materials = {}
+        if consumable_trend_data:
+            consumable_trend['labels'] = sorted(set(row['label'] for row in consumable_trend_data))
+            for row in consumable_trend_data:
+                if row['name'] not in materials:
+                    materials[row['name']] = []
+                materials[row['name']].append(row['count'])
+                
+            # Erstelle Datasets für jedes Material
+            colors = ['#36A2EB', '#FF6384', '#4BC0C0', '#FF9F40', '#9966FF']
+            for i, (name, data) in enumerate(materials.items()):
+                consumable_trend['datasets'].append({
+                    'label': name,
+                    'data': data,
+                    'borderColor': colors[i % len(colors)],
+                    'backgroundColor': colors[i % len(colors)].replace(')', ', 0.1)'),
+                    'borderWidth': 2,
+                    'fill': True,
+                    'tension': 0.4
+                })
+        
         # Statistiken für Werkzeuge und Verbrauchsmaterial
         stats = {
             'tools': {
@@ -49,72 +154,13 @@ def dashboard():
                 'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity', one=True)['count'],
                 'warning': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5', one=True)['count'],
                 'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
-            }
+            },
+            'recent_activity': get_recent_activity(),
+            'material_usage': get_material_usage(),
+            'warnings': get_warnings(),
+            'backups': backups,
+            'consumable_trend': consumable_trend
         }
-        
-        # Top 5 Materialverbrauch der letzten 7 Tage
-        consumable_trend = Database.query('''
-            WITH daily_usage AS (
-                SELECT 
-                    c.name,
-                    date(cu.used_at) as date,
-                    SUM(cu.quantity) as daily_quantity
-                FROM consumable_usages cu
-                JOIN consumables c ON cu.consumable_barcode = c.barcode
-                WHERE cu.used_at >= date('now', '-6 days')
-                GROUP BY c.name, date(cu.used_at)
-            ),
-            dates AS (
-                SELECT date('now', '-' || n || ' days') as date
-                FROM (SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
-                     UNION SELECT 4 UNION SELECT 5 UNION SELECT 6)
-            ),
-            top_consumables AS (
-                SELECT 
-                    c.name,
-                    SUM(cu.quantity) as total_quantity
-                FROM consumable_usages cu
-                JOIN consumables c ON cu.consumable_barcode = c.barcode
-                WHERE cu.used_at >= date('now', '-6 days')
-                GROUP BY c.name
-                ORDER BY total_quantity DESC
-                LIMIT 5
-            )
-            SELECT 
-                dates.date as label,
-                tc.name,
-                COALESCE(du.daily_quantity, 0) as count
-            FROM dates
-            CROSS JOIN top_consumables tc
-            LEFT JOIN daily_usage du ON dates.date = du.date AND tc.name = du.name
-            ORDER BY tc.name, dates.date
-        ''')
-        
-        # Formatiere die Daten für das Chart
-        stats['consumable_trend'] = {
-            'labels': sorted(set(row['label'] for row in consumable_trend)),
-            'datasets': []
-        }
-        
-        # Gruppiere die Daten nach Material
-        materials = {}
-        for row in consumable_trend:
-            if row['name'] not in materials:
-                materials[row['name']] = []
-            materials[row['name']].append(row['count'])
-            
-        # Erstelle Datasets für jedes Material
-        colors = ['#36A2EB', '#FF6384', '#4BC0C0', '#FF9F40', '#9966FF']
-        for i, (name, data) in enumerate(materials.items()):
-            stats['consumable_trend']['datasets'].append({
-                'label': name,
-                'data': data,
-                'borderColor': colors[i % len(colors)],
-                'backgroundColor': colors[i % len(colors)].replace(')', ', 0.1)'),
-                'borderWidth': 2,
-                'fill': True,
-                'tension': 0.4
-            })
         
         # Wartungsprobleme (defekte Werkzeuge)
         maintenance_issues = Database.query('''
@@ -183,6 +229,47 @@ def dashboard():
                              stats={}, 
                              current_lendings=[], 
                              consumable_usages=[])
+
+def get_consumable_trend():
+    """Hole die Top 5 Materialverbrauch der letzten 7 Tage"""
+    trend_data = Database.query('''
+        WITH daily_usage AS (
+            SELECT 
+                c.name,
+                date(cu.used_at) as date,
+                SUM(cu.quantity) as daily_quantity
+            FROM consumable_usages cu
+            JOIN consumables c ON cu.consumable_barcode = c.barcode
+            WHERE cu.used_at >= date('now', '-6 days')
+            GROUP BY c.name, date(cu.used_at)
+        ),
+        dates AS (
+            SELECT date('now', '-' || n || ' days') as date
+            FROM (SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
+                 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6)
+        ),
+        top_consumables AS (
+            SELECT 
+                c.name,
+                SUM(cu.quantity) as total_quantity
+            FROM consumable_usages cu
+            JOIN consumables c ON cu.consumable_barcode = c.barcode
+            WHERE cu.used_at >= date('now', '-6 days')
+            GROUP BY c.name
+            ORDER BY total_quantity DESC
+            LIMIT 5
+        )
+        SELECT 
+            dates.date as label,
+            tc.name,
+            COALESCE(du.daily_quantity, 0) as count
+        FROM dates
+        CROSS JOIN top_consumables tc
+        LEFT JOIN daily_usage du ON dates.date = du.date AND tc.name = du.name
+        ORDER BY tc.name, dates.date
+    ''')
+    
+    return trend_data
 
 # Manuelle Ausleihe
 @bp.route('/manual-lending', methods=['GET', 'POST'])
@@ -692,6 +779,49 @@ def import_table(table):
     except Exception as e:
         flash(f'Fehler beim Import: {str(e)}', 'error')
         
+    return redirect(url_for('admin.dashboard'))
+
+@bp.route('/backup/create', methods=['POST'])
+@admin_required
+def create_backup():
+    """Manuelles Backup erstellen"""
+    try:
+        logger.info("Starte manuelles Backup...")
+        success = backup_manager.create_backup()
+        if success:
+            flash('Backup wurde erfolgreich erstellt', 'success')
+            logger.info("Backup erfolgreich erstellt")
+        else:
+            flash('Fehler beim Erstellen des Backups', 'error')
+            logger.error("Backup konnte nicht erstellt werden")
+    except Exception as e:
+        error_msg = f'Fehler beim Erstellen des Backups: {str(e)}'
+        logger.error(error_msg)
+        flash(error_msg, 'error')
+    return redirect(url_for('admin.dashboard'))
+
+@bp.route('/backup/restore/<filename>', methods=['POST'])
+@admin_required
+def restore_backup(filename):
+    """Backup wiederherstellen"""
+    try:
+        logger.info(f"Versuche Backup wiederherzustellen: {filename}")
+        backup_path = backup_manager.backup_dir / filename
+        if not backup_path.exists():
+            error_msg = 'Backup-Datei nicht gefunden'
+            logger.error(f"{error_msg}: {backup_path}")
+            flash(error_msg, 'error')
+            return redirect(url_for('admin.dashboard'))
+        
+        # Datenbank wiederherstellen
+        Database.restore_from_backup(str(backup_path))
+        success_msg = 'Backup wurde erfolgreich wiederhergestellt'
+        logger.info(success_msg)
+        flash(success_msg, 'success')
+    except Exception as e:
+        error_msg = f'Fehler beim Wiederherstellen des Backups: {str(e)}'
+        logger.error(error_msg)
+        flash(error_msg, 'error')
     return redirect(url_for('admin.dashboard'))
 
 # Weitere Admin-Routen...
