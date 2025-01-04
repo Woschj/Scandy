@@ -13,6 +13,10 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Zurück
                 </a>
+                <button class="btn btn-primary" onclick="openEditModal()">
+                    <i class="fas fa-edit mr-2"></i>
+                    Bearbeiten
+                </button>
             </div>
         </div>
 
@@ -29,93 +33,242 @@
                         </div>
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Status</label>
-                            <p>
-                                {% if tool.status == 'defekt' %}
-                                    <span class="badge badge-error gap-1">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Defekt
-                                    </span>
-                                {% elif tool.status == 'ausgeliehen' %}
-                                    <span class="badge badge-warning gap-1">
-                                        <i class="fas fa-hand-holding"></i>
-                                        Ausgeliehen
-                                    </span>
-                                {% else %}
-                                    <span class="badge badge-success gap-1">
-                                        <i class="fas fa-check"></i>
-                                        Verfügbar
-                                    </span>
-                                {% endif %}
+                            <p class="flex items-center gap-2">
+                                <span class="badge {% if tool.status == 'verfügbar' %}badge-success{% elif tool.status == 'ausgeliehen' %}badge-warning{% else %}badge-error{% endif %}">
+                                    {{ tool.status }}
+                                </span>
+                                <button onclick="openStatusModal()" class="btn btn-sm btn-ghost">
+                                    <i class="fas fa-edit"></i>
+                                </button>
                             </p>
                         </div>
-                        {% if tool.location %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Standort</label>
-                            <p>{{ tool.location }}</p>
-                        </div>
-                        {% endif %}
                         {% if tool.category %}
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Kategorie</label>
                             <p>{{ tool.category }}</p>
                         </div>
                         {% endif %}
+                        {% if tool.location %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Standort</label>
+                            <p>{{ tool.location }}</p>
+                        </div>
+                        {% endif %}
+                        {% if tool.description %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Beschreibung</label>
+                            <p>{{ tool.description }}</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Aktuelle Ausleihe -->
+            <!-- Aktueller Status -->
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
-                    <h2 class="card-title">Aktuelle Ausleihe</h2>
-                    {% if current_lending %}
+                    <h2 class="card-title">Aktueller Status</h2>
                     <div class="space-y-4">
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Ausgeliehen an</label>
-                            <p>{{ current_lending.worker_name }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Seit</label>
-                            <p>{{ current_lending.lent_at|format_datetime }}</p>
-                        </div>
+                        {% if tool.status == 'defekt' %}
+                            <div class="alert alert-error">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                <div>
+                                    <h3 class="font-bold">Defekt</h3>
+                                    <p>{{ tool.status_reason or 'Keine Beschreibung verfügbar' }}</p>
+                                </div>
+                            </div>
+                        {% elif tool.status == 'ausgeliehen' %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-user mr-2"></i>
+                                <div>
+                                    <h3 class="font-bold">Ausgeliehen an {{ tool.lent_to }}</h3>
+                                    <p>Seit: {{ tool.lent_at|format_datetime }}</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check mr-2"></i>
+                                <div>
+                                    <h3 class="font-bold">Verfügbar</h3>
+                                    <p>Das Werkzeug ist einsatzbereit</p>
+                                </div>
+                            </div>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <p class="text-base-content/60">Aktuell nicht ausgeliehen</p>
-                    {% endif %}
                 </div>
             </div>
 
-            <!-- Ausleih-Historie -->
+            <!-- Historie -->
             <div class="card bg-base-100 shadow-xl col-span-2">
                 <div class="card-body">
-                    <h2 class="card-title">Ausleih-Historie</h2>
-                    {% if lending_history %}
+                    <h2 class="card-title">Historie</h2>
+                    {% if history %}
                     <div class="overflow-x-auto">
-                        <table class="table w-full">
+                        <table class="table table-zebra w-full">
                             <thead>
                                 <tr>
-                                    <th>Mitarbeiter</th>
-                                    <th>Ausgeliehen am</th>
-                                    <th>Zurückgegeben am</th>
+                                    <th>Datum</th>
+                                    <th>Aktion</th>
+                                    <th>Beschreibung</th>
+                                    <th>Grund</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for lending in lending_history %}
+                                {% for entry in history %}
                                 <tr>
-                                    <td>{{ lending.worker_name }}</td>
-                                    <td>{{ lending.lent_at|format_datetime }}</td>
-                                    <td>{{ lending.returned_at|format_datetime if lending.returned_at else 'Noch ausgeliehen' }}</td>
+                                    <td>{{ entry.action_date|format_datetime }}</td>
+                                    <td>
+                                        <span class="badge {% if entry.action_type == 'Ausleihe/Rückgabe' %}badge-warning
+                                                   {% elif entry.action_type == 'Statusänderung' %}badge-neutral
+                                                   {% else %}badge-info{% endif %}">
+                                            {{ entry.action_type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ entry.description }}</td>
+                                    <td>{{ entry.reason or '-' }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-base-content/60">Keine Ausleih-Historie vorhanden</p>
+                    <p class="text-base-content/60">Keine Einträge vorhanden</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Edit Modal -->
+<dialog id="editModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Werkzeug bearbeiten</h3>
+        <form method="POST" action="{{ url_for('tools.update', id=tool.id) }}">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Name</span>
+                    </label>
+                    <input type="text" name="name" value="{{ tool.name }}" class="input input-bordered" required>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Kategorie</span>
+                    </label>
+                    <input type="text" name="category" value="{{ tool.category }}" class="input input-bordered">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Standort</span>
+                    </label>
+                    <input type="text" name="location" value="{{ tool.location }}" class="input input-bordered">
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Beschreibung</span>
+                    </label>
+                    <textarea name="description" class="textarea textarea-bordered">{{ tool.description }}</textarea>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" onclick="closeEditModal()" class="btn">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Status Change Modal -->
+<dialog id="statusModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Status ändern</h3>
+        <form id="statusForm" onsubmit="return updateStatus(event)">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Neuer Status</span>
+                    </label>
+                    <select name="status" class="select select-bordered" required>
+                        <option value="verfügbar">Verfügbar</option>
+                        <option value="defekt">Defekt</option>
+                    </select>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Grund (optional)</span>
+                    </label>
+                    <textarea name="reason" class="textarea textarea-bordered"></textarea>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" onclick="closeStatusModal()" class="btn">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+{% block scripts %}
+<script>
+function openEditModal() {
+    const modal = document.getElementById('editModal');
+    modal.showModal();
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeEditModal();
+        }
+    });
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').close();
+}
+
+function openStatusModal() {
+    const modal = document.getElementById('statusModal');
+    modal.showModal();
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeStatusModal();
+        }
+    });
+}
+
+function closeStatusModal() {
+    document.getElementById('statusModal').close();
+}
+
+async function updateStatus(event) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch(`{{ url_for('tools.change_status', barcode=tool.barcode) }}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Fehler beim Aktualisieren des Status');
+        }
+    } catch (error) {
+        alert('Fehler beim Aktualisieren des Status');
+    }
+    
+    closeStatusModal();
+    return false;
+}
+</script>
+{% endblock %}
+
 {% endblock %} 

@@ -1,48 +1,41 @@
-from flask import Flask, redirect, url_for
-from app.models.database import Database, init_db
-from app.utils.structure_viewer import print_database_structure, print_app_structure
-from app.utils.context_processors import register_context_processors
-from app.utils.db_schema import SchemaManager
-import logging
 import os
-from datetime import timedelta
-from app import create_app
+import logging
+from app.models.database import Database, init_db
 
-# Logging konfigurieren
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-if __name__ == "__main__":
-    # Logging-Handler hinzufügen
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+def list_app_files():
+    """Listet alle für die App relevanten Dateien auf"""
+    app_files = []
     
-    logger.info("Starte Anwendung...")
-    
-    # Erstelle die Flask-App
-    app = create_app()
-    
-    # Application Context für Debug-Informationen
-    with app.app_context():
-        # Prüfe ob Datenbank existiert
-        if not os.path.exists(Database.get_database_path()):
-            logger.info("Initialisiere Datenbank...")
-            Database.init_db()
+    # Durchsuche das app-Verzeichnis rekursiv
+    for root, dirs, files in os.walk('app'):
+        # Ignoriere __pycache__ Verzeichnisse
+        if '__pycache__' in root:
+            continue
             
-            # Testdaten erstellen
-            logger.info("Erstelle Testdaten...")
-            from app.create_test_data import create_test_data
-            create_test_data()
-        
-        # Debug-Informationen immer ausgeben
-        logger.info("Drucke Datenbank-Struktur...")
-        print_database_structure()
-        
-        logger.info("Drucke App-Struktur...")
-        print_app_structure()
+        for file in files:
+            # Nur Python, SQL, HTML und JavaScript Dateien
+            if file.endswith(('.py', '.sql', '.html', '.js')):
+                full_path = os.path.join(root, file)
+                app_files.append(full_path)
     
-    logger.info("Starte Entwicklungsserver...")
-    app.run(debug=True, host='127.0.0.1', port=5000) 
+    logging.info("\n=== APP DATEIEN ===")
+    for file in sorted(app_files):
+        logging.info(f"📄 {file}")
+    logging.info("=================\n")
+
+if __name__ == '__main__':
+    # Logging konfigurieren
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # App-Dateien auflisten
+    list_app_files()
+    
+    logging.info("Starte Entwicklungsserver...")
+    
+    # Server starten
+    from app import create_app
+    app = create_app()
+    app.run(debug=True) 

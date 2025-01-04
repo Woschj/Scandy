@@ -13,6 +13,10 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Zurück
                 </a>
+                <button class="btn btn-primary" onclick="editConsumable()">
+                    <i class="fas fa-edit mr-2"></i>
+                    Bearbeiten
+                </button>
             </div>
         </div>
 
@@ -29,47 +33,62 @@
                         </div>
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Aktueller Bestand</label>
-                            <p>{{ consumable.quantity }} Stück</p>
+                            <p class="flex items-center gap-2">
+                                {{ consumable.quantity }} Stück
+                                {% if consumable.quantity <= consumable.min_quantity %}
+                                    <span class="badge badge-warning">Nachbestellen</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Mindestbestand</label>
+                            <p>{{ consumable.min_quantity }} Stück</p>
+                        </div>
+                        {% if consumable.category %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
+                            <p>{{ consumable.category }}</p>
+                        </div>
+                        {% endif %}
+                        {% if consumable.location %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Standort</label>
+                            <p>{{ consumable.location }}</p>
+                        </div>
+                        {% endif %}
+                        {% if consumable.description %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Beschreibung</label>
+                            <p>{{ consumable.description }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bestandsverlauf -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Bestandsverlauf</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="flex-1">
+                                <label class="text-sm font-medium text-base-content/60">Letzte Änderung</label>
+                                <p>{{ consumable.modified_at|format_datetime }}</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="adjustStock()">
+                                <i class="fas fa-plus-minus mr-2"></i>
+                                Bestand anpassen
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Letzte Entnahmen -->
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Letzte Entnahmen</h2>
-                    {% if recent_usage %}
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Mitarbeiter</th>
-                                    <th>Menge</th>
-                                    <th>Datum</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for usage in recent_usage %}
-                                <tr>
-                                    <td>{{ usage.worker_name }}</td>
-                                    <td>{{ usage.quantity }} Stk</td>
-                                    <td>{{ usage.used_at|format_datetime }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-base-content/60">Keine Entnahmen vorhanden</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Verbrauchshistorie -->
             <div class="card bg-base-100 shadow-xl col-span-2">
                 <div class="card-body">
-                    <h2 class="card-title">Verbrauchshistorie</h2>
+                    <h2 class="card-title">Letzte Entnahmen</h2>
                     {% if usage_history %}
                     <div class="overflow-x-auto">
                         <table class="table w-full">
@@ -84,7 +103,7 @@
                                 {% for usage in usage_history %}
                                 <tr>
                                     <td>{{ usage.worker_name }}</td>
-                                    <td>{{ usage.quantity }} Stk</td>
+                                    <td>{{ usage.quantity }} Stück</td>
                                     <td>{{ usage.used_at|format_datetime }}</td>
                                 </tr>
                                 {% endfor %}
@@ -92,11 +111,146 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-base-content/60">Keine Verbrauchshistorie vorhanden</p>
+                    <p class="text-base-content/60">Keine Entnahmen vorhanden</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Edit Modal -->
+<dialog id="editModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Verbrauchsmaterial bearbeiten</h3>
+        <form method="POST" id="editForm">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Name</span>
+                    </label>
+                    <input type="text" name="name" class="input input-bordered" value="{{ consumable.name }}" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Mindestbestand</span>
+                    </label>
+                    <input type="number" name="min_quantity" class="input input-bordered" value="{{ consumable.min_quantity }}" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Kategorie</span>
+                    </label>
+                    <input type="text" name="category" class="input input-bordered" value="{{ consumable.category }}">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Standort</span>
+                    </label>
+                    <input type="text" name="location" class="input input-bordered" value="{{ consumable.location }}">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Beschreibung</span>
+                    </label>
+                    <textarea name="description" class="textarea textarea-bordered">{{ consumable.description }}</textarea>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="closeEditModal()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Stock Adjustment Modal -->
+<dialog id="stockModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Bestand anpassen</h3>
+        <form method="POST" id="stockForm">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Aktuelle Menge: {{ consumable.quantity }} Stück</span>
+                    </label>
+                    <input type="number" name="quantity" class="input input-bordered" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Grund der Anpassung</span>
+                    </label>
+                    <select name="reason" class="select select-bordered" required>
+                        <option value="restock">Nachbestellung</option>
+                        <option value="correction">Korrektur</option>
+                        <option value="inventory">Inventur</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="closeStockModal()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+function editConsumable() {
+    document.getElementById('editModal').showModal();
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').close();
+}
+
+function adjustStock() {
+    document.getElementById('stockModal').showModal();
+}
+
+function closeStockModal() {
+    document.getElementById('stockModal').close();
+}
+
+// Form-Handler
+document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    try {
+        const response = await fetch(window.location.pathname, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Ein Fehler ist aufgetreten');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten');
+    }
+});
+
+document.getElementById('stockForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    try {
+        const response = await fetch(window.location.pathname + '/adjust-stock', {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Ein Fehler ist aufgetreten');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten');
+    }
+});
+</script>
 {% endblock %} 

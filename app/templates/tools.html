@@ -81,8 +81,8 @@
                     {% for tool in tools %}
                     <tr class="hover:bg-base-200">
                         <td class="px-6 py-4 whitespace-nowrap item-name">
-                            <a href="{{ url_for('tools.details', barcode=tool.barcode) }}"
-                               hx-get="{{ url_for('tools.details', barcode=tool.barcode) }}"
+                            <a href="{{ url_for('tools.detail', barcode=tool.barcode) }}"
+                               hx-get="{{ url_for('tools.detail', barcode=tool.barcode) }}"
                                hx-target="#detailsModal"
                                hx-trigger="click"
                                onclick="showDetailsModal(event)"

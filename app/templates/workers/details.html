@@ -13,6 +13,10 @@
                     <i class="fas fa-arrow-left mr-2"></i>
                     Zurück
                 </a>
+                <button class="btn btn-primary" onclick="editWorker()">
+                    <i class="fas fa-edit mr-2"></i>
+                    Bearbeiten
+                </button>
             </div>
         </div>
 
@@ -28,15 +32,29 @@
                             <p class="font-mono">{{ worker.barcode }}</p>
                         </div>
                         <div>
-                            <label class="text-sm font-medium text-base-content/60">Abteilung</label>
-                            <p>{{ worker.department or 'Keine Abteilung' }}</p>
+                            <label class="text-sm font-medium text-base-content/60">Name</label>
+                            <p>{{ worker.firstname }} {{ worker.lastname }}</p>
                         </div>
+                        {% if worker.department %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Abteilung</label>
+                            <p>{{ worker.department }}</p>
+                        </div>
+                        {% endif %}
                         {% if worker.email %}
                         <div>
                             <label class="text-sm font-medium text-base-content/60">E-Mail</label>
-                            <p>{{ worker.email }}</p>
+                            <p>
+                                <a href="mailto:{{ worker.email }}" class="link link-primary">
+                                    {{ worker.email }}
+                                </a>
+                            </p>
                         </div>
                         {% endif %}
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Letzte Änderung</label>
+                            <p>{{ worker.modified_at|format_datetime }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -45,20 +63,31 @@
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
                     <h2 class="card-title">Aktuelle Ausleihen</h2>
-                    {% if active_lendings %}
+                    {% if current_lendings %}
                     <div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
                                     <th>Werkzeug</th>
                                     <th>Ausgeliehen seit</th>
+                                    <th>Aktionen</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for lending in active_lendings %}
+                                {% for lending in current_lendings %}
                                 <tr>
-                                    <td>{{ lending.tool_name }}</td>
+                                    <td>
+                                        <a href="{{ url_for('tools.detail', barcode=lending.tool_barcode) }}" class="link link-primary">
+                                            {{ lending.tool_name }}
+                                        </a>
+                                    </td>
                                     <td>{{ lending.lent_at|format_datetime }}</td>
+                                    <td>
+                                        <button onclick="returnTool('{{ lending.tool_barcode }}')" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-undo mr-1"></i>
+                                            Rückgabe
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -70,55 +99,179 @@
                 </div>
             </div>
 
-            <!-- Historie -->
-            <div class="card bg-base-100 shadow-xl col-span-2">
+            <!-- Verbrauchsmaterial-Entnahmen -->
+            <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
-                    <h2 class="card-title">Historie</h2>
-                    {% if history %}
+                    <h2 class="card-title">Letzte Materialentnahmen</h2>
+                    {% if recent_usages %}
                     <div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
-                                    <th>Typ</th>
-                                    <th>Gegenstand</th>
-                                    <th>Datum</th>
-                                    <th>Aktion</th>
-                                    {% if history.quantity %}
+                                    <th>Material</th>
                                     <th>Menge</th>
-                                    {% endif %}
+                                    <th>Datum</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in history %}
+                                {% for usage in recent_usages %}
                                 <tr>
-                                    <td>{{ item.type }}</td>
-                                    <td>{{ item.item_name }}</td>
-                                    <td>{{ item.lent_at|format_datetime }}</td>
                                     <td>
-                                        {% if item.type == 'Werkzeug' %}
-                                            {% if item.returned_at %}
-                                            Rückgabe am {{ item.returned_at|format_datetime }}
-                                            {% else %}
-                                            Ausleihe
-                                            {% endif %}
-                                        {% else %}
-                                            Ausgabe
-                                        {% endif %}
+                                        <a href="{{ url_for('consumables.detail', barcode=usage.consumable_barcode) }}" class="link link-primary">
+                                            {{ usage.consumable_name }}
+                                        </a>
                                     </td>
-                                    {% if item.quantity %}
-                                    <td>{{ item.quantity }} Stk</td>
-                                    {% endif %}
+                                    <td>{{ usage.quantity }} Stück</td>
+                                    <td>{{ usage.used_at|format_datetime }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-base-content/60">Keine Historie vorhanden</p>
+                    <p class="text-base-content/60">Keine Materialentnahmen</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ausleih-Historie -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Ausleih-Historie</h2>
+                    {% if lending_history %}
+                    <div class="overflow-x-auto">
+                        <table class="table w-full">
+                            <thead>
+                                <tr>
+                                    <th>Werkzeug</th>
+                                    <th>Von</th>
+                                    <th>Bis</th>
+                                    <th>Dauer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lending in lending_history %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('tools.detail', barcode=lending.tool_barcode) }}" class="link link-primary">
+                                            {{ lending.tool_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ lending.lent_at|format_datetime }}</td>
+                                    <td>{{ lending.returned_at|format_datetime if lending.returned_at else 'Noch ausgeliehen' }}</td>
+                                    <td>
+                                        {% if lending.returned_at %}
+                                            {{ (lending.returned_at|to_datetime - lending.lent_at|to_datetime)|format_duration }}
+                                        {% else %}
+                                            Läuft
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Ausleih-Historie vorhanden</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Edit Modal -->
+<dialog id="editModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Mitarbeiter bearbeiten</h3>
+        <form method="POST" id="editForm">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Vorname</span>
+                    </label>
+                    <input type="text" name="firstname" class="input input-bordered" value="{{ worker.firstname }}" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Nachname</span>
+                    </label>
+                    <input type="text" name="lastname" class="input input-bordered" value="{{ worker.lastname }}" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Abteilung</span>
+                    </label>
+                    <input type="text" name="department" class="input input-bordered" value="{{ worker.department }}">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">E-Mail</span>
+                    </label>
+                    <input type="email" name="email" class="input input-bordered" value="{{ worker.email }}">
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="closeEditModal()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+function editWorker() {
+    document.getElementById('editModal').showModal();
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').close();
+}
+
+function returnTool(toolBarcode) {
+    if (confirm('Möchten Sie das Werkzeug wirklich zurückgeben?')) {
+        const formData = new FormData();
+        formData.append('tool_barcode', toolBarcode);
+        formData.append('action', 'return');
+        
+        fetch('/admin/manual-lending', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert(result.message || 'Ein Fehler ist aufgetreten');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ein Fehler ist aufgetreten');
+        });
+    }
+}
+
+// Form-Handler
+document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    try {
+        const response = await fetch(window.location.pathname, {
+            method: 'POST',
+            body: formData
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.message || 'Ein Fehler ist aufgetreten');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten');
+    }
+});
+</script>
 {% endblock %} 

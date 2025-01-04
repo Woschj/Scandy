@@ -263,13 +263,27 @@ def workers():
 def manual_lending():
     return render_template('inventory/manual_lending.html')
 
-@bp.route('/tools/<barcode>/update', methods=['POST'])
+@bp.route('/tools/<barcode>/update', methods=['GET', 'POST'])
 @login_required
 def update_tool(barcode):
     try:
-        print(f"Update für Werkzeug {barcode} mit Daten:", request.form)
-        
         with Database.get_db() as conn:
+            if request.method == 'GET':
+                # Tool-Details für das Bearbeitungsformular abrufen
+                tool = conn.execute('''
+                    SELECT * FROM tools 
+                    WHERE barcode = ? AND deleted = 0
+                ''', (barcode,)).fetchone()
+                
+                if not tool:
+                    flash('Werkzeug nicht gefunden', 'error')
+                    return redirect(url_for('inventory.tools'))
+                    
+                return render_template('tools/edit.html', tool=tool)
+                
+            # POST-Request verarbeiten
+            print(f"Update für Werkzeug {barcode} mit Daten:", request.form)
+            
             data = request.form
             
             # SQL-Query mit korrekten Spaltennamen

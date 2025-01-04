@@ -221,8 +221,21 @@ def manual_lending():
                     'message': 'Werkzeug erfolgreich ausgeliehen'
                 })
             else:  # action == 'return'
+                # Prüfe ob eine aktive Ausleihe existiert
+                lending = Database.query('''
+                    SELECT * FROM lendings
+                    WHERE tool_barcode = ?
+                    AND returned_at IS NULL
+                ''', [tool_barcode], one=True)
+                
+                if not lending:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Keine aktive Ausleihe für dieses Werkzeug gefunden'
+                    }), 400
+                
                 # Rückgabe verarbeiten
-                result = Database.query('''
+                Database.query('''
                     UPDATE lendings 
                     SET returned_at = datetime('now'),
                         modified_at = datetime('now'),
@@ -231,25 +244,19 @@ def manual_lending():
                     AND returned_at IS NULL
                 ''', [tool_barcode])
                 
-                if result:
-                    # Status des Werkzeugs aktualisieren
-                    Database.query('''
-                        UPDATE tools 
-                        SET status = 'verfügbar',
-                            modified_at = datetime('now'),
-                            sync_status = 'pending'
-                        WHERE barcode = ?
-                    ''', [tool_barcode])
-                    
-                    return jsonify({
-                        'success': True, 
-                        'message': 'Werkzeug erfolgreich zurückgegeben'
-                    })
-                else:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Keine aktive Ausleihe für dieses Werkzeug gefunden'
-                    }), 400
+                # Status des Werkzeugs aktualisieren
+                Database.query('''
+                    UPDATE tools 
+                    SET status = 'verfügbar',
+                        modified_at = datetime('now'),
+                        sync_status = 'pending'
+                    WHERE barcode = ?
+                ''', [tool_barcode])
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Werkzeug erfolgreich zurückgegeben'
+                })
                 
         except Exception as e:
             print("Fehler bei der Ausleihe:", str(e))

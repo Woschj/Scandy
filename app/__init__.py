@@ -307,4 +307,8 @@ def create_app(test_config=None):
         except Exception as e:
             print(f"Fehler beim Datenbankcheck: {e}")
     
+    # Jinja Filter registrieren
+    from app.utils.filters import register_filters
+    register_filters(app)
+
     return app
