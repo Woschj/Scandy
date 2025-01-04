@@ -40,9 +40,10 @@
         <!-- Vertikales Seitenmenü -->
         <div class="fixed left-0 top-0 h-full w-16 bg-base-300 flex flex-col items-center py-4 gap-2 shadow-lg z-50">
             <!-- Logo als QuickScan-Trigger -->
-            <div class="w-16 h-16 rounded-full hover:rounded-xl mb-4 overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 cursor-pointer relative"
+            <div class="w-16 h-16 rounded-full hover:rounded-xl overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 cursor-pointer relative"
                  id="quickScanTrigger"
-                 title="Quick Scan öffnen">
+                 title="Quick Scan öffnen"
+                 style="margin-top: -1.5rem;">
                 <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
                      alt="Scandy Logo" 
                      class="w-14 h-14 object-contain">
@@ -51,7 +52,7 @@
             </div>
             
             <!-- Trennlinie -->
-            <div class="w-8 h-0.5 bg-base-content/20 rounded-full mb-2"></div>
+            <div class="w-8 h-0.5 bg-base-content/20 rounded-full"></div>
             
             <!-- Navigation Items -->
             <a href="{{ url_for('tools.index') }}" 

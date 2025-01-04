@@ -4,6 +4,16 @@
 
 {% block content %}
 <div class="container mx-auto p-4">
+    <!-- QuickScan Pfeil -->
+    <div class="fixed left-16 top-20 hidden md:block z-50">
+        <div class="relative">
+            <img src="{{ url_for('static', filename='images/arrow.png') }}" 
+                 alt="Pfeil" 
+                 class="w-24 h-24"
+                 style="transform: scaleX(-1) rotate(-7deg);">
+        </div>
+    </div>
+
     <!-- Hero-Sektion -->
     <div class="hero bg-base-100 rounded-box shadow-xl mb-8">
         <div class="hero-content text-center">
@@ -40,27 +50,12 @@
                         </span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-sm">Ausgeliehen</span>
-                        <span class="badge badge-warning gap-2">
-                            <i class="fas fa-hand-holding"></i>
-                            {{ tool_stats.lent }}
-                        </span>
-                    </div>
-                    <div class="flex justify-between items-center">
                         <span class="text-sm">Defekt</span>
                         <span class="badge badge-error gap-2">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-times"></i>
                             {{ tool_stats.defect }}
                         </span>
                     </div>
-                    <div class="divider my-2"></div>
-                    <div class="text-sm font-bold">Top Kategorien:</div>
-                    {% for category in tool_stats.top_categories %}
-                    <div class="flex justify-between items-center text-sm">
-                        <span>{{ category.name }}</span>
-                        <span class="badge badge-ghost">{{ category.count }}</span>
-                    </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -97,14 +92,6 @@
                             {{ consumable_stats.critical }}
                         </span>
                     </div>
-                    <div class="divider my-2"></div>
-                    <div class="text-sm font-bold">Niedrigster Bestand:</div>
-                    {% for item in consumable_stats.low_stock %}
-                    <div class="flex justify-between items-center text-sm">
-                        <span>{{ item.name }}</span>
-                        <span class="badge badge-error">{{ item.quantity }}/{{ item.min_quantity }}</span>
-                    </div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -125,21 +112,7 @@
                     {% for dept in worker_stats.by_department %}
                     <div class="flex justify-between items-center">
                         <span class="text-sm">{{ dept.name }}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="badge badge-ghost">{{ dept.count }}</span>
-                            <div class="radial-progress text-accent" style="--value:{{ dept.percentage }}; --size:1.5rem">
-                                <span class="text-xs">{{ dept.percentage }}%</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                    <div class="divider my-2"></div>
-                    <!-- Aktive Ausleihen -->
-                    <div class="text-sm font-bold">Aktive Ausleihen:</div>
-                    {% for worker in worker_stats.top_borrowers %}
-                    <div class="flex justify-between items-center text-sm">
-                        <span>{{ worker.name }}</span>
-                        <span class="badge badge-warning">{{ worker.active_lendings }}</span>
+                        <span class="badge badge-ghost">{{ dept.count }}</span>
                     </div>
                     {% endfor %}
                 </div>

@@ -3,288 +3,162 @@
 {% block title %}Papierkorb{% endblock %}
 
 {% block content %}
-<div class="container mx-auto p-4">
-    <div class="card bg-base-100 shadow-xl">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Papierkorb</h2>
-                <div class="stats shadow bg-base-100">
-                    <div class="stat">
-                        <div class="stat-title text-base-content">Gelöschte Einträge</div>
-                        <div class="stat-value text-base-content">
-                            {{ deleted_tools|length + deleted_consumables|length + deleted_workers|length }}
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-8">Papierkorb</h1>
 
-            <!-- Tabs -->
-            <div class="flex gap-2 mb-6">
-                <a class="btn btn-ghost min-h-[3rem] flex items-center {% if active_tab == 'tools' %}btn-active{% endif %}" 
-                    href="{{ url_for('admin.trash', tab='tools') }}">
-                    <i class="fas fa-tools mr-2"></i>Werkzeuge
-                </a>
-                <a class="btn btn-ghost min-h-[3rem] flex items-center {% if active_tab == 'consumables' %}btn-active{% endif %}" 
-                    href="{{ url_for('admin.trash', tab='consumables') }}">
-                    <i class="fas fa-box-open mr-2"></i>Verbrauchsmaterial
-                </a>
-                <a class="btn btn-ghost min-h-[3rem] flex items-center {% if active_tab == 'workers' %}btn-active{% endif %}" 
-                    href="{{ url_for('admin.trash', tab='workers') }}">
-                    <i class="fas fa-users mr-2"></i>Mitarbeiter
-                </a>
-            </div>
+    <div class="tabs tabs-boxed mb-6">
+        <a class="tab tab-active" onclick="showTab('tools')" id="toolsTab">Werkzeuge</a>
+        <a class="tab" onclick="showTab('consumables')" id="consumablesTab">Verbrauchsmaterial</a>
+        <a class="tab" onclick="showTab('workers')" id="workersTab">Mitarbeiter</a>
+    </div>
 
-            <!-- Werkzeuge -->
-            <div class="{% if active_tab != 'tools' %}hidden{% endif %}">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Gelöschte Werkzeuge</h2>
-                        <div class="text-sm text-gray-500 mb-2">
-                            Anzahl Tools: {{ deleted_tools|length }}
-                        </div>
-                        <div class="overflow-x-auto">
-                            {% if deleted_tools %}
-                            <table class="table table-zebra w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Barcode</th>
-                                        <th>Name</th>
-                                        <th>Kategorie</th>
-                                        <th>Standort</th>
-                                        <th>Gelöscht am</th>
-                                        <th class="text-right">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in deleted_tools %}
-                                    <tr>
-                                        <td>{{ item.barcode }}</td>
-                                        <td>{{ item.name }}</td>
-                                        <td>{{ item.category or '-' }}</td>
-                                        <td>{{ item.location or '-' }}</td>
-                                        <td>{{ item.deleted_at }}</td>
-                                        <td class="text-right">
-                                            <div class="btn-group">
-                                                <button onclick="restoreItem('tools', '{{ item.barcode }}')" 
-                                                        class="btn btn-sm btn-success">
-                                                    <i class="fas fa-undo mr-2"></i>Wiederherstellen
-                                                </button>
-                                                <button onclick="deleteItemPermanently('tools', '{{ item.barcode }}')" 
-                                                        class="btn btn-sm btn-error">
-                                                    <i class="fas fa-trash mr-2"></i>Löschen
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Keine gelöschten Werkzeuge vorhanden
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Werkzeuge -->
+    <div id="toolsContent" class="tab-content">
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Name</th>
+                        <th>Kategorie</th>
+                        <th>Standort</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tool in tools %}
+                    <tr>
+                        <td>{{ tool.barcode }}</td>
+                        <td>{{ tool.name }}</td>
+                        <td>{{ tool.category }}</td>
+                        <td>{{ tool.location }}</td>
+                        <td>{{ tool.deleted_at|format_datetime }}</td>
+                        <td>
+                            <button onclick="restoreItem('tool', '{{ tool.barcode }}')" 
+                                    class="btn btn-sm btn-primary">
+                                <i class="fas fa-undo mr-2"></i>
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-            <!-- Verbrauchsmaterial -->
-            <div class="{% if active_tab != 'consumables' %}hidden{% endif %}">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Gelöschte Verbrauchsmaterialien</h2>
-                        <div class="overflow-x-auto">
-                            {% if deleted_consumables %}
-                            <table class="table table-zebra w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Barcode</th>
-                                        <th>Name</th>
-                                        <th>Kategorie</th>
-                                        <th>Standort</th>
-                                        <th>Gelöscht am</th>
-                                        <th class="text-right">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in deleted_consumables %}
-                                    <tr>
-                                        <td>{{ item.barcode }}</td>
-                                        <td>{{ item.name }}</td>
-                                        <td>{{ item.category or '-' }}</td>
-                                        <td>{{ item.location or '-' }}</td>
-                                        <td>{{ item.deleted_at }}</td>
-                                        <td class="text-right">
-                                            <div class="btn-group">
-                                                <button onclick="restoreItem('consumables', '{{ item.barcode }}')" 
-                                                        class="btn btn-sm btn-success">
-                                                    <i class="fas fa-undo mr-2"></i>Wiederherstellen
-                                                </button>
-                                                <button onclick="deleteItemPermanently('consumables', '{{ item.barcode }}')" 
-                                                        class="btn btn-sm btn-error">
-                                                    <i class="fas fa-trash mr-2"></i>Löschen
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Keine gelöschten Verbrauchsmaterialien vorhanden
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Verbrauchsmaterial -->
+    <div id="consumablesContent" class="tab-content hidden">
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Name</th>
+                        <th>Kategorie</th>
+                        <th>Standort</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for consumable in consumables %}
+                    <tr>
+                        <td>{{ consumable.barcode }}</td>
+                        <td>{{ consumable.name }}</td>
+                        <td>{{ consumable.category }}</td>
+                        <td>{{ consumable.location }}</td>
+                        <td>{{ consumable.deleted_at|format_datetime }}</td>
+                        <td>
+                            <button onclick="restoreItem('consumable', '{{ consumable.barcode }}')" 
+                                    class="btn btn-sm btn-primary">
+                                <i class="fas fa-undo mr-2"></i>
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-            <!-- Mitarbeiter -->
-            <div class="{% if active_tab != 'workers' %}hidden{% endif %}">
-                <div class="card bg-base-100 shadow-xl">
-                    <div class="card-body">
-                        <h2 class="card-title">Gelöschte Mitarbeiter</h2>
-                        <div class="overflow-x-auto">
-                            {% if deleted_workers %}
-                            <table class="table table-zebra w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Barcode</th>
-                                        <th>Name</th>
-                                        <th>Abteilung</th>
-                                        <th>Email</th>
-                                        <th>Gelöscht am</th>
-                                        <th class="text-right">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for worker in deleted_workers %}
-                                    <tr>
-                                        <td>{{ worker.barcode }}</td>
-                                        <td>{{ worker.name }}</td>
-                                        <td>{{ worker.category or '-' }}</td>
-                                        <td>{{ worker.location or '-' }}</td>
-                                        <td>{{ worker.deleted_at }}</td>
-                                        <td class="text-right">
-                                            <div class="btn-group">
-                                                <button onclick="restoreItem('workers', '{{ worker.barcode }}')" 
-                                                        class="btn btn-sm btn-success">
-                                                    <i class="fas fa-undo mr-2"></i>Wiederherstellen
-                                                </button>
-                                                <button onclick="deleteItemPermanently('workers', '{{ worker.barcode }}')" 
-                                                        class="btn btn-sm btn-error">
-                                                    <i class="fas fa-trash mr-2"></i>Löschen
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                            {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle mr-2"></i>
-                                Keine gelöschten Mitarbeiter vorhanden
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Mitarbeiter -->
+    <div id="workersContent" class="tab-content hidden">
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr>
+                        <th>Barcode</th>
+                        <th>Name</th>
+                        <th>Abteilung</th>
+                        <th>Gelöscht am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for worker in workers %}
+                    <tr>
+                        <td>{{ worker.barcode }}</td>
+                        <td>{{ worker.firstname }} {{ worker.lastname }}</td>
+                        <td>{{ worker.department }}</td>
+                        <td>{{ worker.deleted_at|format_datetime }}</td>
+                        <td>
+                            <button onclick="restoreItem('worker', '{{ worker.barcode }}')" 
+                                    class="btn btn-sm btn-primary">
+                                <i class="fas fa-undo mr-2"></i>
+                                Wiederherstellen
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+{{ super() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tabs = document.querySelectorAll('.tab');
-    const contents = document.querySelectorAll('.tab-content');
-
-    function showTab(tabName) {
-        // Alle Tab-Inhalte ausblenden
-        contents.forEach(content => {
-            content.style.display = 'none';
-        });
-        
-        // Gewählten Tab-Inhalt anzeigen
-        const activeContent = document.getElementById(`${tabName}-tab`);
-        if (activeContent) {
-            activeContent.style.display = 'block';
-        }
-        
-        // Aktiven Tab markieren
-        tabs.forEach(tab => {
-            tab.classList.remove('tab-active');
-        });
-        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
-        if (activeTab) {
-            activeTab.classList.add('tab-active');
-        }
-    }
-
-    // Click-Handler für Tabs
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            showTab(this.dataset.tab);
-        });
+function showTab(tabName) {
+    // Alle Tab-Inhalte ausblenden
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
     });
-
-    // Initial den ersten Tab aktivieren
-    if (tabs.length > 0) {
-        showTab('tools');  // Zeige standardmäßig den Werkzeuge-Tab
-    }
-});
-
-// Restore-Funktion
-function restoreItem(type, barcode) {
-    if (confirm('Möchten Sie diesen Eintrag wirklich wiederherstellen?')) {
-        fetch(`/admin/trash/${type}/${barcode}/restore`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            } else {
-                alert(result.message || 'Fehler bei der Wiederherstellung');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Fehler bei der Wiederherstellung');
-        });
-    }
+    
+    // Alle Tabs deaktivieren
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('tab-active');
+    });
+    
+    // Gewählten Tab-Inhalt anzeigen
+    document.getElementById(tabName + 'Content').classList.remove('hidden');
+    
+    // Gewählten Tab aktivieren
+    document.getElementById(tabName + 'Tab').classList.add('tab-active');
 }
 
-// Delete-Funktion
-function deleteItemPermanently(type, barcode) {
-    if (confirm('Möchten Sie diesen Eintrag endgültig löschen? Dies kann nicht rückgängig gemacht werden!')) {
-        fetch(`/admin/trash/${type}/${barcode}/delete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                location.reload();
-            } else {
-                alert(result.message || 'Fehler beim Löschen');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Fehler beim Löschen');
-        });
+function restoreItem(type, barcode) {
+    if (!confirm('Möchten Sie dieses Element wirklich wiederherstellen?')) {
+        return;
     }
+    
+    fetch(`/admin/trash/restore/${type}/${barcode}`, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Fehler beim Wiederherstellen des Elements');
+        }
+    })
+    .catch(error => {
+        alert('Fehler: ' + error);
+    });
 }
 </script>
 {% endblock %}

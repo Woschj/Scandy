@@ -26,11 +26,24 @@ def index():
         }
         
         consumable_stats = {
-            'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count']
+            'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
+            'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity', one=True)['count'],
+            'warning': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5', one=True)['count'],
+            'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
         }
         
         worker_stats = {
-            'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count']
+            'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count'],
+            'by_department': Database.query('''
+                SELECT 
+                    department as name,
+                    COUNT(*) as count,
+                    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM workers WHERE deleted = 0), 1) as percentage
+                FROM workers 
+                WHERE deleted = 0 
+                GROUP BY department
+                ORDER BY count DESC
+            ''')
         }
         
         return render_template('index.html',

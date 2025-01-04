@@ -108,6 +108,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Suchfunktion
@@ -146,26 +147,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Löschfunktion
-async function deleteTool(barcode) {
-    if (!confirm('Möchten Sie dieses Werkzeug wirklich löschen?')) {
+function deleteTool(barcode) {
+    if (!confirm('Möchten Sie dieses Werkzeug wirklich in den Papierkorb verschieben?')) {
         return;
     }
     
-    try {
-        const response = await fetch(`/tools/${barcode}/delete`, {
-            method: 'DELETE'
-        });
-        
+    fetch(`/admin/tools/${barcode}/delete`, {
+        method: 'DELETE'
+    })
+    .then(response => {
         if (response.ok) {
             location.reload();
         } else {
-            const data = await response.json();
-            alert(`Fehler beim Löschen: ${data.message}`);
+            alert('Fehler beim Löschen des Werkzeugs');
         }
-    } catch (error) {
-        alert(`Fehler: ${error.message}`);
-    }
+    })
+    .catch(error => {
+        alert('Fehler: ' + error);
+    });
 }
 </script>
 {% endblock %} 

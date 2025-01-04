@@ -26,7 +26,7 @@ bp = Blueprint('admin', __name__, url_prefix='/admin')
 def dashboard():
     """Admin Dashboard"""
     try:
-        # Statistiken für Werkzeuge, Mitarbeiter und Verbrauchsmaterial
+        # Statistiken für Werkzeuge und Verbrauchsmaterial
         stats = {
             'tools': {
                 'total': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0', one=True)['count'],
@@ -44,10 +44,6 @@ def dashboard():
                 ''', one=True)['count'],
                 'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defect'", one=True)['count']
             },
-            'workers': {
-                'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count'],
-                'active': Database.query('SELECT COUNT(DISTINCT worker_barcode) as count FROM lendings WHERE returned_at IS NULL', one=True)['count']
-            },
             'consumables': {
                 'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
                 'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity', one=True)['count'],
@@ -55,6 +51,104 @@ def dashboard():
                 'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
             }
         }
+        
+        # Top 5 Materialverbrauch der letzten 7 Tage
+        consumable_trend = Database.query('''
+            WITH daily_usage AS (
+                SELECT 
+                    c.name,
+                    date(cu.used_at) as date,
+                    SUM(cu.quantity) as daily_quantity
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode
+                WHERE cu.used_at >= date('now', '-6 days')
+                GROUP BY c.name, date(cu.used_at)
+            ),
+            dates AS (
+                SELECT date('now', '-' || n || ' days') as date
+                FROM (SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 
+                     UNION SELECT 4 UNION SELECT 5 UNION SELECT 6)
+            ),
+            top_consumables AS (
+                SELECT 
+                    c.name,
+                    SUM(cu.quantity) as total_quantity
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode
+                WHERE cu.used_at >= date('now', '-6 days')
+                GROUP BY c.name
+                ORDER BY total_quantity DESC
+                LIMIT 5
+            )
+            SELECT 
+                dates.date as label,
+                tc.name,
+                COALESCE(du.daily_quantity, 0) as count
+            FROM dates
+            CROSS JOIN top_consumables tc
+            LEFT JOIN daily_usage du ON dates.date = du.date AND tc.name = du.name
+            ORDER BY tc.name, dates.date
+        ''')
+        
+        # Formatiere die Daten für das Chart
+        stats['consumable_trend'] = {
+            'labels': sorted(set(row['label'] for row in consumable_trend)),
+            'datasets': []
+        }
+        
+        # Gruppiere die Daten nach Material
+        materials = {}
+        for row in consumable_trend:
+            if row['name'] not in materials:
+                materials[row['name']] = []
+            materials[row['name']].append(row['count'])
+            
+        # Erstelle Datasets für jedes Material
+        colors = ['#36A2EB', '#FF6384', '#4BC0C0', '#FF9F40', '#9966FF']
+        for i, (name, data) in enumerate(materials.items()):
+            stats['consumable_trend']['datasets'].append({
+                'label': name,
+                'data': data,
+                'borderColor': colors[i % len(colors)],
+                'backgroundColor': colors[i % len(colors)].replace(')', ', 0.1)'),
+                'borderWidth': 2,
+                'fill': True,
+                'tension': 0.4
+            })
+        
+        # Wartungsprobleme (defekte Werkzeuge)
+        maintenance_issues = Database.query('''
+            SELECT 
+                name,
+                status,
+                CASE 
+                    WHEN status = 'defect' THEN 'error'
+                    ELSE 'warning'
+                END as severity
+            FROM tools
+            WHERE status = 'defect' AND deleted = 0
+            LIMIT 5
+        ''')
+        stats['maintenance_issues'] = maintenance_issues
+
+        # Bestandswarnungen
+        inventory_warnings = Database.query('''
+            SELECT 
+                name as message,
+                CASE 
+                    WHEN quantity < min_quantity * 0.5 THEN 'error'
+                    ELSE 'warning'
+                END as type,
+                CASE 
+                    WHEN quantity < min_quantity * 0.5 THEN 'exclamation-triangle'
+                    ELSE 'exclamation'
+                END as icon
+            FROM consumables
+            WHERE quantity < min_quantity AND deleted = 0
+            ORDER BY quantity / min_quantity ASC
+            LIMIT 5
+        ''')
+        stats['inventory_warnings'] = inventory_warnings
         
         # Aktuelle Ausleihen
         current_lendings = Database.query('''
@@ -76,48 +170,19 @@ def dashboard():
             ORDER BY cu.used_at DESC
             LIMIT 10
         ''')
-        
-        # Mitarbeiter-Statistiken überarbeitet
-        worker_stats = {
-            'total': Database.query("SELECT COUNT(*) as count FROM workers WHERE deleted = 0", one=True)['count'],
-            'by_department': Database.query("""
-                WITH dept_counts AS (
-                    SELECT 
-                        CASE 
-                            WHEN department IS NULL OR department = '' THEN 'Keine Abteilung'
-                            ELSE department 
-                        END as name,
-                        COUNT(*) as count
-                    FROM workers 
-                    WHERE deleted = 0
-                    GROUP BY department
-                    HAVING name IS NOT NULL
-                )
-                SELECT 
-                    name, 
-                    count,
-                    ROUND(CAST(count AS FLOAT) * 100 / (
-                        SELECT COUNT(*) FROM workers WHERE deleted = 0
-                    ), 1) as percentage
-                FROM dept_counts
-                ORDER BY 
-                    CASE name 
-                        WHEN 'Keine Abteilung' THEN 2
-                        ELSE 1 
-                    END,
-                    count DESC
-            """)
-        }
-        
+
         return render_template('admin/dashboard.html',
                              stats=stats,
                              current_lendings=current_lendings,
-                             consumable_usages=consumable_usages,
-                             worker_stats=worker_stats)
+                             consumable_usages=consumable_usages)
                             
     except Exception as e:
+        logging.error(f"Fehler im Admin-Dashboard: {str(e)}", exc_info=True)
         flash(f'Fehler beim Laden des Dashboards: {str(e)}', 'error')
-        return redirect(url_for('index'))
+        return render_template('admin/dashboard.html', 
+                             stats={}, 
+                             current_lendings=[], 
+                             consumable_usages=[])
 
 # Manuelle Ausleihe
 @bp.route('/manual-lending', methods=['GET', 'POST'])
@@ -356,6 +421,83 @@ def trash():
                          tools=tools,
                          consumables=consumables,
                          workers=workers)
+
+@bp.route('/tools/<barcode>/delete', methods=['DELETE'])
+@admin_required
+def delete_tool(barcode):
+    """Werkzeug in den Papierkorb verschieben"""
+    try:
+        Database.query('''
+            UPDATE tools 
+            SET deleted = 1,
+                deleted_at = datetime('now'),
+                modified_at = datetime('now'),
+                sync_status = 'pending'
+            WHERE barcode = ?
+        ''', [barcode])
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/consumables/<barcode>/delete', methods=['DELETE'])
+@admin_required
+def delete_consumable(barcode):
+    """Verbrauchsmaterial in den Papierkorb verschieben"""
+    try:
+        Database.query('''
+            UPDATE consumables 
+            SET deleted = 1,
+                deleted_at = datetime('now'),
+                modified_at = datetime('now'),
+                sync_status = 'pending'
+            WHERE barcode = ?
+        ''', [barcode])
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/workers/<barcode>/delete', methods=['DELETE'])
+@admin_required
+def delete_worker(barcode):
+    """Mitarbeiter in den Papierkorb verschieben"""
+    try:
+        Database.query('''
+            UPDATE workers 
+            SET deleted = 1,
+                deleted_at = datetime('now'),
+                modified_at = datetime('now'),
+                sync_status = 'pending'
+            WHERE barcode = ?
+        ''', [barcode])
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@bp.route('/trash/restore/<type>/<barcode>', methods=['POST'])
+@admin_required
+def restore_item(type, barcode):
+    """Element aus dem Papierkorb wiederherstellen"""
+    try:
+        table = {
+            'tool': 'tools',
+            'consumable': 'consumables',
+            'worker': 'workers'
+        }.get(type)
+        
+        if not table:
+            return jsonify({'success': False, 'error': 'Ungültiger Typ'}), 400
+            
+        Database.query(f'''
+            UPDATE {table}
+            SET deleted = 0,
+                deleted_at = NULL,
+                modified_at = datetime('now'),
+                sync_status = 'pending'
+            WHERE barcode = ?
+        ''', [barcode])
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @bp.route('/server-settings', methods=['GET', 'POST'])
 @admin_required

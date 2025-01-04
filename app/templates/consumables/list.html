@@ -1,0 +1,24 @@
+{% block scripts %}
+{{ super() }}
+<script>
+function deleteConsumable(barcode) {
+    if (!confirm('Möchten Sie dieses Verbrauchsmaterial wirklich in den Papierkorb verschieben?')) {
+        return;
+    }
+    
+    fetch(`/admin/consumables/${barcode}/delete`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (response.ok) {
+            location.reload();
+        } else {
+            alert('Fehler beim Löschen des Verbrauchsmaterials');
+        }
+    })
+    .catch(error => {
+        alert('Fehler: ' + error);
+    });
+}
+</script>
+{% endblock %} 

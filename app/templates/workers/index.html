@@ -87,6 +87,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Filter-Funktionalität
@@ -106,26 +107,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Löschfunktion
-async function deleteWorker(barcode) {
-    if (!confirm('Möchten Sie diesen Mitarbeiter wirklich löschen?')) {
+function deleteWorker(barcode) {
+    if (!confirm('Möchten Sie diesen Mitarbeiter wirklich in den Papierkorb verschieben?')) {
         return;
     }
     
-    try {
-        const response = await fetch(`/workers/${barcode}/delete`, {
-            method: 'DELETE'
-        });
-        
+    fetch(`/admin/workers/${barcode}/delete`, {
+        method: 'DELETE'
+    })
+    .then(response => {
         if (response.ok) {
             location.reload();
         } else {
-            const data = await response.json();
-            alert(`Fehler beim Löschen: ${data.message}`);
+            alert('Fehler beim Löschen des Mitarbeiters');
         }
-    } catch (error) {
-        alert(`Fehler: ${error.message}`);
-    }
+    })
+    .catch(error => {
+        alert('Fehler: ' + error);
+    });
 }
 </script>
 {% endblock %} 
