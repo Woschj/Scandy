@@ -1,11 +1,13 @@
-from flask import render_template, request, flash, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from flask_login import login_required
-from flask_admin import admin_required
-from app.models import Database
+from app.database import Database  # Direkt aus app.database importieren
+import logging
+
+bp = Blueprint('admin', __name__, url_prefix='/admin')
+logger = logging.getLogger(__name__)
 
 @bp.route('/departments')
 @login_required
-@admin_required
 def departments():
     departments = Database.query('''
         SELECT d.*,
@@ -20,7 +22,6 @@ def departments():
 
 @bp.route('/departments/add', methods=['POST'])
 @login_required
-@admin_required
 def add_department():
     name = request.form.get('name')
     if not name:
@@ -50,7 +51,6 @@ def add_department():
 
 @bp.route('/departments/<name>/delete', methods=['DELETE'])
 @login_required
-@admin_required
 def delete_department(name):
     # Prüfen ob noch Mitarbeiter in der Abteilung sind
     count = Database.query('''
@@ -65,3 +65,49 @@ def delete_department(name):
         }), 400
     
     return '', 204 
+
+@bp.route('/manual-lending', methods=['GET', 'POST'])
+@login_required
+def manual_lending():
+    try:
+        # Basis-Abfragen wie in den anderen Templates
+        tools = Database.query('''
+            SELECT t.*, 
+                   CASE 
+                       WHEN l.id IS NULL THEN 'Verfügbar'
+                       ELSE 'Ausgeliehen'
+                   END as status
+            FROM tools t
+            LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
+                AND l.returned_at IS NULL
+            WHERE t.deleted = 0
+            ORDER BY t.name
+        ''')
+        print(f"DEBUG: Found {len(tools)} tools")
+        
+        workers = Database.query('''
+            SELECT * 
+            FROM workers
+            WHERE deleted = 0
+            ORDER BY firstname, lastname
+        ''')
+        print(f"DEBUG: Found {len(workers)} workers")
+        
+        consumables = Database.query('''
+            SELECT *
+            FROM consumables 
+            WHERE deleted = 0
+                AND quantity > 0
+            ORDER BY name
+        ''')
+        print(f"DEBUG: Found {len(consumables)} consumables")
+
+        return render_template('admin/manual_lending.html',
+                            tools=tools,
+                            workers=workers,
+                            consumables=consumables,
+                            current_lendings=[])
+
+    except Exception as e:
+        print(f"ERROR in manual_lending: {str(e)}")
+        return f"Error: {str(e)}", 500

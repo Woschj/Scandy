@@ -8,6 +8,24 @@
 {% endblock %}
 
 {% block content %}
+<!-- Debug-Ausgabe -->
+<div class="bg-gray-100 p-4 mb-4">
+    <h3>Debug Info:</h3>
+    <p>Tools: {{ tools|length }}</p>
+    <ul>
+    {% for tool in tools %}
+        <li>{{ tool }}</li>
+    {% endfor %}
+    </ul>
+    
+    <p>Workers: {{ workers|length }}</p>
+    <ul>
+    {% for worker in workers %}
+        <li>{{ worker }}</li>
+    {% endfor %}
+    </ul>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Linke Spalte: Item-Auswahl -->
     <div class="card bg-base-100 shadow-xl">
@@ -17,12 +35,12 @@
                 <div class="flex flex-col gap-2">
                     <button class="btn btn-square btn-active" 
                             data-tab="tools" 
-                            onclick="switchType('tools')">
+                            onclick="ManualLending.switchType('tools')">
                         <i class="fas fa-tools"></i>
                     </button>
                     <button class="btn btn-square" 
                             data-tab="consumables" 
-                            onclick="switchType('consumables')">
+                            onclick="ManualLending.switchType('consumables')">
                         <i class="fas fa-box-open"></i>
                     </button>
                 </div>
@@ -55,18 +73,20 @@
                             </div>
                             <select size="10" 
                                     id="toolSelect"
-                                    onchange="window.ManualLending.selectItem(this.value)"
+                                    onchange="ManualLending.selectItem(this.value)"
                                     class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
                                 {% for tool in tools %}
-                                    {% if tool.status == 'Verfügbar' %}
                                     <option value="tool:{{ tool.id }}:{{ tool.barcode }}:{{ tool.name }}"
-                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
-                                        <div class="flex justify-between w-full">
-                                            <span>{{ tool.name }}</span>
-                                            <span class="text-gray-500">#{{ tool.barcode }}</span>
-                                        </div>
+                                            class="p-3 hover:bg-gray-50 cursor-pointer">
+                                        {{ tool.name }} (#{{ tool.barcode }})
+                                        {% if tool.current_status == 'lent' %}
+                                            - Ausgeliehen
+                                        {% elif tool.current_status == 'defect' %}
+                                            - Defekt
+                                        {% else %}
+                                            - Verfügbar
+                                        {% endif %}
                                     </option>
-                                    {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -78,18 +98,13 @@
                             </div>
                             <select size="10" 
                                     id="consumableSelect"
-                                    onchange="window.ManualLending.selectItem(this.value)"
+                                    onchange="ManualLending.selectItem(this.value)"
                                     class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
-                                {% for consumable in consumables %}
-                                    {% if consumable.quantity > 0 %}
-                                    <option value="consumable:{{ consumable.id }}:{{ consumable.barcode }}:{{ consumable.name }}"
-                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
-                                        <div class="flex justify-between w-full">
-                                            <span>{{ consumable.name }}</span>
-                                            <span class="text-gray-500">{{ consumable.quantity }} Stk</span>
-                                        </div>
+                                {% for item in consumables %}
+                                    <option value="consumable:{{ item.id }}:{{ item.barcode }}:{{ item.name }}"
+                                            class="p-3 hover:bg-gray-50 cursor-pointer">
+                                        {{ item.name }} ({{ item.quantity }} Stk)
                                     </option>
-                                    {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
@@ -132,15 +147,13 @@
                             </div>
                             <select size="10" 
                                     id="workerSelect"
-                                    onchange="window.ManualLending.selectWorker(this.value)"
+                                    onchange="ManualLending.selectWorker(this.value)"
                                     class="w-full h-[calc(100%-4rem)] overflow-y-auto p-2">
                                 {% for worker in workers %}
-                                    <option value="worker:{{ worker.id }}:{{ worker.barcode }}:{{ worker.firstname }} {{ worker.lastname }}"
-                                            class="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
-                                        <div class="flex justify-between w-full">
-                                            <span>{{ worker.firstname }} {{ worker.lastname }}</span>
-                                            <span class="text-gray-500">{{ worker.department }}</span>
-                                        </div>
+                                    <option value="worker:{{ worker.barcode }}:{{ worker.firstname }}:{{ worker.lastname }}:{{ worker.department }}"
+                                            class="p-3 hover:bg-gray-50 cursor-pointer">
+                                        {{ worker.firstname }} {{ worker.lastname }}
+                                        {% if worker.department %}({{ worker.department }}){% endif %}
                                     </option>
                                 {% endfor %}
                             </select>
@@ -191,7 +204,7 @@
                     <!-- Bestätigungs-Button -->
                     <button id="confirmButton" 
                             class="btn btn-primary w-full" 
-                            onclick="processLending()"
+                            onclick="ManualLending.processLending()"
                             disabled>
                         Ausleihe bestätigen
                     </button>
@@ -285,36 +298,193 @@
 'use strict';
 
 // Namespace für die manuelle Ausleihe
-window.ManualLending = {
+const ManualLending = {
     selectedItem: null,
     selectedWorker: null,
     currentType: 'tools',
 
-    init: function() {
-        console.log('Initialisiere Manual Lending');
-        
-        // Event Listener für beide Listen
-        const toolsList = document.getElementById('toolsList');
-        const consumablesList = document.getElementById('consumablesList');
-        const workerSelect = document.getElementById('workerSelect');
-        
-        if (toolsList) {
-            toolsList.addEventListener('change', (e) => this.updateItemDetails(e.target.value));
-        }
-        
-        if (consumablesList) {
-            consumablesList.addEventListener('change', (e) => this.updateItemDetails(e.target.value));
-        }
-        
-        if (workerSelect) {
-            workerSelect.addEventListener('change', (e) => this.updateWorkerDetails(e.target.value));
-        }
-
-        // Initial Tools anzeigen
-        this.switchType('tools');
+    init() {
+        this.setup();
     },
 
-    switchType: function(type) {
+    setup() {
+        this.setupEventListeners();
+    },
+
+    setupEventListeners() {
+        // Suche in Listen
+        const itemSearch = document.getElementById('itemSearch');
+        if (itemSearch) {
+            itemSearch.addEventListener('input', (e) => this.filterList(e.target.value));
+        }
+
+        const workerSearch = document.getElementById('workerSearch');
+        if (workerSearch) {
+            workerSearch.addEventListener('input', (e) => this.filterWorkers(e.target.value));
+        }
+    },
+
+    selectItem(itemValue) {
+        if (!itemValue) return;
+        
+        const [type, id, barcode, name] = itemValue.split(':');
+        this.selectedItem = { type, id, barcode, name };
+        
+        // Mengenfeld anzeigen/verstecken je nach Typ
+        const amountField = document.getElementById('amountField');
+        if (amountField) {
+            amountField.classList.toggle('hidden', type !== 'consumable');
+        }
+        
+        this.updatePreview();
+        this.updateItemDetails();
+    },
+
+    selectWorker(workerValue) {
+        if (!workerValue) return;
+        
+        const [type, barcode, firstname, lastname, department] = workerValue.split(':');
+        const name = `${firstname} ${lastname}${department ? ` (${department})` : ''}`;
+        
+        console.log('Worker ausgewählt:', { type, barcode, name, department });
+        
+        this.selectedWorker = {
+            barcode: barcode,
+            name: name,
+            department: department
+        };
+        
+        this.updatePreview();
+        this.updateWorkerDetails();
+    },
+
+    updateItemDetails() {
+        const details = document.getElementById('itemDetails');
+        const name = document.getElementById('itemDetailName');
+        const barcode = document.getElementById('itemDetailBarcode');
+        const quantity = document.getElementById('itemDetailQuantity');
+        
+        if (this.selectedItem) {
+            details.classList.remove('hidden');
+            name.textContent = this.selectedItem.name;
+            barcode.textContent = this.selectedItem.barcode;
+            
+            // Zeige Bestandsinfo nur bei Verbrauchsmaterial
+            if (quantity) {
+                quantity.classList.toggle('hidden', this.selectedItem.type !== 'consumable');
+            }
+        } else {
+            details.classList.add('hidden');
+        }
+    },
+
+    updateWorkerDetails() {
+        const details = document.getElementById('workerDetails');
+        const name = document.getElementById('workerDetailName');
+        const barcode = document.getElementById('workerDetailBarcode');
+        const department = document.getElementById('workerDetailDepartment');
+        
+        if (this.selectedWorker) {
+            details.classList.remove('hidden');
+            name.textContent = this.selectedWorker.name;
+            barcode.textContent = this.selectedWorker.barcode;
+            if (department) {
+                department.textContent = this.selectedWorker.department || '-';
+            }
+        } else {
+            details.classList.add('hidden');
+        }
+    },
+
+    updatePreview() {
+        const previewItem = document.getElementById('previewItem');
+        const previewWorker = document.getElementById('previewWorker');
+        const confirmButton = document.getElementById('confirmButton');
+        
+        if (previewItem) {
+            previewItem.textContent = this.selectedItem ? 
+                `${this.selectedItem.name} (${this.selectedItem.barcode})` : 
+                'Kein Artikel ausgewählt';
+        }
+        if (previewWorker) {
+            previewWorker.textContent = this.selectedWorker ? 
+                this.selectedWorker.name : 
+                'Kein Mitarbeiter ausgewählt';
+        }
+        if (confirmButton) {
+            confirmButton.disabled = !(this.selectedItem && this.selectedWorker);
+        }
+    },
+
+    filterList(searchTerm) {
+        const select = this.currentType === 'tools' ? 'toolSelect' : 'consumableSelect';
+        const options = document.getElementById(select).options;
+        
+        for (let option of options) {
+            const text = option.text.toLowerCase();
+            option.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+        }
+    },
+
+    filterWorkers(searchTerm) {
+        const options = document.getElementById('workerSelect').options;
+        
+        for (let option of options) {
+            const text = option.text.toLowerCase();
+            option.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+        }
+    },
+
+    async processLending() {
+        if (!this.selectedItem || !this.selectedWorker) {
+            alert('Bitte wählen Sie einen Artikel und einen Mitarbeiter aus');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('tool_barcode', this.selectedItem.barcode);
+            formData.append('worker_barcode', this.selectedWorker.barcode);
+            formData.append('action', 'lend');
+            
+            // Menge für Verbrauchsmaterial hinzufügen
+            if (this.selectedItem.type === 'consumable') {
+                const amount = document.getElementById('amount').value;
+                if (!amount || amount < 1) {
+                    alert('Bitte geben Sie eine gültige Menge ein');
+                    return;
+                }
+                formData.append('quantity', amount);
+            }
+
+            console.log('Sende Ausleihe:', {
+                tool: this.selectedItem.barcode,
+                worker: this.selectedWorker.barcode
+            });
+
+            const response = await fetch(window.location.pathname, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+            
+            const result = await response.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert(result.message || 'Ein Fehler ist aufgetreten');
+            }
+        } catch (error) {
+            console.error('Fehler bei der Ausleihe:', error);
+            alert(`Fehler bei der Ausleihe: ${error.message}`);
+        }
+    },
+
+    switchType(type) {
         console.log('Switching to type:', type);
         this.currentType = type;
         
@@ -327,94 +497,38 @@ window.ManualLending = {
         // Listen umschalten
         const toolsList = document.getElementById('toolsList');
         const consumablesList = document.getElementById('consumablesList');
-        const amountContainer = document.getElementById('amountContainer');
+        const amountField = document.getElementById('amountField');
         
-        if (type === 'tools') {
-            toolsList.classList.remove('hidden');
-            consumablesList.classList.add('hidden');
-            amountContainer.classList.add('hidden');
-        } else {
-            toolsList.classList.add('hidden');
-            consumablesList.classList.remove('hidden');
-            amountContainer.classList.remove('hidden');
-        }
-
-        // Auswahl zurücksetzen
-        this.selectedItem = null;
-        this.updatePreview();
-        toolsList.selectedIndex = -1;
-        consumablesList.selectedIndex = -1;
-        
-        console.log('Switch complete. Current type:', this.currentType);
-    },
-
-    updateItemDetails: function(itemValue) {
-        console.log('Update Item Details:', itemValue);
-        
-        if (!itemValue) return;
-        
-        const [type, id, barcode, name] = itemValue.split(':');
-        this.selectedItem = { type, id, barcode, name };
-        this.updatePreview();
-    },
-
-    updateWorkerDetails: function(workerValue) {
-        console.log('Update Worker Details:', workerValue);
-        
-        if (!workerValue) return;
-        
-        const workerSelect = document.getElementById('workerSelect');
-        this.selectedWorker = {
-            barcode: workerValue,
-            name: workerSelect.options[workerSelect.selectedIndex].text
-        };
-        this.updatePreview();
-    },
-
-    updatePreview: function() {
-        console.log('Update Preview');
-        console.log('Selected Item:', this.selectedItem);
-        console.log('Selected Worker:', this.selectedWorker);
-        
-        const previewItem = document.getElementById('previewItem');
-        const previewWorker = document.getElementById('previewWorker');
-        const confirmButton = document.getElementById('confirmButton');
-        
-        if (previewItem) previewItem.textContent = this.selectedItem ? this.selectedItem.name : '-';
-        if (previewWorker) previewWorker.textContent = this.selectedWorker ? this.selectedWorker.name : '-';
-        if (confirmButton) confirmButton.disabled = !(this.selectedItem && this.selectedWorker);
-    },
-
-    async processLending() {
-        try {
-            if (!this.selectedItem || !this.selectedWorker) {
-                alert('Bitte Artikel und Mitarbeiter auswählen');
-                return;
+        if (toolsList && consumablesList) {
+            if (type === 'tools') {
+                toolsList.classList.remove('hidden');
+                consumablesList.classList.add('hidden');
+                if (amountField) amountField.classList.add('hidden');
+            } else {
+                toolsList.classList.add('hidden');
+                consumablesList.classList.remove('hidden');
+                if (amountField) amountField.classList.remove('hidden');
             }
 
-            const result = await LendingService.processLending(
-                this.selectedItem, 
-                this.selectedWorker
-            );
-
-            alert(result.message);
-            if (result.success) {
-                location.reload();
-            }
-        } catch (error) {
-            alert(error.message);
+            // Auswahl zurücksetzen
+            this.selectedItem = null;
+            this.updatePreview();
+            
+            const toolSelect = document.getElementById('toolSelect');
+            const consumableSelect = document.getElementById('consumableSelect');
+            if (toolSelect) toolSelect.selectedIndex = -1;
+            if (consumableSelect) consumableSelect.selectedIndex = -1;
         }
     }
 };
 
-// Initialisierung beim Laden der Seite
-document.addEventListener('DOMContentLoaded', () => {
-    window.ManualLending.init();
-});
+// Globales Objekt erstellen
+window.ManualLending = ManualLending;
 
-// Globale Funktionen für HTML-Onclick
-window.switchType = (type) => window.ManualLending.switchType(type);
-window.processLending = () => window.ManualLending.processLending();
+// Initialisierung starten
+document.addEventListener('DOMContentLoaded', () => {
+    ManualLending.init();
+});
 </script>
 
 <style>

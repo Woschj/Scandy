@@ -50,7 +50,7 @@
     data-location="{{ tool.location or '' }}"
     data-status="{{ 'lent' if tool.lent_to else 'available' }}">
     <td>
-        <a href="{{ url_for('tools.detail', uuid=tool.uuid) }}" class="link">
+        <a href="{{ url_for('tools.detail', barcode=tool.barcode) }}" class="link link-hover font-medium">
             {{ tool.name }}
         </a>
     </td>
@@ -94,11 +94,10 @@
     {% if is_admin %}
     <td class="text-right">
         <div class="btn-group">
-            <button class="btn btn-sm" onclick="editTool('{{ tool.barcode }}')">
+            <a href="{{ url_for('tools.detail', barcode=tool.barcode) }}" class="btn btn-sm btn-ghost">
                 <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-sm btn-error" 
-                    onclick="deleteTool('{{ tool.barcode }}')">
+            </a>
+            <button class="btn btn-sm btn-ghost btn-error" onclick="deleteTool('{{ tool.barcode }}')">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -108,32 +107,65 @@
 {% endfor %}
 {% endblock %}
 
-{% block list_scripts %}
-// Suchfunktion
-document.getElementById('searchInput').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    document.querySelectorAll('.data-row').forEach(row => {
-        const searchableContent = row.textContent.toLowerCase();
-        row.style.display = searchableContent.includes(searchTerm) ? '' : 'none';
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Suchfunktion
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            document.querySelectorAll('.data-row').forEach(row => {
+                const searchableContent = row.textContent.toLowerCase();
+                row.style.display = searchableContent.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
+
+    // Filter-Funktionalität
+    function applyFilters() {
+        const category = document.getElementById('categoryFilter').value;
+        const location = document.getElementById('locationFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        document.querySelectorAll('.data-row').forEach(row => {
+            const matchesCategory = !category || row.dataset.category === category;
+            const matchesLocation = !location || row.dataset.location === location;
+            const matchesStatus = !status || row.dataset.status === status;
+            
+            row.style.display = (matchesCategory && matchesLocation && matchesStatus) ? '' : 'none';
+        });
+    }
+
+    // Filter-Event-Listener
+    ['categoryFilter', 'locationFilter', 'statusFilter'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', applyFilters);
+        }
     });
 });
 
-// Filter-Funktionalität
-function applyFilters() {
-    const category = document.getElementById('categoryFilter').value;
-    const location = document.getElementById('locationFilter').value;
-    const status = document.getElementById('statusFilter').value;
+// Löschfunktion
+async function deleteTool(barcode) {
+    if (!confirm('Möchten Sie dieses Werkzeug wirklich löschen?')) {
+        return;
+    }
     
-    document.querySelectorAll('.data-row').forEach(row => {
-        const matchesCategory = !category || row.dataset.category === category;
-        const matchesLocation = !location || row.dataset.location === location;
-        const matchesStatus = !status || row.dataset.status === status;
+    try {
+        const response = await fetch(`/tools/${barcode}/delete`, {
+            method: 'DELETE'
+        });
         
-        row.style.display = (matchesCategory && matchesLocation && matchesStatus) ? '' : 'none';
-    });
+        if (response.ok) {
+            location.reload();
+        } else {
+            const data = await response.json();
+            alert(`Fehler beim Löschen: ${data.message}`);
+        }
+    } catch (error) {
+        alert(`Fehler: ${error.message}`);
+    }
 }
-
-document.getElementById('categoryFilter').addEventListener('change', applyFilters);
-document.getElementById('locationFilter').addEventListener('change', applyFilters);
-document.getElementById('statusFilter').addEventListener('change', applyFilters);
+</script>
 {% endblock %} 

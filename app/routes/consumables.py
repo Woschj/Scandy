@@ -5,12 +5,12 @@ from datetime import datetime
 
 bp = Blueprint('consumables', __name__, url_prefix='/consumables')
 
-@bp.route('/<string:uuid>')
+@bp.route('/<string:barcode>')
 @login_required
-def detail(uuid):
+def detail(barcode):
     """Zeigt die Detailansicht eines Verbrauchsmaterials"""
     try:
-        # Hole Verbrauchsmaterial mit UUID statt Barcode
+        # Hole Verbrauchsmaterial mit Barcode
         consumable = Database.query('''
             SELECT c.*, 
                    CASE 
@@ -19,13 +19,13 @@ def detail(uuid):
                        ELSE 'leer'
                    END as status
             FROM consumables c
-            WHERE c.uuid = ? AND c.deleted = 0
-        ''', [uuid], one=True)
+            WHERE c.barcode = ? AND c.deleted = 0
+        ''', [barcode], one=True)
         
         if not consumable:
             return redirect(url_for('consumables.index'))
             
-        # Hole Nutzungshistorie (weiterhin mit Barcode, da dieser für die Verknüpfung genutzt wird)
+        # Hole Nutzungshistorie
         usage_history = Database.query('''
             SELECT cu.*,
                    w.firstname || ' ' || w.lastname as worker_name,
@@ -34,12 +34,24 @@ def detail(uuid):
             JOIN workers w ON cu.worker_barcode = w.barcode
             WHERE cu.consumable_barcode = ?
             ORDER BY cu.used_at DESC
-        ''', [consumable['barcode']])
+        ''', [barcode])
         
-        # Füge Historie zum Verbrauchsmaterial hinzu
-        consumable['usage_history'] = usage_history
+        # Hole die letzten 5 Entnahmen
+        recent_usage = Database.query('''
+            SELECT cu.*,
+                   w.firstname || ' ' || w.lastname as worker_name,
+                   w.department as worker_department
+            FROM consumable_usages cu
+            JOIN workers w ON cu.worker_barcode = w.barcode
+            WHERE cu.consumable_barcode = ?
+            ORDER BY cu.used_at DESC
+            LIMIT 5
+        ''', [barcode])
             
-        return render_template('consumables/detail.html', consumable=consumable)
+        return render_template('consumables/details.html',
+                            consumable=consumable,
+                            usage_history=usage_history,
+                            recent_usage=recent_usage)
         
     except Exception as e:
         print(f"Fehler beim Laden der Verbrauchsmaterial-Details: {str(e)}")

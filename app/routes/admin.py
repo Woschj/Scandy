@@ -125,17 +125,85 @@ def dashboard():
 def manual_lending():
     """Manuelle Ausleihe/Rückgabe"""
     if request.method == 'POST':
+        print("POST-Anfrage empfangen")
+        print("Form-Daten:", request.form)
+        
         tool_barcode = request.form.get('tool_barcode')
         worker_barcode = request.form.get('worker_barcode')
         action = request.form.get('action')  # 'lend' oder 'return'
+        quantity = request.form.get('quantity', type=int)
+        
+        if not tool_barcode or not worker_barcode:
+            return jsonify({
+                'success': False, 
+                'message': 'Werkzeug und Mitarbeiter müssen ausgewählt sein'
+            }), 400
         
         try:
+            # Prüfe ob es ein Verbrauchsmaterial ist
+            consumable = Database.query('''
+                SELECT * FROM consumables 
+                WHERE barcode = ? AND deleted = 0
+            ''', [tool_barcode], one=True)
+            
+            if consumable:  # Verbrauchsmaterial-Logik
+                if not quantity or quantity <= 0:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Ungültige Menge'
+                    }), 400
+                    
+                if quantity > consumable['quantity']:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Nicht genügend Bestand'
+                    }), 400
+                    
+                # Neue Verbrauchsmaterial-Ausgabe erstellen
+                Database.query('''
+                    INSERT INTO consumable_usages 
+                    (consumable_barcode, worker_barcode, quantity, used_at, modified_at, sync_status)
+                    VALUES (?, ?, ?, datetime('now'), datetime('now'), 'pending')
+                ''', [tool_barcode, worker_barcode, quantity])
+                
+                # Bestand aktualisieren
+                Database.query('''
+                    UPDATE consumables
+                    SET quantity = quantity - ?,
+                        modified_at = datetime('now'),
+                        sync_status = 'pending'
+                    WHERE barcode = ?
+                ''', [quantity, tool_barcode])
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Verbrauchsmaterial erfolgreich ausgegeben'
+                })
+            
+            # Werkzeug-Logik (unverändert)
             if action == 'lend':
+                # Prüfe ob das Werkzeug bereits ausgeliehen ist
+                existing_lending = Database.query('''
+                    SELECT * FROM lendings
+                    WHERE tool_barcode = ?
+                    AND returned_at IS NULL
+                ''', [tool_barcode], one=True)
+                
+                if existing_lending:
+                    return jsonify({
+                        'success': False, 
+                        'message': 'Dieses Werkzeug ist bereits ausgeliehen'
+                    }), 400
+                
                 Database.query('''
                     INSERT INTO lendings (tool_barcode, worker_barcode, lent_at)
                     VALUES (?, ?, datetime('now'))
                 ''', [tool_barcode, worker_barcode])
-                flash('Werkzeug erfolgreich ausgeliehen', 'success')
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Werkzeug erfolgreich ausgeliehen'
+                })
             else:
                 Database.query('''
                     UPDATE lendings 
@@ -143,14 +211,73 @@ def manual_lending():
                     WHERE tool_barcode = ? 
                     AND returned_at IS NULL
                 ''', [tool_barcode])
-                flash('Werkzeug erfolgreich zurückgegeben', 'success')
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Werkzeug erfolgreich zurückgegeben'
+                })
                 
         except Exception as e:
-            flash(f'Fehler: {str(e)}', 'error')
-        
-        return redirect(url_for('admin.manual_lending'))
-        
-    return render_template('admin/manual_lending.html')
+            print("Fehler bei der Ausleihe:", str(e))
+            return jsonify({
+                'success': False, 
+                'message': f'Fehler: {str(e)}'
+            }), 500
+            
+    # GET request - zeige das Formular
+    tools = Database.query('''
+        SELECT t.*,
+                CASE 
+                    WHEN l.returned_at IS NULL THEN 'lent'
+                    WHEN t.status = 'defect' THEN 'defect'
+                    ELSE 'available'
+                END as current_status,
+                w.firstname || ' ' || w.lastname as lent_to
+        FROM tools t
+        LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+        LEFT JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE t.deleted = 0
+    ''')
+
+    workers = Database.query('''
+        SELECT * FROM workers WHERE deleted = 0
+    ''')
+
+    consumables = Database.query('''
+        SELECT * FROM consumables WHERE deleted = 0
+    ''')
+
+    current_lendings = Database.query('''
+        SELECT 
+            l.*,
+            t.name as item_name,
+            w.firstname || ' ' || w.lastname as worker_name,
+            'Werkzeug' as category,
+            t.barcode as item_barcode,
+            w.barcode as worker_barcode,
+            l.lent_at as action_date
+        FROM lendings l
+        JOIN tools t ON l.tool_barcode = t.barcode
+        JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE l.returned_at IS NULL
+        ORDER BY l.lent_at DESC
+    ''')
+    
+    categories = Database.query('''
+        SELECT DISTINCT category FROM tools WHERE deleted = 0 AND category IS NOT NULL
+    ''')
+    
+    locations = Database.query('''
+        SELECT DISTINCT location FROM tools WHERE deleted = 0 AND location IS NOT NULL
+    ''')
+
+    return render_template('admin/manual_lending.html', 
+                          tools=tools,
+                          workers=workers,
+                          consumables=consumables,
+                          current_lendings=current_lendings,
+                          categories=[cat['category'] for cat in categories],
+                          locations=[loc['location'] for loc in locations])
 
 @bp.route('/trash')
 @admin_required

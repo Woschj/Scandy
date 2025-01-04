@@ -45,9 +45,9 @@ def index():
                          categories=[c['category'] for c in categories],
                          locations=[l['location'] for l in locations])
 
-@bp.route('/<string:uuid>')
+@bp.route('/<string:barcode>')
 @login_required
-def detail(uuid):
+def detail(barcode):
     """Zeigt die Detailansicht eines Werkzeugs"""
     try:
         # Hole Werkzeug mit aktueller Ausleihe
@@ -64,8 +64,8 @@ def detail(uuid):
             LEFT JOIN lendings l ON t.barcode = l.tool_barcode 
                 AND l.returned_at IS NULL
             LEFT JOIN workers w ON l.worker_barcode = w.barcode
-            WHERE t.uuid = ? AND t.deleted = 0
-        ''', [uuid], one=True)
+            WHERE t.barcode = ? AND t.deleted = 0
+        ''', [barcode], one=True)
         
         if not tool:
             return redirect(url_for('tools.index'))
@@ -79,19 +79,20 @@ def detail(uuid):
             JOIN workers w ON l.worker_barcode = w.barcode
             WHERE l.tool_barcode = ?
             ORDER BY l.lent_at DESC
-        ''', [tool['barcode']])
-        
-        # Füge Historie zum Werkzeug hinzu
-        tool['lending_history'] = lending_history
+        ''', [barcode])
         
         # Aktuelle Ausleihe
-        tool['current_lending'] = None
+        current_lending = None
         if tool['status'] == 'ausgeliehen':
-            tool['current_lending'] = {
-                'worker_name': tool['current_worker']
+            current_lending = {
+                'worker_name': tool['current_worker'],
+                'lent_at': tool['lent_at']
             }
             
-        return render_template('tools/detail.html', tool=tool)
+        return render_template('tools/details.html', 
+                            tool=tool,
+                            lending_history=lending_history,
+                            current_lending=current_lending)
         
     except Exception as e:
         print(f"Fehler beim Laden der Werkzeugdetails: {str(e)}")

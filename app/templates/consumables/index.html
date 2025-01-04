@@ -50,7 +50,7 @@
     data-location="{{ item.location or '' }}"
     data-status="{{ item.stock_status }}">
     <td>
-        <a href="{{ url_for('consumables.detail', uuid=item.uuid) }}" class="link">
+        <a href="{{ url_for('consumables.detail', barcode=item.barcode) }}" class="link link-hover font-medium">
             {{ item.name }}
         </a>
     </td>
@@ -88,10 +88,10 @@
     {% if session.get('is_admin') %}
     <td class="text-right">
         <div class="btn-group">
-            <button class="btn btn-sm" onclick="editConsumable('{{ item.uuid }}')">
+            <a href="{{ url_for('consumables.detail', barcode=item.barcode) }}" class="btn btn-sm btn-ghost">
                 <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-sm btn-error" onclick="deleteConsumable('{{ item.uuid }}')">
+            </a>
+            <button class="btn btn-sm btn-ghost btn-error" onclick="deleteConsumable('{{ item.barcode }}')">
                 <i class="fas fa-trash"></i>
             </button>
         </div>
@@ -129,13 +129,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Löschfunktion
-async function deleteConsumable(uuid) {
+async function deleteConsumable(barcode) {
     if (!confirm('Möchten Sie dieses Verbrauchsmaterial wirklich löschen?')) {
         return;
     }
     
     try {
-        const response = await fetch(`/consumables/${uuid}/delete`, {
+        const response = await fetch(`/consumables/${barcode}/delete`, {
             method: 'DELETE'
         });
         
