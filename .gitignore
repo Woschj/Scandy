@@ -44,3 +44,25 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build-spezifische Dateien
+*.build/
+*.dist/
+installer/
+*.exe
+nuitka-crash-report.xml
+
+# Große Dateien und Logs
+*.log
+backups/
+backup_unused_files*/
+*.db
+flask_session/
+
+# Temporäre Dateien
+temp/
+tmp/
+
+# Lokale Konfiguration
+instance/
+local_settings.py

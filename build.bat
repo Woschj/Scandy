@@ -9,8 +9,8 @@ call venv\Scripts\activate.bat || (
 )
 
 echo Installiere Nuitka und benötigte Tools...
-pip install nuitka wheel || (
-    echo Fehler beim Installieren von Nuitka!
+pip install nuitka wheel apscheduler || (
+    echo Fehler beim Installieren der benötigten Pakete!
     pause
     exit /b 1
 )
@@ -28,6 +28,12 @@ python -m nuitka ^
     --standalone ^
     --mingw64 ^
     --follow-imports ^
+    --include-package=apscheduler ^
+    --include-package=apscheduler.triggers ^
+    --include-package=apscheduler.triggers.cron ^
+    --include-package=apscheduler.schedulers ^
+    --include-package=apscheduler.executors ^
+    --include-package=apscheduler.jobstores ^
     --windows-company-name="Scandy" ^
     --windows-product-name="Scandy Server" ^
     --windows-file-version=1.0.0 ^
@@ -52,14 +58,22 @@ python -m nuitka ^
     --standalone ^
     --mingw64 ^
     --follow-imports ^
+    --include-package=apscheduler ^
+    --include-package=apscheduler.triggers ^
+    --include-package=apscheduler.triggers.cron ^
+    --include-package=apscheduler.schedulers ^
+    --include-package=apscheduler.executors ^
+    --include-package=apscheduler.jobstores ^
     --windows-company-name="Scandy" ^
     --windows-product-name="Scandy Client" ^
     --windows-file-version=1.0.0 ^
     --windows-product-version=1.0.0 ^
     --windows-disable-console ^
+    --include-data-dir=client/core=core ^
+    --include-data-dir=client/ui=ui ^
     --include-data-file=client/main.py=main.py ^
     --output-dir=dist ^
-    run_client.py || (
+    client/main.py || (
         echo Fehler beim Erstellen der Client-EXE!
         pause
         exit /b 1
@@ -76,6 +90,11 @@ if exist "dist\run.dist" (
         pause
         exit /b 1
     )
+    ren "dist\server\run.exe" "scandy_server.exe" || (
+        echo Fehler beim Umbenennen der Server-EXE!
+        pause
+        exit /b 1
+    )
 ) else (
     echo Server-Build-Verzeichnis nicht gefunden!
     pause
@@ -83,9 +102,14 @@ if exist "dist\run.dist" (
 )
 
 echo Kopiere Client-Dateien...
-if exist "dist\run_client.dist" (
-    xcopy /E /I /Y "dist\run_client.dist\*" "dist\client\" || (
+if exist "dist\main.dist" (
+    xcopy /E /I /Y "dist\main.dist\*" "dist\client\" || (
         echo Fehler beim Kopieren der Client-Dateien!
+        pause
+        exit /b 1
+    )
+    ren "dist\client\main.exe" "scandy_client.exe" || (
+        echo Fehler beim Umbenennen der Client-EXE!
         pause
         exit /b 1
     )
