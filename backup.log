@@ -21591,3 +21591,409 @@ jinja2.exceptions.TemplateNotFound: components/quickscan_modal.html
 2025-01-05 10:10:12,496 - INFO - 127.0.0.1 - - [05/Jan/2025 10:10:12] "GET /static/css/quickscan.css HTTP/1.1" 200 -
 2025-01-05 10:10:12,738 - INFO - 127.0.0.1 - - [05/Jan/2025 10:10:12] "GET /static/js/quickscan.js HTTP/1.1" 200 -
 2025-01-05 10:10:12,800 - INFO - 127.0.0.1 - - [05/Jan/2025 10:10:12] "GET /static/js/toast.js HTTP/1.1" 200 -
+2025-01-05 10:16:30,706 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:16:30,706 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:16:30,706 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:16:30,706 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:19:03,285 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:19:03,285 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:19:03,285 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:19:03,286 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:19:41,783 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:19:41,783 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:19:41,783 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:19:41,784 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:22:28,568 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:22:28,568 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:22:28,568 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:22:28,568 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:23:05,082 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:23:05,082 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:23:05,082 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:23:05,083 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:24:23,475 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:24:23,476 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:24:23,476 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:24:23,476 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:28:19,259 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:28:19,260 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:28:19,260 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:28:19,260 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:31:23,211 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:31:23,211 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:31:23,211 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:31:23,211 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 10:32:05,574 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 10:32:05,575 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 10:32:05,575 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 10:32:05,575 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:36:11,821 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:36:11,822 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:36:11,822 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:36:11,822 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:36:55,047 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:36:55,047 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:36:55,048 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:36:55,048 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:51:16,204 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:51:16,204 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:51:16,204 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:51:16,205 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:52:07,041 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:52:07,041 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:52:07,042 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:52:07,042 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:58:44,173 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:58:44,173 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:58:44,174 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:58:44,174 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 12:59:36,423 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 12:59:36,424 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 12:59:36,424 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 12:59:36,425 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:05:00,114 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:05:00,114 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:05:00,115 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:05:00,115 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:06:27,764 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:06:27,765 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:06:27,765 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:06:27,765 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:07:17,659 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:07:17,660 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:07:17,660 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:07:17,660 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:52:19,003 - INFO - Starte Entwicklungsserver...
+2025-01-05 13:52:19,004 - INFO - =================
+2025-01-05 13:52:19,004 - INFO - Durchsuche App-Dateien...
+2025-01-05 13:52:19,004 - INFO - Datei: app\config.py
+2025-01-05 13:52:19,004 - INFO - Datei: app\constants.py
+2025-01-05 13:52:19,004 - INFO - Datei: app\create_test_data.py
+2025-01-05 13:52:19,004 - INFO - Datei: app\db_migration.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\files.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\quickscan.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\sync_manager.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\__init__.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\blueprints\admin.py
+2025-01-05 13:52:19,005 - INFO - Datei: app\blueprints\consumables.py
+2025-01-05 13:52:19,006 - INFO - Datei: app\blueprints\tools.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\consumable.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\database.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\init_db.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\models.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\settings.py
+2025-01-05 13:52:19,007 - INFO - Datei: app\models\system_log.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\models\tool.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\models\user.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\models\worker.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\models\__init__.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\routes\admin.py
+2025-01-05 13:52:19,008 - INFO - Datei: app\routes\api.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\auth.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\consumables.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\history.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\index.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\inventory.py
+2025-01-05 13:52:19,009 - INFO - Datei: app\routes\lending.py
+2025-01-05 13:52:19,010 - INFO - Datei: app\routes\main.py
+2025-01-05 13:52:19,010 - INFO - Datei: app\routes\quick_scan.py
+2025-01-05 13:52:19,010 - INFO - Datei: app\routes\tools.py
+2025-01-05 13:52:19,010 - INFO - Datei: app\routes\workers.py
+2025-01-05 13:52:19,011 - INFO - Datei: app\routes\__init__.py
+2025-01-05 13:52:19,011 - INFO - Datei: app\scripts\reset_color_settings.py
+2025-01-05 13:52:19,011 - INFO - Datei: app\scripts\setup_design_settings.py
+2025-01-05 13:52:19,012 - INFO - Datei: app\templates\about.html
+2025-01-05 13:52:19,012 - INFO - Datei: app\templates\admin.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\base.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\consumables.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\consumable_details.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\edit_consumable.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\error.html
+2025-01-05 13:52:19,013 - INFO - Datei: app\templates\index.html
+2025-01-05 13:52:19,014 - INFO - Datei: app\templates\tools.html
+2025-01-05 13:52:19,014 - INFO - Datei: app\templates\tool_details.html
+2025-01-05 13:52:19,014 - INFO - Datei: app\templates\workers.html
+2025-01-05 13:52:19,014 - INFO - Datei: app\templates\worker_details.html
+2025-01-05 13:52:19,015 - INFO - Datei: app\templates\admin\access_settings.html
+2025-01-05 13:52:19,015 - INFO - Datei: app\templates\admin\add_consumable.html
+2025-01-05 13:52:19,015 - INFO - Datei: app\templates\admin\add_tool.html
+2025-01-05 13:52:19,015 - INFO - Datei: app\templates\admin\add_worker.html
+2025-01-05 13:52:19,015 - INFO - Datei: app\templates\admin\dashboard.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\departments.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\logs.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\manual_lending.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\server_settings.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\system_logs.html
+2025-01-05 13:52:19,016 - INFO - Datei: app\templates\admin\trash.html
+2025-01-05 13:52:19,017 - INFO - Datei: app\templates\auth\login.html
+2025-01-05 13:52:19,017 - INFO - Datei: app\templates\components\quickscan_modal.html
+2025-01-05 13:52:19,017 - INFO - Datei: app\templates\components\quickscan_steps.html
+2025-01-05 13:52:19,017 - INFO - Datei: app\templates\components\quickscan_step_confirm.html
+2025-01-05 13:52:19,017 - INFO - Datei: app\templates\components\quickscan_step_final.html
+2025-01-05 13:52:19,018 - INFO - Datei: app\templates\components\quickscan_step_item.html
+2025-01-05 13:52:19,018 - INFO - Datei: app\templates\components\quickscan_step_worker.html
+2025-01-05 13:52:19,018 - INFO - Datei: app\templates\consumables\add.html
+2025-01-05 13:52:19,018 - INFO - Datei: app\templates\consumables\details.html
+2025-01-05 13:52:19,018 - INFO - Datei: app\templates\consumables\index.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\shared\list_base.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\shared\list_view.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\tools\add.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\tools\details.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\tools\edit.html
+2025-01-05 13:52:19,019 - INFO - Datei: app\templates\tools\index.html
+2025-01-05 13:52:19,020 - INFO - Datei: app\templates\workers\add.html
+2025-01-05 13:52:19,020 - INFO - Datei: app\templates\workers\details.html
+2025-01-05 13:52:19,020 - INFO - Datei: app\templates\workers\index.html
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\auth.py
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\auth_utils.py
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\color_extractor.py
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\color_settings.py
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\context_processors.py
+2025-01-05 13:52:19,021 - INFO - Datei: app\utils\db_schema.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\decorators.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\error_handler.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\filters.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\logger.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\structure_viewer.py
+2025-01-05 13:52:19,022 - INFO - Datei: app\utils\system_structure.py
+2025-01-05 13:52:19,023 - INFO - Datei: app\utils\__init__.py
+2025-01-05 13:52:19,023 - INFO - =================
+2025-01-05 13:53:41,844 - INFO - Starte Entwicklungsserver...
+2025-01-05 13:53:41,845 - INFO - =================
+2025-01-05 13:53:41,845 - INFO - Durchsuche App-Dateien...
+2025-01-05 13:53:41,845 - INFO - Datei: app\config.py
+2025-01-05 13:53:41,845 - INFO - Datei: app\constants.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\create_test_data.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\db_migration.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\files.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\quickscan.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\sync_manager.py
+2025-01-05 13:53:41,846 - INFO - Datei: app\__init__.py
+2025-01-05 13:53:41,847 - INFO - Datei: app\blueprints\admin.py
+2025-01-05 13:53:41,847 - INFO - Datei: app\blueprints\consumables.py
+2025-01-05 13:53:41,847 - INFO - Datei: app\blueprints\tools.py
+2025-01-05 13:53:41,848 - INFO - Datei: app\models\consumable.py
+2025-01-05 13:53:41,848 - INFO - Datei: app\models\database.py
+2025-01-05 13:53:41,848 - INFO - Datei: app\models\init_db.py
+2025-01-05 13:53:41,848 - INFO - Datei: app\models\models.py
+2025-01-05 13:53:41,848 - INFO - Datei: app\models\settings.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\models\system_log.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\models\tool.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\models\user.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\models\worker.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\models\__init__.py
+2025-01-05 13:53:41,849 - INFO - Datei: app\routes\admin.py
+2025-01-05 13:53:41,850 - INFO - Datei: app\routes\api.py
+2025-01-05 13:53:41,850 - INFO - Datei: app\routes\auth.py
+2025-01-05 13:53:41,850 - INFO - Datei: app\routes\consumables.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\history.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\index.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\inventory.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\lending.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\main.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\quick_scan.py
+2025-01-05 13:53:41,851 - INFO - Datei: app\routes\tools.py
+2025-01-05 13:53:41,852 - INFO - Datei: app\routes\workers.py
+2025-01-05 13:53:41,852 - INFO - Datei: app\routes\__init__.py
+2025-01-05 13:53:41,852 - INFO - Datei: app\scripts\reset_color_settings.py
+2025-01-05 13:53:41,852 - INFO - Datei: app\scripts\setup_design_settings.py
+2025-01-05 13:53:41,853 - INFO - Datei: app\templates\about.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\admin.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\base.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\consumables.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\consumable_details.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\edit_consumable.html
+2025-01-05 13:53:41,854 - INFO - Datei: app\templates\error.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\index.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\tools.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\tool_details.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\workers.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\worker_details.html
+2025-01-05 13:53:41,855 - INFO - Datei: app\templates\admin\access_settings.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\add_consumable.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\add_tool.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\add_worker.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\dashboard.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\departments.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\logs.html
+2025-01-05 13:53:41,856 - INFO - Datei: app\templates\admin\manual_lending.html
+2025-01-05 13:53:41,857 - INFO - Datei: app\templates\admin\server_settings.html
+2025-01-05 13:53:41,857 - INFO - Datei: app\templates\admin\system_logs.html
+2025-01-05 13:53:41,857 - INFO - Datei: app\templates\admin\trash.html
+2025-01-05 13:53:41,857 - INFO - Datei: app\templates\auth\login.html
+2025-01-05 13:53:41,857 - INFO - Datei: app\templates\components\quickscan_modal.html
+2025-01-05 13:53:41,858 - INFO - Datei: app\templates\components\quickscan_steps.html
+2025-01-05 13:53:41,858 - INFO - Datei: app\templates\components\quickscan_step_confirm.html
+2025-01-05 13:53:41,858 - INFO - Datei: app\templates\components\quickscan_step_final.html
+2025-01-05 13:53:41,858 - INFO - Datei: app\templates\components\quickscan_step_item.html
+2025-01-05 13:53:41,858 - INFO - Datei: app\templates\components\quickscan_step_worker.html
+2025-01-05 13:53:41,859 - INFO - Datei: app\templates\consumables\add.html
+2025-01-05 13:53:41,859 - INFO - Datei: app\templates\consumables\details.html
+2025-01-05 13:53:41,859 - INFO - Datei: app\templates\consumables\index.html
+2025-01-05 13:53:41,859 - INFO - Datei: app\templates\shared\list_base.html
+2025-01-05 13:53:41,860 - INFO - Datei: app\templates\shared\list_view.html
+2025-01-05 13:53:41,860 - INFO - Datei: app\templates\tools\add.html
+2025-01-05 13:53:41,860 - INFO - Datei: app\templates\tools\details.html
+2025-01-05 13:53:41,860 - INFO - Datei: app\templates\tools\edit.html
+2025-01-05 13:53:41,860 - INFO - Datei: app\templates\tools\index.html
+2025-01-05 13:53:41,861 - INFO - Datei: app\templates\workers\add.html
+2025-01-05 13:53:41,861 - INFO - Datei: app\templates\workers\details.html
+2025-01-05 13:53:41,861 - INFO - Datei: app\templates\workers\index.html
+2025-01-05 13:53:41,861 - INFO - Datei: app\utils\auth.py
+2025-01-05 13:53:41,861 - INFO - Datei: app\utils\auth_utils.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\color_extractor.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\color_settings.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\context_processors.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\db_schema.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\decorators.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\error_handler.py
+2025-01-05 13:53:41,862 - INFO - Datei: app\utils\filters.py
+2025-01-05 13:53:41,863 - INFO - Datei: app\utils\logger.py
+2025-01-05 13:53:41,863 - INFO - Datei: app\utils\structure_viewer.py
+2025-01-05 13:53:41,863 - INFO - Datei: app\utils\system_structure.py
+2025-01-05 13:53:41,864 - INFO - Datei: app\utils\__init__.py
+2025-01-05 13:53:41,864 - INFO - =================
+2025-01-05 13:53:44,081 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:53:44,081 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:53:44,081 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:53:44,082 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:53:44,160 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:53:44,160 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:53:44,160 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:53:44,160 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:53:44,184 - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-01-05 13:53:44,185 - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-01-05 13:53:44,198 - INFO - Added job "DatabaseBackup.create_backup" to job store "default"
+2025-01-05 13:53:44,198 - INFO - Added job "DatabaseBackup.create_backup" to job store "default"
+2025-01-05 13:53:44,199 - INFO - Scheduler started
+2025-01-05 13:53:44,239 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.178.21:5000
+2025-01-05 13:53:44,239 - INFO - [33mPress CTRL+C to quit[0m
+2025-01-05 13:53:44,241 - INFO -  * Restarting with stat
+2025-01-05 13:53:44,891 - INFO - Starte Entwicklungsserver...
+2025-01-05 13:53:44,891 - INFO - =================
+2025-01-05 13:53:44,892 - INFO - Durchsuche App-Dateien...
+2025-01-05 13:53:44,892 - INFO - Datei: app\config.py
+2025-01-05 13:53:44,892 - INFO - Datei: app\constants.py
+2025-01-05 13:53:44,892 - INFO - Datei: app\create_test_data.py
+2025-01-05 13:53:44,893 - INFO - Datei: app\db_migration.py
+2025-01-05 13:53:44,893 - INFO - Datei: app\files.py
+2025-01-05 13:53:44,893 - INFO - Datei: app\quickscan.py
+2025-01-05 13:53:44,893 - INFO - Datei: app\sync_manager.py
+2025-01-05 13:53:44,893 - INFO - Datei: app\__init__.py
+2025-01-05 13:53:44,894 - INFO - Datei: app\blueprints\admin.py
+2025-01-05 13:53:44,894 - INFO - Datei: app\blueprints\consumables.py
+2025-01-05 13:53:44,894 - INFO - Datei: app\blueprints\tools.py
+2025-01-05 13:53:44,895 - INFO - Datei: app\models\consumable.py
+2025-01-05 13:53:44,895 - INFO - Datei: app\models\database.py
+2025-01-05 13:53:44,895 - INFO - Datei: app\models\init_db.py
+2025-01-05 13:53:44,896 - INFO - Datei: app\models\models.py
+2025-01-05 13:53:44,896 - INFO - Datei: app\models\settings.py
+2025-01-05 13:53:44,896 - INFO - Datei: app\models\system_log.py
+2025-01-05 13:53:44,897 - INFO - Datei: app\models\tool.py
+2025-01-05 13:53:44,897 - INFO - Datei: app\models\user.py
+2025-01-05 13:53:44,897 - INFO - Datei: app\models\worker.py
+2025-01-05 13:53:44,898 - INFO - Datei: app\models\__init__.py
+2025-01-05 13:53:44,898 - INFO - Datei: app\routes\admin.py
+2025-01-05 13:53:44,898 - INFO - Datei: app\routes\api.py
+2025-01-05 13:53:44,899 - INFO - Datei: app\routes\auth.py
+2025-01-05 13:53:44,899 - INFO - Datei: app\routes\consumables.py
+2025-01-05 13:53:44,899 - INFO - Datei: app\routes\history.py
+2025-01-05 13:53:44,899 - INFO - Datei: app\routes\index.py
+2025-01-05 13:53:44,899 - INFO - Datei: app\routes\inventory.py
+2025-01-05 13:53:44,900 - INFO - Datei: app\routes\lending.py
+2025-01-05 13:53:44,900 - INFO - Datei: app\routes\main.py
+2025-01-05 13:53:44,900 - INFO - Datei: app\routes\quick_scan.py
+2025-01-05 13:53:44,900 - INFO - Datei: app\routes\tools.py
+2025-01-05 13:53:44,900 - INFO - Datei: app\routes\workers.py
+2025-01-05 13:53:44,901 - INFO - Datei: app\routes\__init__.py
+2025-01-05 13:53:44,901 - INFO - Datei: app\scripts\reset_color_settings.py
+2025-01-05 13:53:44,901 - INFO - Datei: app\scripts\setup_design_settings.py
+2025-01-05 13:53:44,903 - INFO - Datei: app\templates\about.html
+2025-01-05 13:53:44,904 - INFO - Datei: app\templates\admin.html
+2025-01-05 13:53:44,904 - INFO - Datei: app\templates\base.html
+2025-01-05 13:53:44,905 - INFO - Datei: app\templates\consumables.html
+2025-01-05 13:53:44,905 - INFO - Datei: app\templates\consumable_details.html
+2025-01-05 13:53:44,905 - INFO - Datei: app\templates\edit_consumable.html
+2025-01-05 13:53:44,905 - INFO - Datei: app\templates\error.html
+2025-01-05 13:53:44,906 - INFO - Datei: app\templates\index.html
+2025-01-05 13:53:44,906 - INFO - Datei: app\templates\tools.html
+2025-01-05 13:53:44,906 - INFO - Datei: app\templates\tool_details.html
+2025-01-05 13:53:44,906 - INFO - Datei: app\templates\workers.html
+2025-01-05 13:53:44,906 - INFO - Datei: app\templates\worker_details.html
+2025-01-05 13:53:44,907 - INFO - Datei: app\templates\admin\access_settings.html
+2025-01-05 13:53:44,907 - INFO - Datei: app\templates\admin\add_consumable.html
+2025-01-05 13:53:44,907 - INFO - Datei: app\templates\admin\add_tool.html
+2025-01-05 13:53:44,907 - INFO - Datei: app\templates\admin\add_worker.html
+2025-01-05 13:53:44,908 - INFO - Datei: app\templates\admin\dashboard.html
+2025-01-05 13:53:44,908 - INFO - Datei: app\templates\admin\departments.html
+2025-01-05 13:53:44,910 - INFO - Datei: app\templates\admin\logs.html
+2025-01-05 13:53:44,910 - INFO - Datei: app\templates\admin\manual_lending.html
+2025-01-05 13:53:44,910 - INFO - Datei: app\templates\admin\server_settings.html
+2025-01-05 13:53:44,910 - INFO - Datei: app\templates\admin\system_logs.html
+2025-01-05 13:53:44,911 - INFO - Datei: app\templates\admin\trash.html
+2025-01-05 13:53:44,911 - INFO - Datei: app\templates\auth\login.html
+2025-01-05 13:53:44,911 - INFO - Datei: app\templates\components\quickscan_modal.html
+2025-01-05 13:53:44,911 - INFO - Datei: app\templates\components\quickscan_steps.html
+2025-01-05 13:53:44,912 - INFO - Datei: app\templates\components\quickscan_step_confirm.html
+2025-01-05 13:53:44,912 - INFO - Datei: app\templates\components\quickscan_step_final.html
+2025-01-05 13:53:44,912 - INFO - Datei: app\templates\components\quickscan_step_item.html
+2025-01-05 13:53:44,912 - INFO - Datei: app\templates\components\quickscan_step_worker.html
+2025-01-05 13:53:44,913 - INFO - Datei: app\templates\consumables\add.html
+2025-01-05 13:53:44,913 - INFO - Datei: app\templates\consumables\details.html
+2025-01-05 13:53:44,913 - INFO - Datei: app\templates\consumables\index.html
+2025-01-05 13:53:44,914 - INFO - Datei: app\templates\shared\list_base.html
+2025-01-05 13:53:44,914 - INFO - Datei: app\templates\shared\list_view.html
+2025-01-05 13:53:44,915 - INFO - Datei: app\templates\tools\add.html
+2025-01-05 13:53:44,915 - INFO - Datei: app\templates\tools\details.html
+2025-01-05 13:53:44,915 - INFO - Datei: app\templates\tools\edit.html
+2025-01-05 13:53:44,915 - INFO - Datei: app\templates\tools\index.html
+2025-01-05 13:53:44,916 - INFO - Datei: app\templates\workers\add.html
+2025-01-05 13:53:44,916 - INFO - Datei: app\templates\workers\details.html
+2025-01-05 13:53:44,916 - INFO - Datei: app\templates\workers\index.html
+2025-01-05 13:53:44,916 - INFO - Datei: app\utils\auth.py
+2025-01-05 13:53:44,916 - INFO - Datei: app\utils\auth_utils.py
+2025-01-05 13:53:44,917 - INFO - Datei: app\utils\color_extractor.py
+2025-01-05 13:53:44,917 - INFO - Datei: app\utils\color_settings.py
+2025-01-05 13:53:44,917 - INFO - Datei: app\utils\context_processors.py
+2025-01-05 13:53:44,917 - INFO - Datei: app\utils\db_schema.py
+2025-01-05 13:53:44,917 - INFO - Datei: app\utils\decorators.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\error_handler.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\filters.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\logger.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\structure_viewer.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\system_structure.py
+2025-01-05 13:53:44,918 - INFO - Datei: app\utils\__init__.py
+2025-01-05 13:53:44,920 - INFO - =================
+2025-01-05 13:53:45,823 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:53:45,824 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:53:45,824 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:53:45,824 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:53:45,893 - INFO - DatabaseBackup initialisiert mit:
+2025-01-05 13:53:45,894 - INFO - - Basis-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy
+2025-01-05 13:53:45,894 - INFO - - Datenbank-Pfad: C:\Users\wosch\Documents\GitHub\scan\Scandy\app\database\inventory.db
+2025-01-05 13:53:45,894 - INFO - - Backup-Verzeichnis: C:\Users\wosch\Documents\GitHub\scan\Scandy\backups
+2025-01-05 13:53:45,921 - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-01-05 13:53:45,921 - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-01-05 13:53:45,923 - INFO - Added job "DatabaseBackup.create_backup" to job store "default"
+2025-01-05 13:53:45,923 - INFO - Added job "DatabaseBackup.create_backup" to job store "default"
+2025-01-05 13:53:45,923 - INFO - Scheduler started
+2025-01-05 13:53:45,931 - WARNING -  * Debugger is active!
+2025-01-05 13:53:45,934 - INFO -  * Debugger PIN: 585-842-256
+2025-01-05 13:53:57,421 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET / HTTP/1.1" 200 -
+2025-01-05 13:53:57,568 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET /static/css/quickscan.css HTTP/1.1" 200 -
+2025-01-05 13:53:57,574 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET /static/js/toast.js HTTP/1.1" 200 -
+2025-01-05 13:53:57,574 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET /static/js/quickscan.js HTTP/1.1" 200 -
+2025-01-05 13:53:57,575 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET /static/js/lending-service.js HTTP/1.1" 200 -
+2025-01-05 13:53:57,577 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "GET /static/css/main.css HTTP/1.1" 200 -
+2025-01-05 13:53:57,584 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "[36mGET /static/images/BTZ_logo.jpg HTTP/1.1[0m" 304 -
+2025-01-05 13:53:57,593 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "[36mGET /static/images/arrow.png HTTP/1.1[0m" 304 -
+2025-01-05 13:53:57,604 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:57] "[36mGET /static/images/scandy-logo.svg HTTP/1.1[0m" 304 -
+2025-01-05 13:53:58,061 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:58] "GET /static/js/quickscan.js HTTP/1.1" 200 -
+2025-01-05 13:53:58,078 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:58] "GET /static/js/toast.js HTTP/1.1" 200 -
+2025-01-05 13:53:58,090 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:58] "GET /static/js/quickscan.js HTTP/1.1" 200 -
+2025-01-05 13:53:58,138 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:58] "[35m[1mGET /favicon.ico HTTP/1.1[0m" 500 -
+2025-01-05 13:53:58,894 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:58] "[36mGET /static/images/arrow.png HTTP/1.1[0m" 304 -
+2025-01-05 13:53:59,274 - INFO - 127.0.0.1 - - [05/Jan/2025 13:53:59] "[36mGET /static/images/BTZ_logo.jpg HTTP/1.1[0m" 304 -

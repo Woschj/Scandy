@@ -3,11 +3,18 @@ import sqlite3
 from datetime import datetime
 import os
 import logging
-import requests
 from app.config import Config
 import json
 from pathlib import Path
 import shutil
+
+# Requests nur importieren, wenn wir nicht auf dem Server sind
+try:
+    from app.config import IS_SERVER
+    if not IS_SERVER:
+        import requests
+except ImportError:
+    requests = None
 
 logger = logging.getLogger(__name__)
 
@@ -611,6 +618,10 @@ class Database:
     @staticmethod
     def sync_with_server():
         """Synchronisiere lokale DB mit Server"""
+        # Wenn wir auf dem Server sind oder requests nicht verfügbar ist, keine Synchronisation
+        if Config.IS_SERVER or requests is None:
+            return {'success': False, 'message': 'Synchronisation nicht verfügbar auf dem Server'}
+            
         if not Config.SERVER_URL:
             return {'success': False, 'message': 'Keine Server-URL konfiguriert'}
             

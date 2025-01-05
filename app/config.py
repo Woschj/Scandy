@@ -1,24 +1,19 @@
+import os
+from datetime import timedelta
+
 class Config:
+    SECRET_KEY = 'dev'
+    DATABASE = 'instance/scandy.db'
+    SESSION_TYPE = 'filesystem'
+    SESSION_FILE_DIR = 'flask_session'
+    SESSION_PERMANENT = False
+    PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+    COMPRESS_MIMETYPES = ['text/html', 'text/css', 'application/javascript']
+    
     # Basis-Einstellungen
     DATABASE_PATH = 'database/inventory.db'
     UPLOAD_FOLDER = 'uploads'
     
-    # Server/Client Modus
-    SERVER_MODE = False  # Standard: Client-Modus
-    SERVER_HOST = 'localhost'
-    SERVER_PORT = 5000
-    SERVER_URL = None  # Wird dynamisch gesetzt
-    SYNC_INTERVAL = 300  # Synchronisiere alle 5 Minuten
-    
-    @classmethod
-    def init_server(cls, host='0.0.0.0', port=5000):
-        """Server-Modus aktivieren"""
-        cls.SERVER_MODE = True
-        cls.SERVER_HOST = host
-        cls.SERVER_PORT = port
-        
-    @classmethod
-    def init_client(cls, server_url=None):
-        """Client-Modus aktivieren"""
-        cls.SERVER_MODE = False
-        cls.SERVER_URL = server_url 
+    # Server-Einstellungen
+    SERVER_HOST = '0.0.0.0'  # Erlaubt Zugriff von außen
+    SERVER_PORT = 5000 
