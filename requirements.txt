@@ -1,4 +1,4 @@
-# Flask and base packages
+# Flask und Basis-Pakete
 Flask==2.3.3
 Flask-Compress==1.13
 Flask-Login==0.6.3
@@ -9,25 +9,21 @@ click==8.1.7
 itsdangerous==2.2.0
 blinker==1.9.0
 
-# Database and scheduling
+# Datenbank und Scheduling
 APScheduler==3.9.1
 SQLAlchemy==2.0.25
 
-# File processing
+# Dateiverarbeitung
 python-barcode==0.14.0
 Pillow==10.2.0
 reportlab==4.0.4
 openpyxl==3.1.2
 
-# Utility packages
+# Utility-Pakete
 requests==2.31.0
 python-dateutil==2.8.2
 pytz==2024.1
 
-# Compression and caching
+# Komprimierung und Caching
 Brotli==1.1.0
 cachelib==0.13.0
-
-# Data processing
-pandas==2.0.3
-numpy==1.24.4
