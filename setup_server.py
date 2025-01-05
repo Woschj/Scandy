@@ -56,7 +56,22 @@ def install_requirements():
     else:
         pip_path = "venv/bin/pip"
     
-    return run_command(f"{pip_path} install -r requirements.txt")
+    # Lese requirements.txt
+    try:
+        with open('requirements.txt', 'r') as f:
+            requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+    except Exception as e:
+        logger.error(f"Fehler beim Lesen der requirements.txt: {e}")
+        return False
+    
+    # Installiere Pakete einzeln
+    for req in requirements:
+        logger.info(f"Installiere {req}...")
+        if not run_command(f"{pip_path} install {req}"):
+            logger.error(f"Fehler beim Installieren von {req}")
+            return False
+        
+    return True
 
 def init_database():
     """Initialisiert die Datenbank"""

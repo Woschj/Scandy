@@ -66,3 +66,33 @@ tmp/
 # Lokale Konfiguration
 instance/
 local_settings.py
+
+# Client-spezifische Dateien
+client/
+electron/
+src-tauri/
+node_modules/
+package-lock.json
+package.json
+*.spec
+PyQt6*
+Qt6*
+
+# Build und Deployment
+*.build/
+*.dist/
+build/
+dist/
+installer/
+*.exe
+*.msi
+*.deb
+*.rpm
+*.AppImage
+*.dmg
+
+# Große Bibliotheken und Dependencies
+**/node_modules/
+**/bower_components/
+**/*.min.js
+**/*.min.css
