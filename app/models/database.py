@@ -17,189 +17,210 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class Database:
-    DATABASE_PATH = os.path.join('database', 'inventory.db')
-
     @classmethod
     def ensure_db_exists(cls):
         """Stellt sicher, dass die Datenbank existiert und initialisiert ist"""
-        db_path = cls.get_database_path()
+        db_path = Config.get_absolute_database_path()
         
         # Stelle sicher, dass das Verzeichnis existiert
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         
-        print(f"Überprüfe Datenbank in: {db_path}")
+        logger.info(f"=== CHECKING DATABASE AT STARTUP ===")
+        logger.info(f"Configured database path: {Config.DATABASE_PATH}")
+        logger.info(f"Absolute database path: {db_path}")
         
         # Wenn die Datenbank nicht existiert, erstelle sie
         if not os.path.exists(db_path):
-            print("Erstelle neue Datenbank...")
+            logger.info("Database does not exist, creating new one...")
             conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cls._init_schema(conn)
             conn.close()
-            # Initialisiere die Datenbankstruktur
-            cls.init_db_schema()
-            print("Datenbank erfolgreich initialisiert!")
+            logger.info("Database successfully initialized!")
         else:
-            print("Datenbank existiert bereits")
+            logger.info("Database already exists")
             # Aktualisiere Schema wenn nötig
-            cls.init_db_schema()
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cls._init_schema(conn)
+            conn.close()
 
-    @staticmethod
-    def get_database_path():
-        """Gibt den Pfad zur Datenbank zurück"""
-        # Basis-Pfad ist das app-Verzeichnis
-        base_path = os.path.dirname(os.path.dirname(__file__))
-        return os.path.join(base_path, 'database', 'inventory.db')
-    
     @staticmethod
     def get_db():
         """Gibt eine Datenbankverbindung zurück"""
         if hasattr(g, 'db'):
+            logger.debug("Reusing existing database connection")
             return g.db
         
-        db_path = Database.get_database_path()
+        db_path = Config.get_absolute_database_path()
+        logger.debug(f"Creating new database connection to {db_path}")
         g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row
+        
         return g.db
 
     @staticmethod
     def get_db_connection():
         """Direkter Datenbankzugriff für Verwaltungsaufgaben"""
-        db_path = Database.get_database_path()
+        db_path = Config.get_absolute_database_path()
+        logger.debug(f"Creating direct database connection to {db_path}")
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return conn
 
+    @classmethod
+    def _init_schema(cls, conn):
+        """Initialisiert das Datenbankschema"""
+        logger.info("=== INITIALIZING DATABASE SCHEMA ===")
+        
+        # Hole existierende Tabellen
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        logger.info(f"Existing tables: {[t['name'] for t in tables]}")
+        
+        # Werkzeuge
+        logger.info("Creating/updating tools table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS tools (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT,
+                category TEXT,
+                location TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending'
+            )
+        ''')
+
+        # Mitarbeiter
+        logger.info("Creating/updating workers table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS workers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT NOT NULL UNIQUE,
+                firstname TEXT NOT NULL,
+                lastname TEXT NOT NULL,
+                department TEXT,
+                email TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending'
+            )
+        ''')
+
+        # Verbrauchsmaterial
+        logger.info("Creating/updating consumables table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS consumables (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                description TEXT,
+                quantity INTEGER DEFAULT 0,
+                min_quantity INTEGER DEFAULT 0,
+                category TEXT,
+                location TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending'
+            )
+        ''')
+
+        # Ausleihen
+        logger.info("Creating/updating lendings table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS lendings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tool_barcode TEXT NOT NULL,
+                worker_barcode TEXT NOT NULL,
+                lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                returned_at TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending',
+                FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
+                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+            )
+        ''')
+
+        # Verbrauchsmaterial-Nutzung
+        logger.info("Creating/updating consumable_usages table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS consumable_usages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                consumable_barcode TEXT NOT NULL,
+                worker_barcode TEXT NOT NULL,
+                quantity INTEGER NOT NULL,
+                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending',
+                FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+            )
+        ''')
+
+        # Benutzer
+        logger.info("Creating/updating users table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL
+            )
+        ''')
+
+        # Sync-Status
+        logger.info("Creating/updating sync_status table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS sync_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                last_sync TIMESTAMP,
+                last_attempt TIMESTAMP,
+                status TEXT,
+                error TEXT
+            )
+        ''')
+
+        # Einstellungen
+        logger.info("Creating/updating settings table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                description TEXT
+            )
+        ''')
+
+        conn.commit()
+        logger.info("Database schema initialization complete!")
+
     @staticmethod
     def init_db():
-        """Initialisiert die Datenbank"""
+        """Initialisiert die Datenbank (für Flask-Kontext)"""
         with Database.get_db() as conn:
-            # Werkzeuge
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS tools (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    barcode TEXT NOT NULL UNIQUE,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    status TEXT,
-                    category TEXT,
-                    location TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    deleted INTEGER DEFAULT 0,
-                    deleted_at TIMESTAMP,
-                    sync_status TEXT DEFAULT 'pending'
-                )
-            ''')
-
-            # Mitarbeiter
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS workers (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    barcode TEXT NOT NULL UNIQUE,
-                    firstname TEXT NOT NULL,
-                    lastname TEXT NOT NULL,
-                    department TEXT,
-                    email TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    deleted INTEGER DEFAULT 0,
-                    deleted_at TIMESTAMP,
-                    sync_status TEXT DEFAULT 'pending'
-                )
-            ''')
-
-            # Verbrauchsmaterial
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS consumables (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    barcode TEXT NOT NULL UNIQUE,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    quantity INTEGER DEFAULT 0,
-                    min_quantity INTEGER DEFAULT 0,
-                    category TEXT,
-                    location TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    deleted INTEGER DEFAULT 0,
-                    deleted_at TIMESTAMP,
-                    sync_status TEXT DEFAULT 'pending'
-                )
-            ''')
-
-            # Ausleihen
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS lendings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    tool_barcode TEXT NOT NULL,
-                    worker_barcode TEXT NOT NULL,
-                    lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    returned_at TIMESTAMP,
-                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    sync_status TEXT DEFAULT 'pending',
-                    FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
-                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-                )
-            ''')
-
-            # Verbrauchsmaterial-Nutzung
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS consumable_usages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    consumable_barcode TEXT NOT NULL,
-                    worker_barcode TEXT NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    sync_status TEXT DEFAULT 'pending',
-                    FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
-                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-                )
-            ''')
-
-            # Benutzer
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT NOT NULL UNIQUE,
-                    password TEXT NOT NULL,
-                    role TEXT NOT NULL
-                )
-            ''')
-
-            # Sync-Status
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS sync_status (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    last_sync TIMESTAMP,
-                    last_attempt TIMESTAMP,
-                    status TEXT,
-                    error TEXT
-                )
-            ''')
-
-            # Einstellungen
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS settings (
-                    key TEXT PRIMARY KEY,
-                    value TEXT,
-                    description TEXT
-                )
-            ''')
-
-            conn.commit()
+            Database._init_schema(conn)
 
     @staticmethod
     def close_db():
         db = g.pop('db', None)
         if db is not None:
+            logger.debug("Closing database connection")
             db.close()
 
     @staticmethod
     def query(sql, params=None, one=False):
         """Führt eine Datenbankabfrage aus"""
-        print("\n=== DATABASE QUERY ===")
-        print(f"SQL: {sql}")
-        print(f"Parameters: {params}")
+        logger.info("\n=== DATABASE QUERY ===")
+        logger.info(f"SQL: {sql}")
+        logger.info(f"Parameters: {params}")
         
         try:
             with Database.get_db() as conn:
@@ -213,21 +234,21 @@ class Database:
                 else:
                     result = cursor.fetchall()
                     
-                print(f"Anzahl Ergebnisse: {len(result) if result else 0}")
+                logger.info(f"Number of results: {len(result) if result else 0}")
                 if result and len(result) > 0:
-                    print(f"Beispiel-Datensatz: {dict(result[0]) if not one else dict(result)}")
+                    logger.info(f"Example record: {dict(result[0] if not one else result)}")
                 else:
-                    print("Keine Ergebnisse gefunden")
+                    logger.info("No results found")
                     
                 return result
                 
         except Exception as e:
-            print(f"\nDatenbank-Fehler:")
-            print(f"Typ: {type(e)}")
-            print(f"Message: {str(e)}")
+            logger.error(f"\nDatabase error:")
+            logger.error(f"Type: {type(e)}")
+            logger.error(f"Message: {str(e)}")
             import traceback
-            print("Traceback:")
-            print(traceback.format_exc())
+            logger.error("Traceback:")
+            logger.error(traceback.format_exc())
             raise
 
     def create_lending(self, tool_barcode, worker_barcode):

@@ -3,7 +3,7 @@ from datetime import timedelta
 
 class Config:
     SECRET_KEY = 'dev'
-    DATABASE = 'instance/scandy.db'
+    DATABASE = os.path.join('app', 'database', 'inventory.db')
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = 'flask_session'
     SESSION_PERMANENT = False
@@ -11,7 +11,7 @@ class Config:
     COMPRESS_MIMETYPES = ['text/html', 'text/css', 'application/javascript']
     
     # Basis-Einstellungen
-    DATABASE_PATH = 'database/inventory.db'
+    DATABASE_PATH = os.path.join('app', 'database', 'inventory.db')
     UPLOAD_FOLDER = 'uploads'
     
     # Server/Client Einstellungen
@@ -20,3 +20,13 @@ class Config:
     SERVER_PORT = 5000
     SERVER_URL = None  # Keine Sync-URL im Server-Modus
     SYNC_INTERVAL = 300  # 5 Minuten 
+
+    @staticmethod
+    def get_project_root():
+        """Gibt den absoluten Pfad zum Projektverzeichnis zurück"""
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    @classmethod
+    def get_absolute_database_path(cls):
+        """Gibt den absoluten Pfad zur Datenbank zurück"""
+        return os.path.join(cls.get_project_root(), cls.DATABASE_PATH) 
