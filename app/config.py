@@ -14,6 +14,9 @@ class Config:
     DATABASE_PATH = 'database/inventory.db'
     UPLOAD_FOLDER = 'uploads'
     
-    # Server-Einstellungen
+    # Server/Client Einstellungen
+    SERVER_MODE = True  # Erstmal immer im Server-Modus
     SERVER_HOST = '0.0.0.0'  # Erlaubt Zugriff von außen
-    SERVER_PORT = 5000 
+    SERVER_PORT = 5000
+    SERVER_URL = None  # Keine Sync-URL im Server-Modus
+    SYNC_INTERVAL = 300  # 5 Minuten 

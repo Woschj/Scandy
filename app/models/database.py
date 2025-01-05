@@ -8,11 +8,9 @@ import json
 from pathlib import Path
 import shutil
 
-# Requests nur importieren, wenn wir nicht auf dem Server sind
+# Optional requests importieren
 try:
-    from app.config import IS_SERVER
-    if not IS_SERVER:
-        import requests
+    import requests
 except ImportError:
     requests = None
 
