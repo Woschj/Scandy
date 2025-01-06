@@ -27,8 +27,9 @@
 
 <select class="select select-bordered w-full max-w-xs" id="statusFilter">
     <option value="">Alle Status</option>
-    <option value="available">Verfügbar</option>
-    <option value="lent">Ausgeliehen</option>
+    <option value="verfügbar">Verfügbar</option>
+    <option value="ausgeliehen">Ausgeliehen</option>
+    <option value="defekt">Defekt</option>
 </select>
 {% endblock %}
 
@@ -48,7 +49,7 @@
 <tr class="hover data-row" 
     data-category="{{ tool.category or '' }}"
     data-location="{{ tool.location or '' }}"
-    data-status="{{ 'lent' if tool.lent_to else 'available' }}">
+    data-status="{{ tool.current_status }}">
     <td>
         <a href="{{ url_for('tools.detail', barcode=tool.barcode) }}" class="link link-hover font-medium">
             {{ tool.name }}
@@ -62,15 +63,15 @@
         </span>
     </td>
     <td>
-        {% if tool.current_status == 'defect' %}
+        {% if tool.current_status == 'defekt' %}
             <span class="badge badge-error gap-1 text-error-content">
                 <i class="fas fa-exclamation-triangle"></i>
                 Defekt
             </span>
-        {% elif tool.current_status == 'lent' %}
+        {% elif tool.current_status == 'ausgeliehen' %}
             <span class="badge badge-warning gap-1 text-warning-content">
                 <i class="fas fa-hand-holding"></i>
-                Ausgeliehen
+                Ausgeliehen an {{ tool.lent_to }}
             </span>
         {% else %}
             <span class="badge badge-success gap-1 text-success-content">
@@ -144,6 +145,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (element) {
             element.addEventListener('change', applyFilters);
         }
+    });
+
+    // Neue Event-Listener für Statusänderungen
+    window.addEventListener('toolStatusChanged', function() {
+        location.reload();
+    });
+
+    window.addEventListener('toolLent', function() {
+        location.reload();
+    });
+
+    window.addEventListener('toolReturned', function() {
+        location.reload();
     });
 });
 

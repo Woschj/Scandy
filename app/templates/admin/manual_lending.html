@@ -16,13 +16,11 @@
                 <!-- Icon-Buttons statt Tabs -->
                 <div class="flex flex-col gap-2">
                     <button class="btn btn-square btn-active" 
-                            data-tab="tools" 
-                            onclick="ManualLending.switchType('tools')">
+                            data-tab="tools">
                         <i class="fas fa-tools"></i>
                     </button>
                     <button class="btn btn-square" 
-                            data-tab="consumables" 
-                            onclick="ManualLending.switchType('consumables')">
+                            data-tab="consumables">
                         <i class="fas fa-box-open"></i>
                     </button>
                 </div>
@@ -287,10 +285,13 @@ const ManualLending = {
 
     init() {
         this.setup();
+        this.setupCategoryFilter();
     },
 
     setup() {
         this.setupEventListeners();
+        // Initialisiere den aktiven Typ nach dem Setup der Event-Listener
+        this.switchType('tools');
     },
 
     setupEventListeners() {
@@ -304,6 +305,15 @@ const ManualLending = {
         if (workerSearch) {
             workerSearch.addEventListener('input', (e) => this.filterWorkers(e.target.value));
         }
+
+        // Event-Listener für Typ-Umschalter
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const type = e.currentTarget.getAttribute('data-tab');
+                this.switchType(type);
+            });
+        });
     },
 
     selectItem(itemValue) {
@@ -400,20 +410,26 @@ const ManualLending = {
 
     filterList(searchTerm) {
         const select = this.currentType === 'tools' ? 'toolSelect' : 'consumableSelect';
-        const options = document.getElementById(select).options;
+        const options = document.getElementById(select)?.options;
         
-        for (let option of options) {
-            const text = option.text.toLowerCase();
-            option.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+        if (options) {
+            Array.from(options).forEach(option => {
+                const text = option.text.toLowerCase();
+                const shouldShow = text.includes(searchTerm.toLowerCase());
+                option.style.display = shouldShow ? '' : 'none';
+            });
         }
     },
 
     filterWorkers(searchTerm) {
-        const options = document.getElementById('workerSelect').options;
+        const options = document.getElementById('workerSelect')?.options;
         
-        for (let option of options) {
-            const text = option.text.toLowerCase();
-            option.style.display = text.includes(searchTerm.toLowerCase()) ? '' : 'none';
+        if (options) {
+            Array.from(options).forEach(option => {
+                const text = option.text.toLowerCase();
+                const shouldShow = text.includes(searchTerm.toLowerCase());
+                option.style.display = shouldShow ? '' : 'none';
+            });
         }
     },
 
@@ -472,9 +488,12 @@ const ManualLending = {
         
         // Buttons aktualisieren
         document.querySelectorAll('[data-tab]').forEach(btn => {
-            btn.classList.remove('btn-active');
+            if (btn.getAttribute('data-tab') === type) {
+                btn.classList.add('btn-active');
+            } else {
+                btn.classList.remove('btn-active');
+            }
         });
-        document.querySelector(`[data-tab="${type}"]`).classList.add('btn-active');
         
         // Listen umschalten
         const toolsList = document.getElementById('toolsList');
@@ -486,7 +505,7 @@ const ManualLending = {
                 toolsList.classList.remove('hidden');
                 consumablesList.classList.add('hidden');
                 if (amountField) amountField.classList.add('hidden');
-            } else {
+            } else if (type === 'consumables') {
                 toolsList.classList.add('hidden');
                 consumablesList.classList.remove('hidden');
                 if (amountField) amountField.classList.remove('hidden');
@@ -495,11 +514,36 @@ const ManualLending = {
             // Auswahl zurücksetzen
             this.selectedItem = null;
             this.updatePreview();
+            this.updateItemDetails();
             
+            // Listen zurücksetzen
             const toolSelect = document.getElementById('toolSelect');
             const consumableSelect = document.getElementById('consumableSelect');
             if (toolSelect) toolSelect.selectedIndex = -1;
             if (consumableSelect) consumableSelect.selectedIndex = -1;
+            
+            // Suchfeld zurücksetzen
+            const itemSearch = document.getElementById('itemSearch');
+            if (itemSearch) {
+                itemSearch.value = '';
+                this.filterList('');
+            }
+        }
+    },
+
+    // Füge Event-Listener für die Kategorie-Filter hinzu
+    setupCategoryFilter() {
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', (e) => {
+                const category = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#lendingsTable tbody tr');
+                
+                rows.forEach(row => {
+                    const rowCategory = row.querySelector('td:nth-child(6)').textContent.toLowerCase();
+                    row.style.display = !category || rowCategory === category ? '' : 'none';
+                });
+            });
         }
     }
 };

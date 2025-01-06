@@ -59,7 +59,7 @@ def get_material_usage():
     return Database.query('''
         SELECT 
             c.name,
-            SUM(cu.quantity) as total_quantity
+            SUM(CASE WHEN cu.quantity > 0 THEN cu.quantity ELSE 0 END) as total_quantity
         FROM consumable_usages cu
         JOIN consumables c ON cu.consumable_barcode = c.barcode
         GROUP BY c.name
@@ -75,7 +75,7 @@ def get_warnings():
             name as message,
             'error' as severity
         FROM tools 
-        WHERE status = 'defect' AND deleted = 0
+        WHERE status = 'defekt' AND deleted = 0
         
         UNION ALL
         
@@ -140,14 +140,14 @@ def dashboard():
                     SELECT COUNT(*) as count 
                     FROM tools 
                     WHERE deleted = 0 
-                    AND status != 'defect' 
+                    AND status != 'defekt' 
                     AND barcode NOT IN (
                         SELECT tool_barcode 
                         FROM lendings 
                         WHERE returned_at IS NULL
                     )
                 ''', one=True)['count'],
-                'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defect'", one=True)['count']
+                'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defekt'", one=True)['count']
             },
             'consumables': {
                 'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
@@ -168,11 +168,11 @@ def dashboard():
                 name,
                 status,
                 CASE 
-                    WHEN status = 'defect' THEN 'error'
+                    WHEN status = 'defekt' THEN 'error'
                     ELSE 'warning'
                 END as severity
             FROM tools
-            WHERE status = 'defect' AND deleted = 0
+            WHERE status = 'defekt' AND deleted = 0
             LIMIT 5
         ''')
         stats['maintenance_issues'] = maintenance_issues
@@ -237,7 +237,7 @@ def get_consumable_trend():
             SELECT 
                 c.name,
                 date(cu.used_at) as date,
-                SUM(cu.quantity) as daily_quantity
+                SUM(CASE WHEN cu.quantity > 0 THEN cu.quantity ELSE 0 END) as daily_quantity
             FROM consumable_usages cu
             JOIN consumables c ON cu.consumable_barcode = c.barcode
             WHERE cu.used_at >= date('now', '-6 days')
@@ -251,7 +251,7 @@ def get_consumable_trend():
         top_consumables AS (
             SELECT 
                 c.name,
-                SUM(cu.quantity) as total_quantity
+                SUM(CASE WHEN cu.quantity > 0 THEN cu.quantity ELSE 0 END) as total_quantity
             FROM consumable_usages cu
             JOIN consumables c ON cu.consumable_barcode = c.barcode
             WHERE cu.used_at >= date('now', '-6 days')
@@ -420,75 +420,84 @@ def manual_lending():
     # GET request - zeige das Formular
     tools = Database.query('''
         SELECT t.*,
-                CASE 
-                    WHEN l.id IS NOT NULL THEN 'lent'
-                    WHEN t.status = 'defect' THEN 'defect'
-                    ELSE 'available'
-                END as current_status,
-                w.firstname || ' ' || w.lastname as lent_to,
-                l.id as lending_id
+               CASE 
+                   WHEN l.id IS NOT NULL THEN 'ausgeliehen'
+                   WHEN t.status = 'defekt' THEN 'defekt'
+                   ELSE 'verfügbar'
+               END as current_status,
+               w.firstname || ' ' || w.lastname as lent_to,
+               l.lent_at as lending_date
         FROM tools t
-        LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+        LEFT JOIN (
+            SELECT l1.* 
+            FROM lendings l1
+            LEFT JOIN lendings l2 ON l1.tool_barcode = l2.tool_barcode 
+                AND l1.lent_at < l2.lent_at
+            WHERE l2.id IS NULL 
+            AND l1.returned_at IS NULL
+        ) l ON t.barcode = l.tool_barcode
         LEFT JOIN workers w ON l.worker_barcode = w.barcode
         WHERE t.deleted = 0
+        ORDER BY t.name
     ''')
 
     workers = Database.query('''
         SELECT * FROM workers WHERE deleted = 0
+        ORDER BY lastname, firstname
     ''')
 
     consumables = Database.query('''
         SELECT * FROM consumables WHERE deleted = 0
+        ORDER BY name
     ''')
 
     # Aktuelle Ausleihen (Werkzeuge und Verbrauchsmaterial)
     current_lendings = Database.query('''
-        SELECT 
-            l.id,
-            t.name as item_name,
-            t.barcode as item_barcode,
-            w.firstname || ' ' || w.lastname as worker_name,
-            w.barcode as worker_barcode,
-            'Werkzeug' as category,
-            l.lent_at as action_date,
-            NULL as amount
-        FROM lendings l
-        JOIN tools t ON l.tool_barcode = t.barcode
-        JOIN workers w ON l.worker_barcode = w.barcode
-        WHERE l.returned_at IS NULL
-        
+        WITH RECURSIVE current_tool_lendings AS (
+            SELECT 
+                l.id,
+                t.name as item_name,
+                t.barcode as item_barcode,
+                w.firstname || ' ' || w.lastname as worker_name,
+                w.barcode as worker_barcode,
+                'Werkzeug' as category,
+                l.lent_at as action_date,
+                NULL as amount
+            FROM lendings l
+            JOIN tools t ON l.tool_barcode = t.barcode
+            JOIN workers w ON l.worker_barcode = w.barcode
+            WHERE l.returned_at IS NULL
+            AND t.deleted = 0
+            AND w.deleted = 0
+        ),
+        current_consumable_usages AS (
+            SELECT 
+                cu.id,
+                c.name as item_name,
+                c.barcode as item_barcode,
+                w.firstname || ' ' || w.lastname as worker_name,
+                w.barcode as worker_barcode,
+                'Verbrauchsmaterial' as category,
+                cu.used_at as action_date,
+                cu.quantity as amount
+            FROM consumable_usages cu
+            JOIN consumables c ON cu.consumable_barcode = c.barcode
+            JOIN workers w ON cu.worker_barcode = w.barcode
+            WHERE DATE(cu.used_at) >= DATE('now', '-7 days')
+            AND c.deleted = 0
+            AND w.deleted = 0
+        )
+        SELECT * FROM current_tool_lendings
         UNION ALL
-        
-        SELECT 
-            cu.id,
-            c.name as item_name,
-            c.barcode as item_barcode,
-            w.firstname || ' ' || w.lastname as worker_name,
-            w.barcode as worker_barcode,
-            'Verbrauchsmaterial' as category,
-            cu.used_at as action_date,
-            cu.quantity as amount
-        FROM consumable_usages cu
-        JOIN consumables c ON cu.consumable_barcode = c.barcode
-        JOIN workers w ON cu.worker_barcode = w.barcode
+        SELECT * FROM current_consumable_usages
         ORDER BY action_date DESC
-    ''')
-    
-    categories = Database.query('''
-        SELECT DISTINCT category FROM tools WHERE deleted = 0 AND category IS NOT NULL
-    ''')
-    
-    locations = Database.query('''
-        SELECT DISTINCT location FROM tools WHERE deleted = 0 AND location IS NOT NULL
     ''')
 
     return render_template('admin/manual_lending.html', 
                           tools=tools,
                           workers=workers,
                           consumables=consumables,
-                          current_lendings=current_lendings,
-                          categories=[cat['category'] for cat in categories],
-                          locations=[loc['location'] for loc in locations])
+                          current_lendings=current_lendings)
 
 @bp.route('/trash')
 @admin_required

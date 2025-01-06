@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cache-Control Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    // ... existing code ...
+</head>
+<body>
+    // ... existing code ...
+    {% block scripts %}
+    <script>
+        // Verhindere Browser-Caching bei Navigation
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        // Verhindere Browser-Caching bei Zurück-Navigation
+        window.onunload = function(){};
+
+        // Broadcast Channel für Aktualisierungen
+        if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('lending_updates');
+            bc.onmessage = function(event) {
+                if (event.data.type === 'update') {
+                    window.location.reload();
+                }
+            };
+        }
+    </script>
+    {% endblock %}
+</body>
+</html> 

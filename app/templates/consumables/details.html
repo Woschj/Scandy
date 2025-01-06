@@ -203,24 +203,25 @@ function closeStockModal() {
 }
 
 // Form-Handler
-document.getElementById('editForm').addEventListener('submit', async (e) => {
+document.getElementById('editForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    try {
-        const response = await fetch(window.location.pathname, {
-            method: 'POST',
-            body: formData
-        });
-        if (response.ok) {
+    const formData = new FormData(this);
+    
+    fetch(window.location.pathname, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('editModal').close();
+            // Dispatch ein Event für die Übersichtsseite
+            window.dispatchEvent(new CustomEvent('consumableUpdated'));
             window.location.reload();
         } else {
-            const data = await response.json();
-            alert(data.message || 'Ein Fehler ist aufgetreten');
+            alert('Fehler beim Speichern: ' + data.message);
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten');
-    }
+    });
 });
 
 document.getElementById('stockForm').addEventListener('submit', async (e) => {
@@ -232,6 +233,8 @@ document.getElementById('stockForm').addEventListener('submit', async (e) => {
             body: formData
         });
         if (response.ok) {
+            // Dispatch ein Event für die Übersichtsseite
+            window.dispatchEvent(new CustomEvent('consumableUpdated'));
             window.location.reload();
         } else {
             const data = await response.json();

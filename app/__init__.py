@@ -129,21 +129,65 @@ def create_app(test_config=None):
             'message': 'API is working'
         })
 
-    # Blueprints registrieren
-    from app.routes import auth, admin, tools, workers, consumables, api, quick_scan, history, main
-    
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(admin.bp)
-    app.register_blueprint(tools.bp)
-    app.register_blueprint(workers.bp)
-    app.register_blueprint(consumables.bp)
-    app.register_blueprint(api.bp)
-    app.register_blueprint(quick_scan.bp)
-    app.register_blueprint(history.bp)
-    app.register_blueprint(main.bp)
+    # Setze die Index-Routen
+    @app.route('/')
+    @app.route('/index')
+    def index():
+        # Statistiken berechnen
+        from app.models.database import Database
+        db = Database.get_db()
+        
+        # Tool Statistiken
+        tool_stats = db.execute('''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'verfügbar' THEN 1 ELSE 0 END) as available,
+                SUM(CASE WHEN status = 'defekt' THEN 1 ELSE 0 END) as defect
+            FROM tools
+        ''').fetchone()
+        
+        # Consumable Statistiken
+        consumable_stats = db.execute('''
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE 
+                    WHEN quantity > min_quantity THEN 1 
+                    ELSE 0 
+                END) as sufficient,
+                SUM(CASE 
+                    WHEN quantity <= min_quantity THEN 1 
+                    ELSE 0 
+                END) as warning,
+                0 as critical
+            FROM consumables
+        ''').fetchone()
+        
+        # Worker Statistiken Gesamt
+        worker_stats = db.execute('''
+            SELECT COUNT(*) as total
+            FROM workers
+        ''').fetchone()
+        
+        # Worker Statistiken nach Abteilung
+        departments = db.execute('''
+            SELECT department as name, COUNT(*) as count
+            FROM workers
+            GROUP BY department
+            ORDER BY department
+        ''').fetchall()
+        
+        # Füge die Abteilungsstatistiken zum worker_stats Dictionary hinzu
+        worker_stats = dict(worker_stats)
+        worker_stats['by_department'] = departments
+        
+        return render_template('index.html',
+                             tool_stats=tool_stats,
+                             worker_stats=worker_stats,
+                             consumable_stats=consumable_stats)
 
-    # Setze die Index-Route als Startseite
-    app.add_url_rule('/', endpoint='index', view_func=main.index)
+    # Blueprints DANACH registrieren
+    from app.routes import init_app
+    init_app(app)
 
     # CLI-Befehle nur lokal laden
     try:

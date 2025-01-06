@@ -113,9 +113,9 @@
                                     <td>{{ lending.tool_name }}</td>
                                     <td>
                                         {% if lending.returned_at %}
-                                            <span class="badge badge-success">Zurückgegeben am {{ lending.returned_at|format_datetime }}</span>
+                                            <span class="badge badge-success">{{ lending.status }}</span>
                                         {% else %}
-                                            <span class="badge badge-warning">Ausgeliehen</span>
+                                            <span class="badge badge-warning">{{ lending.status }}</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -237,24 +237,33 @@ function returnTool(toolBarcode) {
 }
 
 // Form-Handler
-document.getElementById('editForm').addEventListener('submit', async (e) => {
+document.getElementById('editForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    try {
-        const response = await fetch(window.location.pathname, {
-            method: 'POST',
-            body: formData
-        });
-        if (response.ok) {
-            window.location.reload();
+    const formData = new FormData(this);
+    
+    fetch(window.location.pathname, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('editModal').close();
+            // Aktualisiere die Übersichtsseite im Browser-Cache
+            fetch('/workers', {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            }).then(() => {
+                console.log('Übersichtsseite wurde aktualisiert');
+                // Lade die aktuelle Seite neu
+                window.location.reload();
+            });
         } else {
-            const data = await response.json();
-            alert(data.message || 'Ein Fehler ist aufgetreten');
+            alert('Fehler beim Speichern: ' + data.message);
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten');
-    }
+    });
 });
 </script>
 {% endblock %} 

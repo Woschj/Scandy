@@ -218,27 +218,27 @@ def create_test_data():
             if tool_barcode == 'T002':  # Akkuschrauber -> Produktion/Wartung
                 worker_barcode = random.choice(['W001', 'W002', 'W003', 'W004'])
             else:  # Multimeter -> Wartung/Qualitätssicherung
-                worker_barcode = random.choice(['W003', 'W004', 'W006'])
+                worker_barcode = 'W006'  # Sarah Wagner bekommt das Multimeter
             
             lent_at = datetime.now() - timedelta(days=random.randint(1, 5))
             create_lending(cursor, tool_barcode, worker_barcode, lent_at)
 
-        # Historische Ausleihen
+        # Historische Ausleihen (alle mit Rückgabedatum)
         historical_lendings = [
             # Hammer wurde von Produktion ausgeliehen
-            ('T001', 'W001', 15),
-            ('T001', 'W002', 10),
+            ('T001', 'W001', 15, True),
+            ('T001', 'W002', 10, True),
             # Kreissäge wurde von Wartung ausgeliehen
-            ('T004', 'W003', 20),
+            ('T004', 'W003', 20, True),
             # Schraubendreher von verschiedenen Abteilungen
-            ('T005', 'W001', 8),
-            ('T005', 'W003', 12),
-            ('T005', 'W005', 5)
+            ('T005', 'W001', 8, True),
+            ('T005', 'W003', 12, True),
+            ('T005', 'W005', 5, True)
         ]
         
-        for tool_barcode, worker_barcode, days_ago in historical_lendings:
+        for tool_barcode, worker_barcode, days_ago, should_return in historical_lendings:
             lent_at = datetime.now() - timedelta(days=days_ago)
-            returned_at = lent_at + timedelta(hours=random.randint(2, 8))
+            returned_at = lent_at + timedelta(hours=random.randint(2, 8)) if should_return else None
             create_lending(cursor, tool_barcode, worker_barcode, lent_at, returned_at)
 
         # Setze Kreissäge auf 'in Reparatur'

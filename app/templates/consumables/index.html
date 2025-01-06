@@ -127,6 +127,11 @@ document.addEventListener('DOMContentLoaded', function() {
             element.addEventListener('change', applyFilters);
         }
     });
+
+    // Event-Listener für Aktualisierungen
+    window.addEventListener('consumableUpdated', function() {
+        window.location.reload();
+    });
 });
 
 function deleteConsumable(barcode) {

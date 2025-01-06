@@ -14,16 +14,17 @@ def index():
         print("\n=== WORKERS INDEX ===")
         
         # Hole alle aktiven Mitarbeiter mit Ausleihzähler
-        workers = Database.query('''
-            SELECT w.*,
-                   COUNT(DISTINCT l.id) as active_lendings
-            FROM workers w
-            LEFT JOIN lendings l ON w.barcode = l.worker_barcode AND l.returned_at IS NULL
-            WHERE w.deleted = 0
-            GROUP BY w.id, w.barcode, w.firstname, w.lastname, w.department, w.email,
-                     w.created_at, w.modified_at, w.deleted, w.deleted_at, w.sync_status
-            ORDER BY w.lastname, w.firstname
-        ''')
+        with Database.get_db() as conn:
+            workers = conn.execute('''
+                SELECT w.*,
+                       (SELECT COUNT(*) 
+                        FROM lendings l 
+                        WHERE l.worker_barcode = w.barcode 
+                        AND l.returned_at IS NULL) as active_lendings
+                FROM workers w
+                WHERE w.deleted = 0
+                ORDER BY w.lastname, w.firstname
+            ''').fetchall()
         
         print(f"Gefundene Mitarbeiter: {len(workers)}")
         if workers:
@@ -115,6 +116,7 @@ def details(barcode):
         
         # GET-Anfrage: Details anzeigen
         with Database.get_db() as conn:
+            # Mitarbeiter-Details laden
             worker = conn.execute('''
                 SELECT * FROM workers 
                 WHERE barcode = ? AND deleted = 0
@@ -123,31 +125,38 @@ def details(barcode):
             if not worker:
                 return jsonify({'success': False, 'message': 'Mitarbeiter nicht gefunden'}), 404
             
-            # Ausleihhistorie laden
-            lending_history = conn.execute('''
+            # Aktuelle Ausleihen laden
+            current_lendings = conn.execute('''
                 SELECT l.*, t.name as tool_name
+                FROM lendings l
+                JOIN tools t ON l.tool_barcode = t.barcode AND t.deleted = 0
+                WHERE l.worker_barcode = ?
+                AND l.returned_at IS NULL
+                ORDER BY l.lent_at DESC
+            ''', [barcode]).fetchall()
+            
+            # Ausleihhistorie laden (alle Ausleihen)
+            lending_history = conn.execute('''
+                SELECT 
+                    l.*, 
+                    t.name as tool_name,
+                    CASE 
+                        WHEN l.returned_at IS NULL THEN 'Ausgeliehen'
+                        ELSE 'Zurückgegeben am ' || datetime(l.returned_at)
+                    END as status
                 FROM lendings l
                 JOIN tools t ON l.tool_barcode = t.barcode AND t.deleted = 0
                 WHERE l.worker_barcode = ?
                 ORDER BY l.lent_at DESC
             ''', [barcode]).fetchall()
             
-            # Verbrauchsmaterial-Historie laden
-            usage_history = conn.execute('''
-                SELECT cu.*, c.name as consumable_name
-                FROM consumable_usages cu
-                JOIN consumables c ON cu.consumable_barcode = c.barcode AND c.deleted = 0
-                WHERE cu.worker_barcode = ?
-                ORDER BY cu.used_at DESC
-            ''', [barcode]).fetchall()
-            
             return render_template('workers/details.html',
                                worker=worker,
-                               lending_history=lending_history,
-                               usage_history=usage_history)
+                               current_lendings=current_lendings,
+                               lending_history=lending_history)
                                
     except Exception as e:
-        print(f"Fehler bei Mitarbeiter-Details: {str(e)}")
+        logger.error(f"Fehler in worker details: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/<barcode>/edit', methods=['POST'])

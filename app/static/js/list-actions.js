@@ -9,7 +9,7 @@ function deleteTool(barcode) {
         }).then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = '/tools/';
+                refreshList();
             } else {
                 alert('Fehler beim Löschen: ' + data.message);
             }
@@ -28,7 +28,7 @@ function deleteConsumable(barcode) {
         }).then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = '/consumables/';
+                refreshList();
             } else {
                 alert('Fehler beim Löschen: ' + data.message);
             }
@@ -47,10 +47,15 @@ function deleteWorker(barcode) {
         }).then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = '/workers/';
+                refreshList();
             } else {
                 alert('Fehler beim Löschen: ' + data.message);
             }
         });
     }
+}
+
+// Funktion zum Neuladen der Übersichtsseite
+function refreshList() {
+    window.location.reload();
 } 

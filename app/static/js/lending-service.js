@@ -66,6 +66,17 @@
 
     // LendingService Definition
     window.LendingService = {
+        // Neue Funktion für Broadcast-Events
+        broadcastChange() {
+            // Sende eine Nachricht an alle Tabs
+            if (window.BroadcastChannel) {
+                const bc = new BroadcastChannel('lending_updates');
+                bc.postMessage({ type: 'update' });
+            }
+            // Aktualisiere die aktuelle Seite
+            window.location.reload();
+        },
+
         async processLending(itemData, workerData) {
             debug('LENDING', 'ProcessLending called with:', { itemData, workerData });
             
@@ -124,6 +135,11 @@
                     throw new Error(result.message || 'Fehler bei der Ausleihe');
                 }
 
+                // Bei Erfolg Broadcast senden
+                if (result.success) {
+                    this.broadcastChange();
+                }
+
                 debug('LENDING', 'Request completed successfully');
                 return result;
 
@@ -150,7 +166,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    window.location.reload();
+                    this.broadcastChange();
                 } else {
                     alert(result.message || 'Ein Fehler ist aufgetreten');
                 }
@@ -354,5 +370,53 @@ function manualLending(event) {
     .catch(error => {
         console.error('Error:', error);
         alert('Fehler bei der Ausleihe');
+    });
+} 
+
+function processLending(barcode) {
+    // ... existing code ...
+    fetch('/admin/lending/process', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            window.dispatchEvent(new Event('toolLent'));
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Ein Fehler ist aufgetreten', 'error');
+    });
+}
+
+function processReturn(barcode) {
+    // ... existing code ...
+    fetch('/admin/lending/return', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            window.dispatchEvent(new Event('toolReturned'));
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Ein Fehler ist aufgetreten', 'error');
     });
 } 

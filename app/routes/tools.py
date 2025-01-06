@@ -1,49 +1,77 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app.models.database import Database
 from app.utils.decorators import admin_required, login_required
 from datetime import datetime
+import logging
 
+# Explizit URL-Präfix setzen
 bp = Blueprint('tools', __name__, url_prefix='/tools')
 
 @bp.route('/')
 def index():
     """Zeigt alle aktiven Werkzeuge"""
-    tools = Database.query('''
-        SELECT t.*,
-               l.lent_at,
-               w.firstname || ' ' || w.lastname as lent_to,
-               CASE 
-                   WHEN t.status = 'defect' THEN 'defect'
-                   WHEN l.id IS NOT NULL THEN 'lent'
-                   ELSE 'available'
-               END as current_status
-        FROM tools t
-        LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
-        LEFT JOIN workers w ON l.worker_barcode = w.barcode
-        WHERE t.deleted = 0
-        ORDER BY t.name
-    ''')
-    
-    # Debug-Ausgabe
-    if tools:
-        print("Beispiel-Tool:", dict(tools[0]))
-    
-    categories = Database.query('''
-        SELECT DISTINCT category FROM tools
-        WHERE deleted = 0 AND category IS NOT NULL
-        ORDER BY category
-    ''')
-    
-    locations = Database.query('''
-        SELECT DISTINCT location FROM tools
-        WHERE deleted = 0 AND location IS NOT NULL
-        ORDER BY location
-    ''')
-    
-    return render_template('tools/index.html',
-                         tools=tools,
-                         categories=[c['category'] for c in categories],
-                         locations=[l['location'] for l in locations])
+    try:
+        with Database.get_db() as conn:
+            # Debug: Prüfe aktive Ausleihen
+            active_lendings = conn.execute('''
+                SELECT tool_barcode, worker_barcode, lent_at 
+                FROM lendings 
+                WHERE returned_at IS NULL
+            ''').fetchall()
+            print("Aktive Ausleihen:", [dict(l) for l in active_lendings])
+
+            tools = conn.execute('''
+                SELECT t.*,
+                       CASE 
+                           WHEN l.tool_barcode IS NOT NULL THEN 'ausgeliehen'
+                           WHEN t.status = 'defekt' THEN 'defekt'
+                           ELSE 'verfügbar'
+                       END as current_status,
+                       w.firstname || ' ' || w.lastname as lent_to,
+                       l.lent_at as lending_date,
+                       t.location,
+                       t.category
+                FROM tools t
+                LEFT JOIN (
+                    SELECT tool_barcode, worker_barcode, lent_at
+                    FROM lendings
+                    WHERE returned_at IS NULL
+                ) l ON t.barcode = l.tool_barcode
+                LEFT JOIN workers w ON l.worker_barcode = w.barcode
+                WHERE t.deleted = 0
+                ORDER BY t.name
+            ''').fetchall()
+            
+            # Debug-Ausgabe
+            if tools:
+                print("Beispiel-Tool:", dict(tools[0]))
+                for tool in tools:
+                    tool_dict = dict(tool)
+                    print(f"Tool {tool_dict['barcode']}: Status = {tool_dict['current_status']}, Ausgeliehen an = {tool_dict.get('lent_to', 'niemanden')}")
+            
+            categories = conn.execute('''
+                SELECT DISTINCT category FROM tools
+                WHERE deleted = 0 AND category IS NOT NULL
+                ORDER BY category
+            ''').fetchall()
+            
+            locations = conn.execute('''
+                SELECT DISTINCT location FROM tools
+                WHERE deleted = 0 AND location IS NOT NULL
+                ORDER BY location
+            ''').fetchall()
+            
+            return render_template('tools/index.html',
+                               tools=tools,
+                               categories=[c['category'] for c in categories],
+                               locations=[l['location'] for l in locations])
+                               
+    except Exception as e:
+        print(f"Fehler beim Laden der Werkzeuge: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        flash('Fehler beim Laden der Werkzeuge', 'error')
+        return redirect(url_for('main.index'))
 
 @bp.route('/<barcode>')
 def detail(barcode):
@@ -256,23 +284,24 @@ def change_status(barcode):
             (tool_barcode, old_status, new_status, reason)
             VALUES (?, ?, ?, ?)
         ''', [barcode, tool['status'], status, reason])
-        
-        # Status aktualisieren
+
+        # Status des Werkzeugs aktualisieren
         Database.query('''
             UPDATE tools 
             SET status = ?,
-                modified_at = datetime('now'),
-                sync_status = 'pending'
+                modified_at = CURRENT_TIMESTAMP
             WHERE barcode = ?
         ''', [status, barcode])
-        
-        return jsonify({'success': True})
-        
+
+        return jsonify({
+            'success': True,
+            'message': 'Status erfolgreich aktualisiert'
+        })
+
     except Exception as e:
-        print(f"Fehler beim Ändern des Status: {str(e)}")
         return jsonify({
             'success': False,
-            'message': f'Fehler: {str(e)}'
+            'message': f'Fehler bei der Statusänderung: {str(e)}'
         }), 500
 
 # Weitere Tool-Routen...

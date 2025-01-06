@@ -220,6 +220,12 @@
 
 {% block scripts %}
 <script>
+// Tool-Daten für JavaScript verfügbar machen
+const tool = {
+    barcode: '{{ tool.barcode }}',
+    status: '{{ tool.status }}'
+};
+
 function openEditModal() {
     const modal = document.getElementById('editModal');
     modal.showModal();
@@ -248,29 +254,52 @@ function closeStatusModal() {
     document.getElementById('statusModal').close();
 }
 
-async function updateStatus(event) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
+// Form-Handler für das Edit-Modal
+document.querySelector('#editModal form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
     
-    try {
-        const response = await fetch(`{{ url_for('tools.change_status', barcode=tool.barcode) }}`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
         if (data.success) {
-            location.reload();
+            closeEditModal();
+            window.location.reload();
+            // Aktualisiere auch die Übersichtsseite im Hintergrund
+            fetch('/tools').then(() => {
+                console.log('Übersichtsseite wurde im Cache aktualisiert');
+            });
         } else {
-            alert(data.message || 'Fehler beim Aktualisieren des Status');
+            alert('Fehler beim Speichern: ' + data.message);
         }
-    } catch (error) {
-        alert('Fehler beim Aktualisieren des Status');
-    }
+    });
+});
+
+// Form-Handler für das Status-Modal
+function updateStatus(event) {
+    event.preventDefault();
+    const formData = new FormData(document.getElementById('statusForm'));
     
-    closeStatusModal();
+    fetch(`/tools/${tool.barcode}/status`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeStatusModal();
+            window.location.reload();
+            // Aktualisiere auch die Übersichtsseite im Hintergrund
+            fetch('/tools').then(() => {
+                console.log('Übersichtsseite wurde im Cache aktualisiert');
+            });
+        } else {
+            alert('Fehler beim Aktualisieren des Status: ' + data.message);
+        }
+    });
     return false;
 }
 </script>
