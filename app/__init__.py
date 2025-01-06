@@ -241,8 +241,13 @@ def create_app(test_config=None):
     # Cache-Einstellungen
     @app.after_request
     def add_header(response):
-        # Cache statische Dateien für 1 Stunde
-        if 'Cache-Control' not in response.headers:
+        if 'text/html' in response.content_type:
+            # Keine Caching für HTML-Seiten
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        else:
+            # Cache statische Dateien für 1 Stunde
             response.headers['Cache-Control'] = 'public, max-age=3600'
         return response
         

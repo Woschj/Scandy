@@ -78,7 +78,8 @@
 
         <!-- Navbar -->
         <div class="navbar bg-base-100 shadow-lg px-4 relative ml-16">
-            <div class="flex-1">
+            <!-- Linke Seite mit Titel -->
+            <div class="flex-none">
                 <h1 class="text-xl font-bold">
                     {% if 'tools' in request.endpoint %}Werkzeuge
                     {% elif 'workers' in request.endpoint %}Mitarbeiter
@@ -88,9 +89,9 @@
                 </h1>
             </div>
 
-            <!-- BTZ Logo in der Mitte als Link zur Startseite -->
-            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                <a href="{{ url_for('main.index') }}" class="hover:opacity-80 transition-opacity">
+            <!-- BTZ Logo zentriert -->
+            <div class="flex-1 flex justify-center">
+                <a href="{{ url_for('main.index') }}" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:opacity-80 transition-opacity">
                     <img src="{{ url_for('static', filename='images/BTZ_logo.jpg') }}" 
                          alt="BTZ Logo" 
                          class="h-10 object-contain">
@@ -99,22 +100,35 @@
 
             <!-- Rechte Seite -->
             <div class="flex-none">
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
                     {% if session.get('is_admin') %}
-                    <a href="{{ url_for('admin.manual_lending') }}" 
-                       class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'admin.manual_lending' %}btn-active{% endif %}">
-                        <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
-                    </a>
-                    <a href="{{ url_for('admin.dashboard') }}" 
-                       class="btn btn-ghost min-h-[3rem] flex items-center {% if 'admin.dashboard' in request.endpoint %}btn-active{% endif %}">
-                        <i class="fas fa-chart-line mr-2"></i>Dashboard
-                    </a>
-                    <a href="{{ url_for('main.about') }}" 
-                       class="btn btn-ghost min-h-[3rem] flex items-center {% if request.endpoint == 'main.about' %}btn-active{% endif %}">
-                        <i class="fas fa-info-circle mr-2"></i>Über Scandy
-                    </a>
+                    <div class="dropdown dropdown-end">
+                        <label tabindex="0" class="btn btn-ghost btn-sm">
+                            <i class="fas fa-bars"></i>
+                        </label>
+                        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                            <li>
+                                <a href="{{ url_for('admin.manual_lending') }}" 
+                                   class="{% if request.endpoint == 'admin.manual_lending' %}active{% endif %}">
+                                    <i class="fas fa-hand-holding mr-2"></i>Manuelle Ausleihe
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ url_for('admin.dashboard') }}" 
+                                   class="{% if 'admin.dashboard' in request.endpoint %}active{% endif %}">
+                                    <i class="fas fa-chart-line mr-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ url_for('main.about') }}" 
+                                   class="{% if request.endpoint == 'main.about' %}active{% endif %}">
+                                    <i class="fas fa-info-circle mr-2"></i>Über Scandy
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <a href="{{ url_for('admin.trash') }}" 
-                       class="btn btn-ghost btn-circle text-error relative">
+                       class="btn btn-ghost btn-circle btn-sm text-error relative">
                         <i class="fas fa-trash-alt"></i>
                         {% if trash_count is defined and trash_count > 0 %}
                         <span class="absolute -top-2 -right-2 bg-error text-white rounded-full w-5 h-5 
@@ -123,16 +137,16 @@
                         </span>
                         {% endif %}
                     </a>
-                    <label class="swap swap-rotate btn btn-ghost btn-circle">
+                    <label class="swap swap-rotate btn btn-ghost btn-circle btn-sm">
                         <input type="checkbox" class="theme-controller" />
                         <i class="fas fa-sun swap-on"></i>
                         <i class="fas fa-moon swap-off"></i>
                     </label>
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-circle" title="Logout">
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-circle btn-sm" title="Logout">
                         <i class="fas fa-sign-out-alt"></i>
                     </a>
                     {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-ghost">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-ghost btn-sm">
                         <i class="fas fa-sign-in-alt mr-2"></i>Login
                     </a>
                     {% endif %}
