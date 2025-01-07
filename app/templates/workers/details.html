@@ -184,7 +184,14 @@
                     <label class="label">
                         <span class="label-text">Abteilung</span>
                     </label>
-                    <input type="text" name="department" class="input input-bordered" value="{{ worker.department }}">
+                    <select name="department" class="select select-bordered">
+                        <option value="">Keine Abteilung</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept }}" {% if worker and worker.department == dept %}selected{% endif %}>
+                            {{ dept }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-control">
                     <label class="label">

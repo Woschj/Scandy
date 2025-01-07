@@ -97,6 +97,27 @@ def get_warnings():
 def dashboard():
     """Admin Dashboard"""
     try:
+        # Initialisiere stats Dictionary
+        stats = {}
+        
+        # Hole die finale Liste der Abteilungen
+        departments = Database.query('''
+            SELECT 
+                s.value as name,
+                (SELECT COUNT(*) 
+                FROM workers w 
+                WHERE w.department = s.value 
+                AND w.deleted = 0) as worker_count
+            FROM settings s
+            WHERE s.key LIKE 'department_%'
+            AND s.value IS NOT NULL
+            AND s.value != ''
+            ORDER BY s.value
+        ''')
+        logger.info(f"=== Abteilungsliste ===")
+        logger.info(f"Gefundene Abteilungen: {[dict(d) for d in departments]}")
+        stats['departments'] = departments
+        
         # Backup-Liste abrufen
         backups = backup_manager.list_backups()
         
@@ -131,8 +152,10 @@ def dashboard():
                     'tension': 0.4
                 })
         
+        stats['consumable_trend'] = consumable_trend
+        
         # Statistiken für Werkzeuge und Verbrauchsmaterial
-        stats = {
+        stats.update({
             'tools': {
                 'total': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0', one=True)['count'],
                 'lent': Database.query('SELECT COUNT(*) as count FROM lendings WHERE returned_at IS NULL', one=True)['count'],
@@ -140,7 +163,6 @@ def dashboard():
                     SELECT COUNT(*) as count 
                     FROM tools 
                     WHERE deleted = 0 
-                    AND status != 'defekt' 
                     AND barcode NOT IN (
                         SELECT tool_barcode 
                         FROM lendings 
@@ -155,12 +177,11 @@ def dashboard():
                 'warning': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5', one=True)['count'],
                 'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
             },
-            'recent_activity': get_recent_activity(),
-            'material_usage': get_material_usage(),
-            'warnings': get_warnings(),
-            'backups': backups,
-            'consumable_trend': consumable_trend
-        }
+            'workers': {
+                'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count'],
+                'active_lendings': Database.query('SELECT COUNT(DISTINCT worker_barcode) as count FROM lendings WHERE returned_at IS NULL', one=True)['count']
+            }
+        })
         
         # Wartungsprobleme (defekte Werkzeuge)
         maintenance_issues = Database.query('''
@@ -195,7 +216,7 @@ def dashboard():
             LIMIT 5
         ''')
         stats['inventory_warnings'] = inventory_warnings
-        
+
         # Aktuelle Ausleihen
         current_lendings = Database.query('''
             SELECT l.*, t.name as tool_name, w.firstname || ' ' || w.lastname as worker_name
@@ -206,7 +227,8 @@ def dashboard():
             ORDER BY l.lent_at DESC
             LIMIT 10
         ''')
-        
+        stats['current_lendings'] = current_lendings
+
         # Aktuelle Materialausgaben
         consumable_usages = Database.query('''
             SELECT cu.*, c.name as consumable_name, w.firstname || ' ' || w.lastname as worker_name
@@ -216,19 +238,20 @@ def dashboard():
             ORDER BY cu.used_at DESC
             LIMIT 10
         ''')
+        stats['consumable_usages'] = consumable_usages
 
-        return render_template('admin/dashboard.html',
-                             stats=stats,
-                             current_lendings=current_lendings,
-                             consumable_usages=consumable_usages)
-                            
-    except Exception as e:
-        logging.error(f"Fehler im Admin-Dashboard: {str(e)}", exc_info=True)
-        flash(f'Fehler beim Laden des Dashboards: {str(e)}', 'error')
         return render_template('admin/dashboard.html', 
-                             stats={}, 
-                             current_lendings=[], 
-                             consumable_usages=[])
+                             stats=stats,
+                             backups=backups)
+                             
+    except Exception as e:
+        logger.error(f"Fehler im Admin-Dashboard: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        flash('Fehler beim Laden des Dashboards', 'error')
+        return render_template('admin/dashboard.html', 
+                             stats={},
+                             backups=[])
 
 def get_consumable_trend():
     """Hole die Top 5 Materialverbrauch der letzten 7 Tage"""
@@ -838,80 +861,85 @@ def restore_backup(filename):
         flash(error_msg, 'error')
     return redirect(url_for('admin.dashboard'))
 
+@bp.route('/departments')
+def get_departments():
+    """Gibt alle verfügbaren Abteilungen zurück"""
+    try:
+        departments = Database.get_departments()
+        return jsonify({
+            'success': True,
+            'departments': [dict(d) for d in departments]
+        })
+    except Exception as e:
+        logger.error(f"Fehler beim Laden der Abteilungen: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Fehler beim Laden der Abteilungen'
+        })
+
 @bp.route('/departments/add', methods=['POST'])
 @admin_required
 def add_department():
-    """Neue Abteilung hinzufügen"""
+    """Fügt eine neue Abteilung hinzu"""
     try:
         name = request.form.get('name')
         if not name:
-            return jsonify({'success': False, 'message': 'Name ist erforderlich'}), 400
-
-        # Prüfe ob Abteilung bereits existiert
-        existing = Database.query(
-            'SELECT department FROM workers WHERE department = ? AND deleted = 0 LIMIT 1',
-            [name],
-            one=True
-        )
-        if existing:
-            return jsonify({'success': False, 'message': 'Abteilung existiert bereits'}), 400
-
-        # Füge die neue Abteilung hinzu
-        Database.query(
-            'INSERT INTO settings (key, value, description) VALUES (?, ?, ?)',
-            [f'department_{name}', name, 'Abteilung']
-        )
-        
-        flash('Abteilung erfolgreich hinzugefügt', 'success')
-        return redirect(url_for('admin.dashboard'))
-        
-    except Exception as e:
-        flash(f'Fehler beim Hinzufügen der Abteilung: {str(e)}', 'error')
-        return redirect(url_for('admin.dashboard'))
-
-@bp.route('/departments/<name>/delete', methods=['DELETE'])
-@admin_required
-def delete_department(name):
-    """Abteilung löschen"""
-    try:
-        # Prüfe ob Mitarbeiter in dieser Abteilung existieren
-        workers = Database.query(
-            'SELECT COUNT(*) as count FROM workers WHERE department = ? AND deleted = 0',
-            [name],
-            one=True
-        )
-        if workers['count'] > 0:
             return jsonify({
                 'success': False,
-                'message': f'Es gibt noch {workers["count"]} Mitarbeiter in dieser Abteilung'
-            }), 400
-
-        # Lösche die Abteilung
-        Database.query(
-            'DELETE FROM settings WHERE key = ?',
-            [f'department_{name}']
-        )
+                'message': 'Kein Name angegeben'
+            })
         
-        return jsonify({'success': True, 'message': 'Abteilung gelöscht'})
-        
+        result = Database.add_department(name)
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"Fehler beim Hinzufügen der Abteilung: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
 
-@bp.route('/departments', methods=['GET'])
+@bp.route('/departments/delete/<name>', methods=['DELETE'])
 @admin_required
-def get_departments():
-    """Liste aller Abteilungen"""
+def delete_department(name):
+    """Löscht eine Abteilung"""
     try:
-        departments = Database.query('''
-            SELECT value as name,
-                   (SELECT COUNT(*) FROM workers 
-                    WHERE department = value AND deleted = 0) as worker_count
-            FROM settings
-            WHERE key LIKE 'department_%'
-            ORDER BY value
-        ''')
-        return jsonify({'success': True, 'departments': departments})
+        name = name.strip()
+        logger.info(f"\n=== DELETE DEPARTMENT ROUTE ===")
+        logger.info(f"Abteilung zum Löschen: '{name}'")
+        
+        # Prüfe ob die Abteilung existiert
+        existing = Database.query(
+            'SELECT * FROM settings WHERE key = ?',
+            [f"department_{name}"],
+            one=True
+        )
+        logger.info(f"Gefundene Abteilung: {dict(existing) if existing else 'Nicht gefunden'}")
+        
+        if not existing:
+            logger.error("Abteilung existiert nicht")
+            return jsonify({
+                'success': False,
+                'message': 'Abteilung existiert nicht'
+            })
+        
+        # Versuche die Abteilung zu löschen
+        result = Database.delete_department(name)
+        logger.info(f"Löschergebnis: {result}")
+        
+        # Prüfe nochmal ob die Abteilung wirklich weg ist
+        after_delete = Database.query(
+            'SELECT * FROM settings WHERE key = ?',
+            [f"department_{name}"],
+            one=True
+        )
+        logger.info(f"Zustand nach Löschung: {dict(after_delete) if after_delete else 'Erfolgreich gelöscht'}")
+        
+        return jsonify(result)
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        logger.error(f"Fehler beim Löschen der Abteilung: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
 
 # Weitere Admin-Routen...

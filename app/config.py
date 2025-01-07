@@ -11,7 +11,7 @@ class Config:
     COMPRESS_MIMETYPES = ['text/html', 'text/css', 'application/javascript']
     
     # Basis-Einstellungen
-    DATABASE_PATH = os.path.join('app', 'database', 'inventory.db')
+    DATABASE_PATH = 'app/database/inventory.db'
     UPLOAD_FOLDER = 'uploads'
     
     # Server/Client Einstellungen
@@ -29,4 +29,4 @@ class Config:
     @classmethod
     def get_absolute_database_path(cls):
         """Gibt den absoluten Pfad zur Datenbank zurück"""
-        return os.path.join(cls.get_project_root(), cls.DATABASE_PATH) 
+        return os.path.abspath(cls.DATABASE_PATH) 

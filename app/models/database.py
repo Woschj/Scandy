@@ -52,7 +52,7 @@ class Database:
             logger.debug("Reusing existing database connection")
             return g.db
         
-        db_path = Config.get_absolute_database_path()
+        db_path = os.path.join('app', 'database', 'inventory.db')
         logger.debug(f"Creating new database connection to {db_path}")
         g.db = sqlite3.connect(db_path)
         g.db.row_factory = sqlite3.Row
@@ -62,7 +62,7 @@ class Database:
     @staticmethod
     def get_db_connection():
         """Direkter Datenbankzugriff für Verwaltungsaufgaben"""
-        db_path = Config.get_absolute_database_path()
+        db_path = os.path.join('app', 'database', 'inventory.db')
         logger.debug(f"Creating direct database connection to {db_path}")
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -961,6 +961,154 @@ class Database:
             # Aufräumen
             if current_backup.exists():
                 current_backup.unlink()
+
+    @staticmethod
+    def transaction():
+        """Gibt eine Datenbankverbindung für eine Transaktion zurück"""
+        conn = Database.get_db()
+        conn.execute('BEGIN')
+        return conn
+
+    @staticmethod
+    def get_departments():
+        """Holt alle verfügbaren Abteilungen"""
+        try:
+            # Hole nur aktive Abteilungen (die mindestens einen aktiven Mitarbeiter haben oder kürzlich hinzugefügt wurden)
+            departments = Database.query('''
+                SELECT DISTINCT
+                    s.value as name,
+                    COALESCE(w.worker_count, 0) as worker_count
+                FROM settings s
+                LEFT JOIN (
+                    SELECT department, COUNT(*) as worker_count
+                    FROM workers
+                    WHERE deleted = 0
+                    GROUP BY department
+                ) w ON w.department = s.value
+                WHERE s.key LIKE 'department_%'
+                AND s.value IS NOT NULL
+                AND s.value != ''
+                ORDER BY s.value
+            ''')
+            
+            # Log für Debugging
+            logger.info("=== DEPARTMENTS QUERY RESULTS ===")
+            logger.info(f"Number of departments found: {len(departments)}")
+            for dept in departments:
+                logger.info(f"Department: {dict(dept)}")
+            
+            return departments
+        except Exception as e:
+            logger.error(f"Fehler beim Laden der Abteilungen: {str(e)}")
+            return []
+
+    @staticmethod
+    def add_department(name):
+        """Fügt eine neue Abteilung hinzu"""
+        try:
+            logger.info(f"\n=== ADDING DEPARTMENT {name} ===")
+            
+            # Prüfe ob die Abteilung bereits existiert
+            existing = Database.query(
+                'SELECT COUNT(*) as count FROM settings WHERE key = ? OR value = ?',
+                [f"department_{name}", name],
+                one=True
+            )['count']
+            
+            if existing > 0:
+                logger.error(f"Abteilung {name} existiert bereits")
+                return {
+                    'success': False,
+                    'message': 'Abteilung existiert bereits'
+                }
+            
+            # Füge neue Abteilung hinzu
+            Database.query(
+                'INSERT INTO settings (key, value, description) VALUES (?, ?, ?)',
+                [f"department_{name}", name, 'Abteilung']
+            )
+            
+            # Überprüfe ob die Abteilung wirklich hinzugefügt wurde
+            added = Database.query(
+                'SELECT COUNT(*) as count FROM settings WHERE key = ?',
+                [f"department_{name}"],
+                one=True
+            )['count']
+            
+            if added == 0:
+                logger.error(f"Abteilung {name} konnte nicht hinzugefügt werden")
+                return {
+                    'success': False,
+                    'message': 'Abteilung konnte nicht hinzugefügt werden'
+                }
+            
+            logger.info(f"Abteilung {name} wurde erfolgreich hinzugefügt")
+            return {
+                'success': True,
+                'message': 'Abteilung erfolgreich hinzugefügt'
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Hinzufügen der Abteilung: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
+
+    @staticmethod
+    def delete_department(name):
+        """Löscht eine Abteilung"""
+        try:
+            logger.info(f"\n=== DELETING DEPARTMENT {name} ===")
+            
+            # Prüfe ob die Abteilung noch Mitarbeiter hat
+            worker_count = Database.query(
+                'SELECT COUNT(*) as count FROM workers WHERE department = ? AND deleted = 0',
+                [name],
+                one=True
+            )['count']
+            
+            logger.info(f"Aktive Mitarbeiter in der Abteilung: {worker_count}")
+            
+            if worker_count > 0:
+                logger.error(f"Abteilung {name} hat noch {worker_count} aktive Mitarbeiter")
+                return {
+                    'success': False,
+                    'message': f'Abteilung hat noch {worker_count} aktive Mitarbeiter'
+                }
+            
+            # Lösche die Abteilung aus der settings Tabelle
+            Database.query(
+                'DELETE FROM settings WHERE key = ?',
+                [f"department_{name}"]
+            )
+            
+            # Überprüfe ob die Löschung erfolgreich war
+            remaining = Database.query(
+                'SELECT COUNT(*) as count FROM settings WHERE key = ?',
+                [f"department_{name}"],
+                one=True
+            )['count']
+            
+            if remaining > 0:
+                logger.error(f"Abteilung {name} konnte nicht gelöscht werden")
+                return {
+                    'success': False,
+                    'message': 'Abteilung konnte nicht gelöscht werden'
+                }
+            
+            logger.info(f"Abteilung {name} wurde erfolgreich gelöscht")
+            return {
+                'success': True,
+                'message': 'Abteilung erfolgreich gelöscht'
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Löschen der Abteilung: {str(e)}")
+            return {
+                'success': False,
+                'message': f'Datenbankfehler: {str(e)}'
+            }
 
 def init_db():
     """Initialisiert die Datenbank"""

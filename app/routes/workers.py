@@ -30,18 +30,21 @@ def index():
         if workers:
             print("Erster Datensatz:", dict(workers[0]))
         
-        # Hole alle Abteilungen für Filter
+        # Hole alle Abteilungen aus den Settings
         departments = Database.query('''
-            SELECT DISTINCT department FROM workers
-            WHERE deleted = 0 AND department IS NOT NULL
-            ORDER BY department
+            SELECT value as name
+            FROM settings 
+            WHERE key LIKE 'department_%'
+            AND value IS NOT NULL
+            AND value != ''
+            ORDER BY value
         ''')
         
-        print(f"Gefundene Abteilungen: {[d['department'] for d in departments]}")
+        print(f"Gefundene Abteilungen: {[d['name'] for d in departments]}")
         
         return render_template('workers/index.html',
                              workers=workers,
-                             departments=[d['department'] for d in departments],
+                             departments=[d['name'] for d in departments],
                              is_admin=session.get('is_admin', False))
                              
     except Exception as e:
@@ -54,14 +57,16 @@ def index():
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required
 def add():
-    departments = [
-        'Medien und Digitales',
-        'Technik',
-        'Kaufmännisches',
-        'Service',
-        'APE',
-        'Mitarbeiter'
-    ]
+    # Lade Abteilungen aus Settings
+    departments = Database.query('''
+        SELECT value as name
+        FROM settings 
+        WHERE key LIKE 'department_%'
+        AND value IS NOT NULL
+        AND value != ''
+        ORDER BY value
+    ''')
+    departments = [d['name'] for d in departments]
     
     if request.method == 'POST':
         barcode = request.form['barcode']
@@ -69,10 +74,6 @@ def add():
         lastname = request.form['lastname']
         department = request.form.get('department', '')
         email = request.form.get('email', '')
-        
-        if department not in departments:
-            flash('Ungültige Abteilung ausgewählt', 'error')
-            return render_template('workers/add.html', departments=departments)
         
         try:
             Database.query(
@@ -93,6 +94,17 @@ def add():
 def details(barcode):
     """Details eines Mitarbeiters anzeigen und bearbeiten"""
     try:
+        # Lade Abteilungen aus Settings
+        departments = Database.query('''
+            SELECT value as name
+            FROM settings 
+            WHERE key LIKE 'department_%'
+            AND value IS NOT NULL
+            AND value != ''
+            ORDER BY value
+        ''')
+        departments = [d['name'] for d in departments]
+        
         if request.method == 'POST':
             data = request.form
             
@@ -161,6 +173,7 @@ def details(barcode):
             
             return render_template('workers/details.html',
                                worker=worker,
+                               departments=departments,
                                current_lendings=current_lendings,
                                lending_history=lending_history,
                                usage_history=usage_history)
