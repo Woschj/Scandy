@@ -90,9 +90,16 @@
                         </button>
                     </div>
                 </form>
-                <div class="overflow-x-auto">
+                <div class="mb-2">
+                    <input type="text" 
+                           id="locationSearch" 
+                           placeholder="Standort suchen..." 
+                           class="input input-bordered input-sm w-full"
+                           oninput="LocationManager.filterLocations(this.value)">
+                </div>
+                <div class="overflow-x-auto h-[300px] overflow-y-auto">
                     <table class="table table-compact w-full">
-                        <thead>
+                        <thead class="sticky top-0 bg-base-100">
                             <tr>
                                 <th>Name</th>
                                 <th>Verwendung</th>
@@ -125,9 +132,16 @@
                         </button>
                     </div>
                 </form>
-                <div class="overflow-x-auto">
+                <div class="mb-2">
+                    <input type="text" 
+                           id="categorySearch" 
+                           placeholder="Kategorie suchen..." 
+                           class="input input-bordered input-sm w-full"
+                           oninput="CategoryManager.filterCategories(this.value)">
+                </div>
+                <div class="overflow-x-auto h-[300px] overflow-y-auto">
                     <table class="table table-compact w-full">
-                        <thead>
+                        <thead class="sticky top-0 bg-base-100">
                             <tr>
                                 <th>Name</th>
                                 <th>Verwendung</th>
@@ -646,6 +660,8 @@ const DepartmentManager = {
 
 // Standortverwaltung
 const LocationManager = {
+    locations: [], // Speichert alle Standorte
+
     init() {
         this.bindEvents();
         this.loadLocations();
@@ -673,6 +689,7 @@ const LocationManager = {
             if (!data.success) {
                 throw new Error(data.message || 'Fehler beim Laden der Standorte');
             }
+            this.locations = data.locations; // Speichere alle Standorte
             this.renderLocations(data.locations);
             return data.locations;
         })
@@ -683,11 +700,34 @@ const LocationManager = {
         });
     },
 
+    filterLocations(searchTerm) {
+        if (!searchTerm) {
+            this.renderLocations(this.locations);
+            return;
+        }
+        
+        const filtered = this.locations.filter(loc => 
+            loc.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        this.renderLocations(filtered);
+    },
+
     renderLocations(locations) {
         const tbody = document.getElementById('locationsList');
         if (!tbody) return;
 
         tbody.innerHTML = '';
+
+        if (locations.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td colspan="3" class="text-center text-gray-500">
+                    Keine Standorte gefunden
+                </td>
+            `;
+            tbody.appendChild(tr);
+            return;
+        }
 
         locations.forEach(loc => {
             const tr = document.createElement('tr');
@@ -817,6 +857,8 @@ const LocationManager = {
 
 // Kategorieverwaltung
 const CategoryManager = {
+    categories: [], // Speichert alle Kategorien
+
     init() {
         this.bindEvents();
         this.loadCategories();
@@ -844,6 +886,7 @@ const CategoryManager = {
             if (!data.success) {
                 throw new Error(data.message || 'Fehler beim Laden der Kategorien');
             }
+            this.categories = data.categories; // Speichere alle Kategorien
             this.renderCategories(data.categories);
             return data.categories;
         })
@@ -854,11 +897,34 @@ const CategoryManager = {
         });
     },
 
+    filterCategories(searchTerm) {
+        if (!searchTerm) {
+            this.renderCategories(this.categories);
+            return;
+        }
+        
+        const filtered = this.categories.filter(cat => 
+            cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        this.renderCategories(filtered);
+    },
+
     renderCategories(categories) {
         const tbody = document.getElementById('categoriesList');
         if (!tbody) return;
 
         tbody.innerHTML = '';
+
+        if (categories.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td colspan="3" class="text-center text-gray-500">
+                    Keine Kategorien gefunden
+                </td>
+            `;
+            tbody.appendChild(tr);
+            return;
+        }
 
         categories.forEach(cat => {
             const tr = document.createElement('tr');
