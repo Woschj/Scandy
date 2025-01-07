@@ -150,13 +150,23 @@ def details(barcode):
                 ORDER BY l.lent_at DESC
             ''', [barcode]).fetchall()
             
+            # Verbrauchsmaterial-Historie laden
+            usage_history = conn.execute('''
+                SELECT u.*, c.name as consumable_name
+                FROM consumable_usages u
+                JOIN consumables c ON u.consumable_barcode = c.barcode AND c.deleted = 0
+                WHERE u.worker_barcode = ?
+                ORDER BY u.used_at DESC
+            ''', [barcode]).fetchall()
+            
             return render_template('workers/details.html',
                                worker=worker,
                                current_lendings=current_lendings,
-                               lending_history=lending_history)
+                               lending_history=lending_history,
+                               usage_history=usage_history)
                                
     except Exception as e:
-        logger.error(f"Fehler in worker details: {str(e)}")
+        print(f"Fehler in worker details: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @bp.route('/<barcode>/edit', methods=['POST'])

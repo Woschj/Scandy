@@ -823,14 +823,95 @@ def restore_backup(filename):
             return redirect(url_for('admin.dashboard'))
         
         # Datenbank wiederherstellen
-        Database.restore_from_backup(str(backup_path))
-        success_msg = 'Backup wurde erfolgreich wiederhergestellt'
-        logger.info(success_msg)
-        flash(success_msg, 'success')
+        success = backup_manager.restore_backup(filename)
+        if success:
+            success_msg = 'Backup wurde erfolgreich wiederhergestellt'
+            logger.info(success_msg)
+            flash(success_msg, 'success')
+        else:
+            error_msg = 'Fehler bei der Wiederherstellung des Backups'
+            logger.error(error_msg)
+            flash(error_msg, 'error')
     except Exception as e:
         error_msg = f'Fehler beim Wiederherstellen des Backups: {str(e)}'
         logger.error(error_msg)
         flash(error_msg, 'error')
     return redirect(url_for('admin.dashboard'))
+
+@bp.route('/departments/add', methods=['POST'])
+@admin_required
+def add_department():
+    """Neue Abteilung hinzufügen"""
+    try:
+        name = request.form.get('name')
+        if not name:
+            return jsonify({'success': False, 'message': 'Name ist erforderlich'}), 400
+
+        # Prüfe ob Abteilung bereits existiert
+        existing = Database.query(
+            'SELECT department FROM workers WHERE department = ? AND deleted = 0 LIMIT 1',
+            [name],
+            one=True
+        )
+        if existing:
+            return jsonify({'success': False, 'message': 'Abteilung existiert bereits'}), 400
+
+        # Füge die neue Abteilung hinzu
+        Database.query(
+            'INSERT INTO settings (key, value, description) VALUES (?, ?, ?)',
+            [f'department_{name}', name, 'Abteilung']
+        )
+        
+        flash('Abteilung erfolgreich hinzugefügt', 'success')
+        return redirect(url_for('admin.dashboard'))
+        
+    except Exception as e:
+        flash(f'Fehler beim Hinzufügen der Abteilung: {str(e)}', 'error')
+        return redirect(url_for('admin.dashboard'))
+
+@bp.route('/departments/<name>/delete', methods=['DELETE'])
+@admin_required
+def delete_department(name):
+    """Abteilung löschen"""
+    try:
+        # Prüfe ob Mitarbeiter in dieser Abteilung existieren
+        workers = Database.query(
+            'SELECT COUNT(*) as count FROM workers WHERE department = ? AND deleted = 0',
+            [name],
+            one=True
+        )
+        if workers['count'] > 0:
+            return jsonify({
+                'success': False,
+                'message': f'Es gibt noch {workers["count"]} Mitarbeiter in dieser Abteilung'
+            }), 400
+
+        # Lösche die Abteilung
+        Database.query(
+            'DELETE FROM settings WHERE key = ?',
+            [f'department_{name}']
+        )
+        
+        return jsonify({'success': True, 'message': 'Abteilung gelöscht'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/departments', methods=['GET'])
+@admin_required
+def get_departments():
+    """Liste aller Abteilungen"""
+    try:
+        departments = Database.query('''
+            SELECT value as name,
+                   (SELECT COUNT(*) FROM workers 
+                    WHERE department = value AND deleted = 0) as worker_count
+            FROM settings
+            WHERE key LIKE 'department_%'
+            ORDER BY value
+        ''')
+        return jsonify({'success': True, 'departments': departments})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 # Weitere Admin-Routen...

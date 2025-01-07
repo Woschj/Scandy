@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 import glob
 import logging
 from pathlib import Path
+import json
+import sqlite3
 
 # Logging einrichten
 logging.basicConfig(
@@ -35,6 +37,37 @@ class DatabaseBackup:
         logger.info(f"- Basis-Verzeichnis: {self.base_dir}")
         logger.info(f"- Datenbank-Pfad: {self.db_path}")
         logger.info(f"- Backup-Verzeichnis: {self.backup_dir}")
+
+    def get_database_stats(self):
+        """Sammelt Statistiken über die Datenbank"""
+        try:
+            logger.info(f"Sammle Statistiken für Datenbank: {self.db_path}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # SQL-Abfragen mit Fehlerprüfung
+                queries = {
+                    'tools': 'SELECT COUNT(*) FROM tools WHERE deleted = 0',
+                    'consumables': 'SELECT COUNT(*) FROM consumables WHERE deleted = 0',
+                    'workers': 'SELECT COUNT(*) FROM workers WHERE deleted = 0',
+                    'active_lendings': 'SELECT COUNT(*) FROM lendings WHERE returned_at IS NULL',
+                    'total_consumable_usages': 'SELECT COUNT(*) FROM consumable_usages'
+                }
+                
+                stats = {}
+                for key, query in queries.items():
+                    try:
+                        result = cursor.execute(query).fetchone()
+                        stats[key] = result[0] if result else 0
+                        logger.info(f"Statistik {key}: {stats[key]}")
+                    except sqlite3.Error as e:
+                        logger.error(f"Fehler bei SQL-Abfrage für {key}: {str(e)}")
+                        stats[key] = 0
+                
+                return stats
+        except Exception as e:
+            logger.error(f"Fehler beim Sammeln der Datenbankstatistiken: {str(e)}", exc_info=True)
+            return None
         
     def create_backup(self):
         """Erstellt ein Backup der Datenbank"""
@@ -52,6 +85,23 @@ class DatabaseBackup:
 
             # Backup erstellen
             shutil.copy2(self.db_path, backup_path)
+
+            # Statistiken sammeln und speichern
+            logger.info("Sammle Statistiken für das Backup...")
+            stats = self.get_database_stats()
+            if stats:
+                metadata_path = backup_path.with_suffix('.json')
+                logger.info(f"Speichere Metadaten in: {metadata_path}")
+                with open(metadata_path, 'w', encoding='utf-8') as f:
+                    metadata = {
+                        'created_at': now.isoformat(),
+                        'database_stats': stats
+                    }
+                    json.dump(metadata, f, ensure_ascii=False, indent=2)
+                logger.info(f"Metadaten erfolgreich gespeichert: {metadata}")
+            else:
+                logger.error("Keine Statistiken verfügbar für das Backup")
+
             logger.info(f"Backup erfolgreich erstellt: {backup_name}")
 
             # Alte Backups aufräumen
@@ -59,7 +109,7 @@ class DatabaseBackup:
             return True
 
         except Exception as e:
-            logger.error(f"Fehler beim Erstellen des Backups: {str(e)}")
+            logger.error(f"Fehler beim Erstellen des Backups: {str(e)}", exc_info=True)
             return False
 
     def cleanup_old_backups(self):
@@ -73,9 +123,12 @@ class DatabaseBackup:
                     date_str = backup_file.stem.split('_')[1]
                     file_date = datetime.strptime(date_str, '%Y%m%d')
                     
-                    # Backup löschen, wenn es älter als max_days ist
+                    # Backup und zugehörige Metadaten löschen, wenn es älter als max_days ist
                     if file_date < cutoff_date:
                         backup_file.unlink()
+                        metadata_file = backup_file.with_suffix('.json')
+                        if metadata_file.exists():
+                            metadata_file.unlink()
                         logger.info(f"Altes Backup gelöscht: {backup_file.name}")
                 
                 except Exception as e:
@@ -95,12 +148,48 @@ class DatabaseBackup:
                     'size': backup_file.stat().st_size,
                     'created': datetime.fromtimestamp(backup_file.stat().st_mtime)
                 }
+                
+                # Metadaten laden, falls vorhanden
+                metadata_path = backup_file.with_suffix('.json')
+                if metadata_path.exists():
+                    try:
+                        with open(metadata_path, 'r', encoding='utf-8') as f:
+                            metadata = json.load(f)
+                            backup_info['stats'] = metadata.get('database_stats', {})
+                    except Exception as e:
+                        logger.error(f"Fehler beim Laden der Metadaten für {backup_file.name}: {str(e)}")
+                
                 backups.append(backup_info)
             logger.info(f"Gefundene Backups: {len(backups)}")
             return backups
         except Exception as e:
             logger.error(f"Fehler beim Auflisten der Backups: {str(e)}")
             return []
+
+    def restore_backup(self, backup_name):
+        """Stellt ein Backup wieder her"""
+        try:
+            backup_path = self.backup_dir / backup_name
+            if not backup_path.exists():
+                logger.error(f"Backup nicht gefunden: {backup_name}")
+                return False
+
+            # Erstelle ein Backup der aktuellen Datenbank vor der Wiederherstellung
+            self.create_backup()
+
+            logger.info(f"Stelle Backup wieder her: {backup_name}")
+            
+            # Stelle sicher, dass das Datenbankverzeichnis existiert
+            self.db_path.parent.mkdir(exist_ok=True)
+            
+            # Kopiere das Backup über die aktuelle Datenbank
+            shutil.copy2(backup_path, self.db_path)
+            logger.info(f"Backup erfolgreich wiederhergestellt: {backup_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Fehler bei der Wiederherstellung des Backups: {str(e)}")
+            return False
 
 if __name__ == '__main__':
     backup = DatabaseBackup()
