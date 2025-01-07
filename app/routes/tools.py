@@ -75,62 +75,54 @@ def index():
 
 @bp.route('/<barcode>')
 def detail(barcode):
-    """Zeigt die Detailansicht eines Werkzeugs"""
-    try:
-        # Hole Werkzeug mit allen relevanten Informationen
-        tool = Database.query('''
-            SELECT t.*, 
-                   l.lent_at,
-                   w.firstname || ' ' || w.lastname as lent_to,
-                   tsc.reason as status_reason
-            FROM tools t
-            LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
-            LEFT JOIN workers w ON l.worker_barcode = w.barcode
-            LEFT JOIN (
-                SELECT tool_barcode, reason
-                FROM tool_status_changes
-                WHERE id = (
-                    SELECT id FROM tool_status_changes 
-                    WHERE tool_barcode = ? 
-                    ORDER BY created_at DESC LIMIT 1
-                )
-            ) tsc ON t.barcode = tsc.tool_barcode
-            WHERE t.barcode = ? AND t.deleted = 0
-        ''', [barcode, barcode], one=True)
-
-        if tool is None:
-            abort(404)
-
-        # Kombinierter Verlauf aus Ausleihen und Statusänderungen
-        history = Database.query('''
-            SELECT 
-                l.lent_at as action_date,
-                'Ausleihe/Rückgabe' as action_type,
-                CASE 
-                    WHEN l.returned_at IS NULL THEN 'Ausgeliehen an ' || w.firstname || ' ' || w.lastname
-                    ELSE 'Zurückgegeben von ' || w.firstname || ' ' || w.lastname
-                END as description,
-                NULL as reason
-            FROM lendings l
-            JOIN workers w ON l.worker_barcode = w.barcode 
-            WHERE l.tool_barcode = ?
-            UNION ALL
-            SELECT 
-                created_at as action_date,
-                'Statusänderung' as action_type,
-                'Status geändert zu: ' || new_status as description,
-                reason
-            FROM tool_status_changes
-            WHERE tool_barcode = ?
-            ORDER BY action_date DESC
-        ''', [barcode, barcode])
-
-        return render_template('tools/details.html', tool=tool, history=history)
-        
-    except Exception as e:
-        print(f"Fehler beim Laden der Werkzeugdetails: {str(e)}")
-        flash('Fehler beim Laden der Werkzeugdetails', 'error')
+    """Zeigt die Details eines Werkzeugs"""
+    tool = Database.query('''
+        SELECT t.*, 
+               l.worker_barcode as lent_to,
+               l.lent_at as lending_date
+        FROM tools t
+        LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+        WHERE t.barcode = ? AND t.deleted = 0
+    ''', [barcode], one=True)
+    
+    if not tool:
+        flash('Werkzeug nicht gefunden', 'error')
         return redirect(url_for('tools.index'))
+    
+    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
+    categories = Database.get_categories('tools')
+    locations = Database.get_locations('tools')
+    
+    # Hole kombinierten Verlauf aus Ausleihen und Statusänderungen
+    history = Database.query('''
+        SELECT 
+            'Ausleihe/Rückgabe' as action_type,
+            lent_at as action_date,
+            worker_barcode as worker,
+            CASE 
+                WHEN returned_at IS NULL THEN 'Ausgeliehen'
+                ELSE 'Zurückgegeben'
+            END as action,
+            NULL as reason
+        FROM lendings 
+        WHERE tool_barcode = ?
+        UNION ALL
+        SELECT 
+            'Statusänderung' as action_type,
+            created_at as action_date,
+            NULL as worker,
+            new_status as action,
+            reason
+        FROM tool_status_changes
+        WHERE tool_barcode = ?
+        ORDER BY action_date DESC
+    ''', [barcode, barcode])
+    
+    return render_template('tools/details.html',
+                         tool=tool,
+                         categories=[c['name'] for c in categories],
+                         locations=[l['name'] for l in locations],
+                         history=history)
 
 @bp.route('/<int:id>/update', methods=['GET', 'POST'])
 @admin_required
@@ -207,14 +199,13 @@ def add():
         description = request.form.get('description')
         category = request.form.get('category')
         location = request.form.get('location')
-        status = request.form.get('status', 'Verfügbar')
         
         try:
             Database.query('''
                 INSERT INTO tools 
                 (name, barcode, description, category, location, status)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', [name, barcode, description, category, location, status])
+                VALUES (?, ?, ?, ?, ?, 'verfügbar')
+            ''', [name, barcode, description, category, location])
             
             flash('Werkzeug erfolgreich hinzugefügt', 'success')
             return redirect(url_for('tools.index'))
@@ -222,22 +213,13 @@ def add():
         except Exception as e:
             flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
     
-    # Hole existierende Kategorien und Orte für Vorschläge
-    categories = Database.query('''
-        SELECT DISTINCT category FROM tools 
-        WHERE deleted = 0 AND category IS NOT NULL
-        ORDER BY category
-    ''')
+    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
+    categories = Database.get_categories('tools')
+    locations = Database.get_locations('tools')
     
-    locations = Database.query('''
-        SELECT DISTINCT location FROM tools
-        WHERE deleted = 0 AND location IS NOT NULL
-        ORDER BY location
-    ''')
-    
-    return render_template('admin/add_tool.html',
-                         categories=[c['category'] for c in categories],
-                         locations=[l['location'] for l in locations])
+    return render_template('tools/add.html',
+                         categories=[c['name'] for c in categories],
+                         locations=[l['name'] for l in locations])
 
 @bp.route('/<string:barcode>/status', methods=['POST'])
 @login_required

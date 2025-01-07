@@ -8,54 +8,40 @@ bp = Blueprint('consumables', __name__, url_prefix='/consumables')
 @bp.route('/<string:barcode>')
 @login_required
 def detail(barcode):
-    """Zeigt die Detailansicht eines Verbrauchsmaterials"""
-    try:
-        # Hole Verbrauchsmaterial mit Barcode
-        consumable = Database.query('''
-            SELECT c.*, 
-                   CASE 
-                       WHEN c.quantity >= c.min_quantity THEN 'verfügbar'
-                       WHEN c.quantity > 0 THEN 'knapp'
-                       ELSE 'leer'
-                   END as status
-            FROM consumables c
-            WHERE c.barcode = ? AND c.deleted = 0
-        ''', [barcode], one=True)
-        
-        if not consumable:
-            return redirect(url_for('consumables.index'))
-            
-        # Hole Nutzungshistorie
-        usage_history = Database.query('''
-            SELECT cu.*,
-                   w.firstname || ' ' || w.lastname as worker_name,
-                   w.department as worker_department
-            FROM consumable_usages cu
-            JOIN workers w ON cu.worker_barcode = w.barcode
-            WHERE cu.consumable_barcode = ?
-            ORDER BY cu.used_at DESC
-        ''', [barcode])
-        
-        # Hole die letzten 5 Entnahmen
-        recent_usage = Database.query('''
-            SELECT cu.*,
-                   w.firstname || ' ' || w.lastname as worker_name,
-                   w.department as worker_department
-            FROM consumable_usages cu
-            JOIN workers w ON cu.worker_barcode = w.barcode
-            WHERE cu.consumable_barcode = ?
-            ORDER BY cu.used_at DESC
-            LIMIT 5
-        ''', [barcode])
-            
-        return render_template('consumables/details.html',
-                            consumable=consumable,
-                            usage_history=usage_history,
-                            recent_usage=recent_usage)
-        
-    except Exception as e:
-        print(f"Fehler beim Laden der Verbrauchsmaterial-Details: {str(e)}")
+    """Zeigt die Details eines Verbrauchsmaterials"""
+    consumable = Database.query('''
+        SELECT * FROM consumables WHERE barcode = ? AND deleted = 0
+    ''', [barcode], one=True)
+    
+    if not consumable:
+        flash('Verbrauchsmaterial nicht gefunden', 'error')
         return redirect(url_for('consumables.index'))
+    
+    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
+    categories = Database.get_categories('consumables')
+    locations = Database.get_locations('consumables')
+    
+    # Hole Bestandsänderungen
+    history = Database.query('''
+        SELECT 
+            'Bestandsänderung' as action_type,
+            used_at as action_date,
+            worker_barcode as worker,
+            CASE 
+                WHEN quantity > 0 THEN 'Zugang: +' || quantity
+                ELSE 'Abgang: ' || quantity
+            END as action,
+            NULL as reason
+        FROM consumable_usages 
+        WHERE consumable_barcode = ?
+        ORDER BY used_at DESC
+    ''', [barcode])
+    
+    return render_template('consumables/details.html',
+                         consumable=consumable,
+                         categories=[c['name'] for c in categories],
+                         locations=[l['name'] for l in locations],
+                         history=history)
 
 @bp.route('/<int:id>/update', methods=['POST'])
 @admin_required
@@ -171,22 +157,13 @@ def add():
         except Exception as e:
             flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
     
-    # Hole existierende Kategorien und Orte für Vorschläge
-    categories = Database.query('''
-        SELECT DISTINCT category FROM consumables 
-        WHERE deleted = 0 AND category IS NOT NULL
-        ORDER BY category
-    ''')
-    
-    locations = Database.query('''
-        SELECT DISTINCT location FROM consumables
-        WHERE deleted = 0 AND location IS NOT NULL
-        ORDER BY location
-    ''')
+    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
+    categories = Database.get_categories('consumables')
+    locations = Database.get_locations('consumables')
     
     return render_template('consumables/add.html',
-                         categories=[c['category'] for c in categories],
-                         locations=[l['location'] for l in locations])
+                         categories=[c['name'] for c in categories],
+                         locations=[l['name'] for l in locations])
 
 @bp.route('/<barcode>/adjust-stock', methods=['POST'])
 @login_required

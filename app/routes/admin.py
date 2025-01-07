@@ -861,85 +861,150 @@ def restore_backup(filename):
         flash(error_msg, 'error')
     return redirect(url_for('admin.dashboard'))
 
-@bp.route('/departments')
+@bp.route('/departments', methods=['GET'])
 def get_departments():
-    """Gibt alle verfügbaren Abteilungen zurück"""
+    """Gibt alle Abteilungen zurück."""
     try:
         departments = Database.get_departments()
+        print("Abteilungen geladen:", departments)  # Debug-Log
         return jsonify({
             'success': True,
-            'departments': [dict(d) for d in departments]
+            'departments': departments
         })
     except Exception as e:
-        logger.error(f"Fehler beim Laden der Abteilungen: {str(e)}")
+        print("Fehler beim Laden der Abteilungen:", str(e))  # Debug-Log
         return jsonify({
             'success': False,
-            'message': 'Fehler beim Laden der Abteilungen'
-        })
+            'message': str(e)
+        }), 500
 
 @bp.route('/departments/add', methods=['POST'])
-@admin_required
 def add_department():
-    """Fügt eine neue Abteilung hinzu"""
-    try:
-        name = request.form.get('name')
-        if not name:
-            return jsonify({
-                'success': False,
-                'message': 'Kein Name angegeben'
-            })
-        
-        result = Database.add_department(name)
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Fehler beim Hinzufügen der Abteilung: {str(e)}")
+    """Fügt eine neue Abteilung hinzu."""
+    name = request.form.get('department')
+    if not name:
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': 'Kein Name angegeben'
         })
 
+    success = Database.add_department(name)
+    return jsonify({
+        'success': success,
+        'message': 'Abteilung erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen der Abteilung'
+    })
+
 @bp.route('/departments/delete/<name>', methods=['DELETE'])
-@admin_required
 def delete_department(name):
-    """Löscht eine Abteilung"""
-    try:
-        name = name.strip()
-        logger.info(f"\n=== DELETE DEPARTMENT ROUTE ===")
-        logger.info(f"Abteilung zum Löschen: '{name}'")
-        
-        # Prüfe ob die Abteilung existiert
-        existing = Database.query(
-            'SELECT * FROM settings WHERE key = ?',
-            [f"department_{name}"],
-            one=True
-        )
-        logger.info(f"Gefundene Abteilung: {dict(existing) if existing else 'Nicht gefunden'}")
-        
-        if not existing:
-            logger.error("Abteilung existiert nicht")
-            return jsonify({
-                'success': False,
-                'message': 'Abteilung existiert nicht'
-            })
-        
-        # Versuche die Abteilung zu löschen
-        result = Database.delete_department(name)
-        logger.info(f"Löschergebnis: {result}")
-        
-        # Prüfe nochmal ob die Abteilung wirklich weg ist
-        after_delete = Database.query(
-            'SELECT * FROM settings WHERE key = ?',
-            [f"department_{name}"],
-            one=True
-        )
-        logger.info(f"Zustand nach Löschung: {dict(after_delete) if after_delete else 'Erfolgreich gelöscht'}")
-        
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"Fehler beim Löschen der Abteilung: {str(e)}")
+    """Löscht eine Abteilung."""
+    success, message = Database.delete_department(name)
+    return jsonify({
+        'success': success,
+        'message': message
+    })
+
+@bp.route('/locations', methods=['GET'])
+def get_locations():
+    """Gibt alle Standorte zurück."""
+    usage = request.args.get('usage')  # Optional: 'tools' oder 'consumables'
+    locations = Database.get_locations(usage)
+    return jsonify({
+        'success': True,
+        'locations': locations
+    })
+
+@bp.route('/locations/add', methods=['POST'])
+def add_location():
+    """Fügt einen neuen Standort hinzu."""
+    name = request.form.get('location')
+    if not name:
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': 'Kein Name angegeben'
         })
+
+    success = Database.add_location(name)
+    return jsonify({
+        'success': success,
+        'message': 'Standort erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen des Standorts'
+    })
+
+@bp.route('/locations/<name>/usage', methods=['PUT'])
+def update_location_usage(name):
+    """Aktualisiert den Verwendungszweck eines Standorts."""
+    data = request.get_json()
+    usage = data.get('usage')
+    if not usage:
+        return jsonify({
+            'success': False,
+            'message': 'Keine Verwendung angegeben'
+        })
+
+    success = Database.update_location_usage(name, usage)
+    return jsonify({
+        'success': success,
+        'message': 'Verwendung erfolgreich aktualisiert' if success else 'Fehler beim Aktualisieren der Verwendung'
+    })
+
+@bp.route('/locations/delete/<name>', methods=['DELETE'])
+def delete_location(name):
+    """Löscht einen Standort."""
+    success, message = Database.delete_location(name)
+    return jsonify({
+        'success': success,
+        'message': message
+    })
+
+@bp.route('/categories', methods=['GET'])
+def get_categories():
+    """Gibt alle Kategorien zurück."""
+    usage = request.args.get('usage')  # Optional: 'tools' oder 'consumables'
+    categories = Database.get_categories(usage)
+    return jsonify({
+        'success': True,
+        'categories': categories
+    })
+
+@bp.route('/categories/add', methods=['POST'])
+def add_category():
+    """Fügt eine neue Kategorie hinzu."""
+    name = request.form.get('category')
+    if not name:
+        return jsonify({
+            'success': False,
+            'message': 'Kein Name angegeben'
+        })
+
+    success = Database.add_category(name)
+    return jsonify({
+        'success': success,
+        'message': 'Kategorie erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen der Kategorie'
+    })
+
+@bp.route('/categories/<name>/usage', methods=['PUT'])
+def update_category_usage(name):
+    """Aktualisiert den Verwendungszweck einer Kategorie."""
+    data = request.get_json()
+    usage = data.get('usage')
+    if not usage:
+        return jsonify({
+            'success': False,
+            'message': 'Keine Verwendung angegeben'
+        })
+
+    success = Database.update_category_usage(name, usage)
+    return jsonify({
+        'success': success,
+        'message': 'Verwendung erfolgreich aktualisiert' if success else 'Fehler beim Aktualisieren der Verwendung'
+    })
+
+@bp.route('/categories/delete/<name>', methods=['DELETE'])
+def delete_category(name):
+    """Löscht eine Kategorie."""
+    success, message = Database.delete_category(name)
+    return jsonify({
+        'success': success,
+        'message': message
+    })
 
 # Weitere Admin-Routen...

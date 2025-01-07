@@ -48,10 +48,12 @@
                     <label class="label">
                         <span class="label-text">Kategorie</span>
                     </label>
-                    <input type="text" 
-                           name="category" 
-                           class="input input-bordered"
-                           placeholder="z.B. Handwerkzeug, Elektrowerkzeug, ...">
+                    <select name="category" class="select select-bordered" required>
+                        <option value="">Bitte wählen...</option>
+                        {% for category in categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <!-- Lagerort -->
@@ -59,10 +61,12 @@
                     <label class="label">
                         <span class="label-text">Lagerort</span>
                     </label>
-                    <input type="text" 
-                           name="location" 
-                           class="input input-bordered"
-                           placeholder="z.B. Werkzeugschrank, Regal 3, ...">
+                    <select name="location" class="select select-bordered" required>
+                        <option value="">Bitte wählen...</option>
+                        {% for location in locations %}
+                            <option value="{{ location }}">{{ location }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
                 <!-- Buttons -->

@@ -108,12 +108,13 @@
                     <h2 class="card-title">Historie</h2>
                     {% if history %}
                     <div class="overflow-x-auto">
-                        <table class="table table-zebra w-full">
+                        <table class="table w-full">
                             <thead>
                                 <tr>
                                     <th>Datum</th>
+                                    <th>Typ</th>
                                     <th>Aktion</th>
-                                    <th>Beschreibung</th>
+                                    <th>Mitarbeiter</th>
                                     <th>Grund</th>
                                 </tr>
                             </thead>
@@ -123,12 +124,12 @@
                                     <td>{{ entry.action_date|format_datetime }}</td>
                                     <td>
                                         <span class="badge {% if entry.action_type == 'Ausleihe/Rückgabe' %}badge-warning
-                                                   {% elif entry.action_type == 'Statusänderung' %}badge-neutral
-                                                   {% else %}badge-info{% endif %}">
+                                                   {% else %}badge-neutral{% endif %}">
                                             {{ entry.action_type }}
                                         </span>
                                     </td>
-                                    <td>{{ entry.description }}</td>
+                                    <td>{{ entry.action }}</td>
+                                    <td>{{ entry.worker or '-' }}</td>
                                     <td>{{ entry.reason or '-' }}</td>
                                 </tr>
                                 {% endfor %}
@@ -161,14 +162,28 @@
                     <label class="label">
                         <span class="label-text">Kategorie</span>
                     </label>
-                    <input type="text" name="category" value="{{ tool.category }}" class="input input-bordered">
+                    <select name="category" class="select select-bordered" required>
+                        <option value="">Bitte wählen...</option>
+                        {% for category in categories %}
+                            <option value="{{ category }}" {% if category == tool.category %}selected{% endif %}>
+                                {{ category }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
                 <div class="form-control">
                     <label class="label">
                         <span class="label-text">Standort</span>
                     </label>
-                    <input type="text" name="location" value="{{ tool.location }}" class="input input-bordered">
+                    <select name="location" class="select select-bordered" required>
+                        <option value="">Bitte wählen...</option>
+                        {% for location in locations %}
+                            <option value="{{ location }}" {% if location == tool.location %}selected{% endif %}>
+                                {{ location }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
                 <div class="form-control">

@@ -49,7 +49,7 @@
                 </div>
                 <form id="addDepartmentForm" class="mb-4">
                     <div class="flex gap-2">
-                        <input type="text" name="name" placeholder="Neue Abteilung" 
+                        <input type="text" name="department" placeholder="Neue Abteilung" 
                                class="input input-bordered input-sm flex-grow" required>
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus"></i>
@@ -65,6 +65,76 @@
                             </tr>
                         </thead>
                         <tbody id="departmentsList">
+                            <!-- Wird per JavaScript gefüllt -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Standortverwaltung -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="card-title text-lg">
+                        <i class="fas fa-map-marker-alt text-primary"></i>
+                        Standorte
+                    </h2>
+                </div>
+                <form id="addLocationForm" class="mb-4">
+                    <div class="flex gap-2">
+                        <input type="text" name="location" placeholder="Neuer Standort" 
+                               class="input input-bordered input-sm flex-grow" required>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="overflow-x-auto">
+                    <table class="table table-compact w-full">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Verwendung</th>
+                                <th class="text-right">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationsList">
+                            <!-- Wird per JavaScript gefüllt -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorieverwaltung -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="card-title text-lg">
+                        <i class="fas fa-tags text-primary"></i>
+                        Kategorien
+                    </h2>
+                </div>
+                <form id="addCategoryForm" class="mb-4">
+                    <div class="flex gap-2">
+                        <input type="text" name="category" placeholder="Neue Kategorie" 
+                               class="input input-bordered input-sm flex-grow" required>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="overflow-x-auto">
+                    <table class="table table-compact w-full">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Verwendung</th>
+                                <th class="text-right">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoriesList">
                             <!-- Wird per JavaScript gefüllt -->
                         </tbody>
                     </table>
@@ -574,6 +644,348 @@ const DepartmentManager = {
     }
 };
 
+// Standortverwaltung
+const LocationManager = {
+    init() {
+        this.bindEvents();
+        this.loadLocations();
+    },
+
+    bindEvents() {
+        const form = document.getElementById('addLocationForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleAddLocation(e));
+        }
+    },
+
+    loadLocations() {
+        console.log('Lade Standorte...');
+        return fetch('/admin/locations', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (!data.success) {
+                throw new Error(data.message || 'Fehler beim Laden der Standorte');
+            }
+            this.renderLocations(data.locations);
+            return data.locations;
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden der Standorte:', error);
+            showToast('error', error.message || 'Fehler beim Laden der Standorte');
+            return [];
+        });
+    },
+
+    renderLocations(locations) {
+        const tbody = document.getElementById('locationsList');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        locations.forEach(loc => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-location', loc.name);
+            tr.innerHTML = `
+                <td>${loc.name}</td>
+                <td>
+                    <div class="flex gap-2">
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="checkbox" class="checkbox checkbox-sm" 
+                                   onclick="return LocationManager.handleUsageChange('${loc.name}', 'tools', this)"
+                                   ${loc.usage === 'tools' || loc.usage === 'both' ? 'checked' : ''}>
+                            <span class="badge badge-info text-lg">
+                                <i class="fas fa-tools text-lg"></i>&nbsp;
+                                <span class="font-bold">${loc.tools_count || 0}</span>
+                            </span>
+                        </label>
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="checkbox" class="checkbox checkbox-sm"
+                                   onclick="return LocationManager.handleUsageChange('${loc.name}', 'consumables', this)"
+                                   ${loc.usage === 'consumables' || loc.usage === 'both' ? 'checked' : ''}>
+                            <span class="badge badge-success text-lg">
+                                <i class="fas fa-box text-lg"></i>&nbsp;
+                                <span class="font-bold">${loc.consumables_count || 0}</span>
+                            </span>
+                        </label>
+                    </div>
+                </td>
+                <td class="text-right">
+                    <button onclick="LocationManager.handleDeleteLocation('${loc.name}')" 
+                            class="btn btn-ghost btn-xs ${(loc.tools_count > 0 || loc.consumables_count > 0) ? 'btn-disabled' : ''}"
+                            ${(loc.tools_count > 0 || loc.consumables_count > 0) ? 'title="Standort wird noch verwendet"' : ''}>
+                        <i class="fas fa-trash text-error"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    handleAddLocation(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        fetch('/admin/locations/add', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', data.message);
+                form.reset();
+                this.loadLocations();
+            } else {
+                showToast('error', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Hinzufügen des Standorts:', error);
+            showToast('error', 'Fehler beim Hinzufügen des Standorts');
+        });
+    },
+
+    handleDeleteLocation(name) {
+        if (!confirm(`Möchten Sie den Standort "${name}" wirklich löschen?`)) {
+            return;
+        }
+
+        console.log(`Versuche Standort zu löschen: ${name}`);
+        fetch(`/admin/locations/delete/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (data.success) {
+                showToast('success', data.message);
+                const row = document.querySelector(`tr[data-location="${name}"]`);
+                if (row) {
+                    row.remove();
+                }
+            } else {
+                showToast('error', data.message);
+                console.error('Fehler beim Löschen:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Löschen des Standorts:', error);
+            showToast('error', 'Fehler beim Löschen des Standorts');
+        });
+    },
+
+    handleUsageChange(name, usage, checkbox) {
+        const wasChecked = checkbox.checked;
+        
+        console.log(`Versuche Verwendung "${usage}" für Standort "${name}" zu ändern...`);
+        fetch(`/admin/locations/${encodeURIComponent(name)}/usage`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usage: usage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (data.success) {
+                showToast('success', data.message);
+                this.loadLocations();
+            } else {
+                showToast('error', data.message);
+                console.error('Fehler beim Ändern der Verwendung:', data.message);
+                checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Ändern der Verwendung:', error);
+            showToast('error', 'Fehler beim Ändern der Verwendung');
+            checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
+        });
+    }
+};
+
+// Kategorieverwaltung
+const CategoryManager = {
+    init() {
+        this.bindEvents();
+        this.loadCategories();
+    },
+
+    bindEvents() {
+        const form = document.getElementById('addCategoryForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleAddCategory(e));
+        }
+    },
+
+    loadCategories() {
+        console.log('Lade Kategorien...');
+        return fetch('/admin/categories', {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (!data.success) {
+                throw new Error(data.message || 'Fehler beim Laden der Kategorien');
+            }
+            this.renderCategories(data.categories);
+            return data.categories;
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden der Kategorien:', error);
+            showToast('error', error.message || 'Fehler beim Laden der Kategorien');
+            return [];
+        });
+    },
+
+    renderCategories(categories) {
+        const tbody = document.getElementById('categoriesList');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        categories.forEach(cat => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-category', cat.name);
+            tr.innerHTML = `
+                <td>${cat.name}</td>
+                <td>
+                    <div class="flex gap-2">
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="checkbox" class="checkbox checkbox-sm" 
+                                   onclick="return CategoryManager.handleUsageChange('${cat.name}', 'tools', this)"
+                                   ${cat.usage === 'tools' || cat.usage === 'both' ? 'checked' : ''}>
+                            <span class="badge badge-info text-lg">
+                                <i class="fas fa-tools text-lg"></i>&nbsp;
+                                <span class="font-bold">${cat.tools_count || 0}</span>
+                            </span>
+                        </label>
+                        <label class="cursor-pointer flex items-center gap-2">
+                            <input type="checkbox" class="checkbox checkbox-sm"
+                                   onclick="return CategoryManager.handleUsageChange('${cat.name}', 'consumables', this)"
+                                   ${cat.usage === 'consumables' || cat.usage === 'both' ? 'checked' : ''}>
+                            <span class="badge badge-success text-lg">
+                                <i class="fas fa-box text-lg"></i>&nbsp;
+                                <span class="font-bold">${cat.consumables_count || 0}</span>
+                            </span>
+                        </label>
+                    </div>
+                </td>
+                <td class="text-right">
+                    <button onclick="CategoryManager.handleDeleteCategory('${cat.name}')" 
+                            class="btn btn-ghost btn-xs ${(cat.tools_count > 0 || cat.consumables_count > 0) ? 'btn-disabled' : ''}"
+                            ${(cat.tools_count > 0 || cat.consumables_count > 0) ? 'title="Kategorie wird noch verwendet"' : ''}>
+                        <i class="fas fa-trash text-error"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    handleAddCategory(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        fetch('/admin/categories/add', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', data.message);
+                form.reset();
+                this.loadCategories();
+            } else {
+                showToast('error', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Hinzufügen der Kategorie:', error);
+            showToast('error', 'Fehler beim Hinzufügen der Kategorie');
+        });
+    },
+
+    handleDeleteCategory(name) {
+        if (!confirm(`Möchten Sie die Kategorie "${name}" wirklich löschen?`)) {
+            return;
+        }
+
+        console.log(`Versuche Kategorie zu löschen: ${name}`);
+        fetch(`/admin/categories/delete/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (data.success) {
+                showToast('success', data.message);
+                const row = document.querySelector(`tr[data-category="${name}"]`);
+                if (row) {
+                    row.remove();
+                }
+            } else {
+                showToast('error', data.message);
+                console.error('Fehler beim Löschen:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Löschen der Kategorie:', error);
+            showToast('error', 'Fehler beim Löschen der Kategorie');
+        });
+    },
+
+    handleUsageChange(name, usage, checkbox) {
+        const wasChecked = checkbox.checked;
+        
+        console.log(`Versuche Verwendung "${usage}" für Kategorie "${name}" zu ändern...`);
+        fetch(`/admin/categories/${encodeURIComponent(name)}/usage`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                usage: usage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Server-Antwort:', data);
+            if (data.success) {
+                showToast('success', data.message);
+                this.loadCategories();
+            } else {
+                showToast('error', data.message);
+                console.error('Fehler beim Ändern der Verwendung:', data.message);
+                checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Ändern der Verwendung:', error);
+            showToast('error', 'Fehler beim Ändern der Verwendung');
+            checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
+        });
+    }
+};
+
 // Toast-Funktion
 function showToast(type, message) {
     const toast = document.createElement('div');
@@ -594,6 +1006,8 @@ function showToast(type, message) {
 // Initialisierung
 document.addEventListener('DOMContentLoaded', () => {
     DepartmentManager.init();
+    LocationManager.init();
+    CategoryManager.init();
 });
 </script>
 {% endblock %} 

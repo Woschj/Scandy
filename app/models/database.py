@@ -971,144 +971,330 @@ class Database:
 
     @staticmethod
     def get_departments():
-        """Holt alle verfügbaren Abteilungen"""
+        """Gibt alle Abteilungen mit der Anzahl der zugeordneten Mitarbeiter zurück."""
         try:
-            # Hole nur aktive Abteilungen (die mindestens einen aktiven Mitarbeiter haben oder kürzlich hinzugefügt wurden)
-            departments = Database.query('''
-                SELECT DISTINCT
-                    s.value as name,
-                    COALESCE(w.worker_count, 0) as worker_count
-                FROM settings s
-                LEFT JOIN (
-                    SELECT department, COUNT(*) as worker_count
-                    FROM workers
-                    WHERE deleted = 0
-                    GROUP BY department
-                ) w ON w.department = s.value
-                WHERE s.key LIKE 'department_%'
-                AND s.value IS NOT NULL
-                AND s.value != ''
-                ORDER BY s.value
-            ''')
-            
-            # Log für Debugging
-            logger.info("=== DEPARTMENTS QUERY RESULTS ===")
-            logger.info(f"Number of departments found: {len(departments)}")
-            for dept in departments:
-                logger.info(f"Department: {dict(dept)}")
-            
-            return departments
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        REPLACE(key, 'department_', '') as name,
+                        value,
+                        COUNT(workers.id) as worker_count
+                    FROM settings
+                    LEFT JOIN workers ON workers.department = settings.value AND workers.deleted = 0
+                    WHERE key LIKE 'department_%'
+                    GROUP BY settings.key, settings.value
+                    ORDER BY value
+                """)
+                departments = []
+                for row in cursor.fetchall():
+                    departments.append({
+                        'name': row[1],
+                        'worker_count': row[2]
+                    })
+                print("Departments from DB:", departments)
+                return departments
         except Exception as e:
-            logger.error(f"Fehler beim Laden der Abteilungen: {str(e)}")
+            print(f"Fehler beim Laden der Abteilungen: {str(e)}")
             return []
 
     @staticmethod
     def add_department(name):
-        """Fügt eine neue Abteilung hinzu"""
+        """Fügt eine neue Abteilung hinzu."""
         try:
-            logger.info(f"\n=== ADDING DEPARTMENT {name} ===")
-            
-            # Prüfe ob die Abteilung bereits existiert
-            existing = Database.query(
-                'SELECT COUNT(*) as count FROM settings WHERE key = ? OR value = ?',
-                [f"department_{name}", name],
-                one=True
-            )['count']
-            
-            if existing > 0:
-                logger.error(f"Abteilung {name} existiert bereits")
-                return {
-                    'success': False,
-                    'message': 'Abteilung existiert bereits'
-                }
-            
-            # Füge neue Abteilung hinzu
-            Database.query(
-                'INSERT INTO settings (key, value, description) VALUES (?, ?, ?)',
-                [f"department_{name}", name, 'Abteilung']
-            )
-            
-            # Überprüfe ob die Abteilung wirklich hinzugefügt wurde
-            added = Database.query(
-                'SELECT COUNT(*) as count FROM settings WHERE key = ?',
-                [f"department_{name}"],
-                one=True
-            )['count']
-            
-            if added == 0:
-                logger.error(f"Abteilung {name} konnte nicht hinzugefügt werden")
-                return {
-                    'success': False,
-                    'message': 'Abteilung konnte nicht hinzugefügt werden'
-                }
-            
-            logger.info(f"Abteilung {name} wurde erfolgreich hinzugefügt")
-            return {
-                'success': True,
-                'message': 'Abteilung erfolgreich hinzugefügt'
-            }
-            
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                key = f"department_{name}"
+                cursor.execute("INSERT INTO settings (key, value) VALUES (?, ?)", (key, name))
+                conn.commit()
+                return True
         except Exception as e:
-            logger.error(f"Fehler beim Hinzufügen der Abteilung: {str(e)}")
-            return {
-                'success': False,
-                'message': f'Datenbankfehler: {str(e)}'
-            }
+            print(f"Fehler beim Hinzufügen der Abteilung: {str(e)}")
+            return False
 
     @staticmethod
     def delete_department(name):
-        """Löscht eine Abteilung"""
+        """Löscht eine Abteilung, wenn sie keine aktiven Mitarbeiter hat."""
         try:
-            logger.info(f"\n=== DELETING DEPARTMENT {name} ===")
-            
-            # Prüfe ob die Abteilung noch Mitarbeiter hat
-            worker_count = Database.query(
-                'SELECT COUNT(*) as count FROM workers WHERE department = ? AND deleted = 0',
-                [name],
-                one=True
-            )['count']
-            
-            logger.info(f"Aktive Mitarbeiter in der Abteilung: {worker_count}")
-            
-            if worker_count > 0:
-                logger.error(f"Abteilung {name} hat noch {worker_count} aktive Mitarbeiter")
-                return {
-                    'success': False,
-                    'message': f'Abteilung hat noch {worker_count} aktive Mitarbeiter'
-                }
-            
-            # Lösche die Abteilung aus der settings Tabelle
-            Database.query(
-                'DELETE FROM settings WHERE key = ?',
-                [f"department_{name}"]
-            )
-            
-            # Überprüfe ob die Löschung erfolgreich war
-            remaining = Database.query(
-                'SELECT COUNT(*) as count FROM settings WHERE key = ?',
-                [f"department_{name}"],
-                one=True
-            )['count']
-            
-            if remaining > 0:
-                logger.error(f"Abteilung {name} konnte nicht gelöscht werden")
-                return {
-                    'success': False,
-                    'message': 'Abteilung konnte nicht gelöscht werden'
-                }
-            
-            logger.info(f"Abteilung {name} wurde erfolgreich gelöscht")
-            return {
-                'success': True,
-                'message': 'Abteilung erfolgreich gelöscht'
-            }
-            
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe ob es aktive Mitarbeiter in der Abteilung gibt
+                cursor.execute("SELECT COUNT(*) FROM workers WHERE department = ? AND deleted = 0", (name,))
+                worker_count = cursor.fetchone()[0]
+                
+                if worker_count > 0:
+                    return False, "Abteilung hat noch aktive Mitarbeiter"
+                
+                # Lösche die Abteilung
+                cursor.execute("DELETE FROM settings WHERE key = ?", (f"department_{name}",))
+                conn.commit()
+                return True, "Abteilung erfolgreich gelöscht"
         except Exception as e:
-            logger.error(f"Fehler beim Löschen der Abteilung: {str(e)}")
-            return {
-                'success': False,
-                'message': f'Datenbankfehler: {str(e)}'
-            }
+            print(f"Fehler beim Löschen der Abteilung: {str(e)}")
+            return False, str(e)
+
+    @staticmethod
+    def add_location(name):
+        """Fügt einen neuen Standort hinzu."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                key = f"location_{name}"
+                # Standardmäßig keine Verwendung festgelegt
+                cursor.execute(
+                    "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)", 
+                    (key, name, 'none')
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Hinzufügen des Standorts: {str(e)}")
+            return False
+
+    @staticmethod
+    def update_location_usage(name, usage):
+        """Aktualisiert den Verwendungszweck eines Standorts."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                key = f"location_{name}"
+                
+                # Hole aktuelle Verwendung
+                cursor.execute("SELECT description FROM settings WHERE key = ?", (key,))
+                current = cursor.fetchone()
+                if not current:
+                    return False
+                
+                current_usage = current[0] or 'none'
+                
+                # Aktualisiere Verwendung basierend auf Checkbox-Status
+                if usage == 'tools':
+                    if current_usage == 'consumables':
+                        new_usage = 'both'
+                    elif current_usage == 'both':
+                        new_usage = 'consumables'
+                    elif current_usage == 'none':
+                        new_usage = 'tools'
+                    else:
+                        new_usage = 'none'
+                elif usage == 'consumables':
+                    if current_usage == 'tools':
+                        new_usage = 'both'
+                    elif current_usage == 'both':
+                        new_usage = 'tools'
+                    elif current_usage == 'none':
+                        new_usage = 'consumables'
+                    else:
+                        new_usage = 'none'
+                
+                cursor.execute(
+                    "UPDATE settings SET description = ? WHERE key = ?",
+                    (new_usage, key)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Verwendung: {str(e)}")
+            return False
+
+    @staticmethod
+    def add_category(name):
+        """Fügt eine neue Kategorie hinzu."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                key = f"category_{name}"
+                # Standardmäßig keine Verwendung festgelegt
+                cursor.execute(
+                    "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)", 
+                    (key, name, 'none')
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Hinzufügen der Kategorie: {str(e)}")
+            return False
+
+    @staticmethod
+    def update_category_usage(name, usage):
+        """Aktualisiert den Verwendungszweck einer Kategorie."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                key = f"category_{name}"
+                
+                # Hole aktuelle Verwendung
+                cursor.execute("SELECT description FROM settings WHERE key = ?", (key,))
+                current = cursor.fetchone()
+                if not current:
+                    return False
+                
+                current_usage = current[0] or 'none'
+                
+                # Aktualisiere Verwendung basierend auf Checkbox-Status
+                if usage == 'tools':
+                    if current_usage == 'consumables':
+                        new_usage = 'both'
+                    elif current_usage == 'both':
+                        new_usage = 'consumables'
+                    elif current_usage == 'none':
+                        new_usage = 'tools'
+                    else:
+                        new_usage = 'none'
+                elif usage == 'consumables':
+                    if current_usage == 'tools':
+                        new_usage = 'both'
+                    elif current_usage == 'both':
+                        new_usage = 'tools'
+                    elif current_usage == 'none':
+                        new_usage = 'consumables'
+                    else:
+                        new_usage = 'none'
+                
+                cursor.execute(
+                    "UPDATE settings SET description = ? WHERE key = ?",
+                    (new_usage, key)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Verwendung: {str(e)}")
+            return False
+
+    @staticmethod
+    def get_locations(usage=None):
+        """Gibt alle Standorte mit der Anzahl der zugeordneten Werkzeuge und Verbrauchsmaterialien zurück.
+        usage: Optional 'tools' oder 'consumables' um nur bestimmte Standorte zu laden"""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Basis-Query
+                query = """
+                    SELECT 
+                        REPLACE(key, 'location_', '') as name,
+                        value,
+                        description as usage,
+                        (SELECT COUNT(*) FROM tools WHERE location = settings.value AND deleted = 0) as tools_count,
+                        (SELECT COUNT(*) FROM consumables WHERE location = settings.value AND deleted = 0) as consumables_count
+                    FROM settings
+                    WHERE key LIKE 'location_%'
+                """
+                
+                # Füge Verwendungszweck-Filter hinzu
+                if usage == 'tools':
+                    query += " AND (description = 'tools' OR description = 'both')"
+                elif usage == 'consumables':
+                    query += " AND (description = 'consumables' OR description = 'both')"
+                
+                query += " ORDER BY value"
+                
+                cursor.execute(query)
+                locations = []
+                for row in cursor.fetchall():
+                    locations.append({
+                        'name': row[1],
+                        'usage': row[2],
+                        'tools_count': row[3],
+                        'consumables_count': row[4]
+                    })
+                return locations
+        except Exception as e:
+            print(f"Fehler beim Laden der Standorte: {str(e)}")
+            return []
+
+    @staticmethod
+    def delete_location(name):
+        """Löscht einen Standort, wenn er keine aktiven Werkzeuge oder Verbrauchsmaterialien hat."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe ob es aktive Werkzeuge oder Verbrauchsmaterialien am Standort gibt
+                cursor.execute("SELECT COUNT(*) FROM tools WHERE location = ? AND deleted = 0", (name,))
+                tools_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM consumables WHERE location = ? AND deleted = 0", (name,))
+                consumables_count = cursor.fetchone()[0]
+                
+                if tools_count > 0 or consumables_count > 0:
+                    return False, "Standort wird noch verwendet"
+                
+                # Lösche den Standort
+                cursor.execute("DELETE FROM settings WHERE key = ?", (f"location_{name}",))
+                conn.commit()
+                return True, "Standort erfolgreich gelöscht"
+        except Exception as e:
+            print(f"Fehler beim Löschen des Standorts: {str(e)}")
+            return False, str(e)
+
+    @staticmethod
+    def delete_category(name):
+        """Löscht eine Kategorie, wenn sie keine aktiven Werkzeuge oder Verbrauchsmaterialien hat."""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Prüfe ob es aktive Werkzeuge oder Verbrauchsmaterialien in der Kategorie gibt
+                cursor.execute("SELECT COUNT(*) FROM tools WHERE category = ? AND deleted = 0", (name,))
+                tools_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM consumables WHERE category = ? AND deleted = 0", (name,))
+                consumables_count = cursor.fetchone()[0]
+                
+                if tools_count > 0 or consumables_count > 0:
+                    return False, "Kategorie wird noch verwendet"
+                
+                # Lösche die Kategorie
+                cursor.execute("DELETE FROM settings WHERE key = ?", (f"category_{name}",))
+                conn.commit()
+                return True, "Kategorie erfolgreich gelöscht"
+        except Exception as e:
+            print(f"Fehler beim Löschen der Kategorie: {str(e)}")
+            return False, str(e)
+
+    @staticmethod
+    def get_categories(usage=None):
+        """Gibt alle Kategorien mit der Anzahl der zugeordneten Werkzeuge und Verbrauchsmaterialien zurück.
+        usage: Optional 'tools' oder 'consumables' um nur bestimmte Kategorien zu laden"""
+        try:
+            with Database.get_db() as conn:
+                cursor = conn.cursor()
+                
+                # Basis-Query
+                query = """
+                    SELECT 
+                        REPLACE(key, 'category_', '') as name,
+                        value,
+                        description as usage,
+                        (SELECT COUNT(*) FROM tools WHERE category = settings.value AND deleted = 0) as tools_count,
+                        (SELECT COUNT(*) FROM consumables WHERE category = settings.value AND deleted = 0) as consumables_count
+                    FROM settings
+                    WHERE key LIKE 'category_%'
+                """
+                
+                # Füge Verwendungszweck-Filter hinzu
+                if usage == 'tools':
+                    query += " AND (description = 'tools' OR description = 'both')"
+                elif usage == 'consumables':
+                    query += " AND (description = 'consumables' OR description = 'both')"
+                
+                query += " ORDER BY value"
+                
+                cursor.execute(query)
+                categories = []
+                for row in cursor.fetchall():
+                    categories.append({
+                        'name': row[1],
+                        'usage': row[2],
+                        'tools_count': row[3],
+                        'consumables_count': row[4]
+                    })
+                return categories
+        except Exception as e:
+            print(f"Fehler beim Laden der Kategorien: {str(e)}")
+            return []
 
 def init_db():
     """Initialisiert die Datenbank"""
