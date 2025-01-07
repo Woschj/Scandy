@@ -79,9 +79,14 @@ def detail(barcode):
     tool = Database.query('''
         SELECT t.*, 
                l.worker_barcode as lent_to,
-               l.lent_at as lending_date
+               l.lent_at as lending_date,
+               w.firstname || ' ' || w.lastname as current_borrower
         FROM tools t
-        LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+        LEFT JOIN (
+            SELECT * FROM lendings 
+            WHERE returned_at IS NULL
+        ) l ON t.barcode = l.tool_barcode
+        LEFT JOIN workers w ON l.worker_barcode = w.barcode
         WHERE t.barcode = ? AND t.deleted = 0
     ''', [barcode], one=True)
     
@@ -97,19 +102,20 @@ def detail(barcode):
     history = Database.query('''
         SELECT 
             'Ausleihe/Rückgabe' as action_type,
-            lent_at as action_date,
-            worker_barcode as worker,
+            datetime(l.lent_at) as action_date,
+            w.firstname || ' ' || w.lastname as worker,
             CASE 
-                WHEN returned_at IS NULL THEN 'Ausgeliehen'
+                WHEN l.returned_at IS NULL THEN 'Ausgeliehen'
                 ELSE 'Zurückgegeben'
             END as action,
             NULL as reason
-        FROM lendings 
-        WHERE tool_barcode = ?
+        FROM lendings l
+        LEFT JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE l.tool_barcode = ?
         UNION ALL
         SELECT 
             'Statusänderung' as action_type,
-            created_at as action_date,
+            datetime(created_at) as action_date,
             NULL as worker,
             new_status as action,
             reason

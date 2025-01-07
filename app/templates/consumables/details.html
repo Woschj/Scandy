@@ -89,22 +89,26 @@
             <div class="card bg-base-100 shadow-xl col-span-2">
                 <div class="card-body">
                     <h2 class="card-title">Letzte Entnahmen</h2>
-                    {% if usage_history %}
+                    {% if history %}
                     <div class="overflow-x-auto">
                         <table class="table w-full">
                             <thead>
                                 <tr>
+                                    <th>Datum</th>
                                     <th>Mitarbeiter</th>
                                     <th>Menge</th>
-                                    <th>Datum</th>
+                                    <th>Grund</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for usage in usage_history %}
+                                {% for usage in history %}
                                 <tr>
+                                    <td>{{ usage.action_date }}</td>
                                     <td>{{ usage.worker_name }}</td>
-                                    <td>{{ usage.quantity }} Stück</td>
-                                    <td>{{ usage.used_at|format_datetime }}</td>
+                                    <td class="{% if usage.quantity > 0 %}text-success{% else %}text-error{% endif %}">
+                                        {% if usage.quantity > 0 %}+{% endif %}{{ usage.quantity }} Stück
+                                    </td>
+                                    <td>{% if usage.worker_name == 'Admin' %}Bestandskorrektur{% else %}Entnahme{% endif %}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

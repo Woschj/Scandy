@@ -12,7 +12,8 @@ class Tool(BaseModel):
                l.returned_at,
                w.firstname || ' ' || w.lastname as current_borrower,
                t.location,
-               t.category
+               t.category,
+               datetime(l.lent_at) as lending_date
         FROM tools t
         LEFT JOIN (
             SELECT tool_barcode, worker_barcode, lent_at, returned_at
@@ -22,6 +23,7 @@ class Tool(BaseModel):
                 WHERE l2.tool_barcode = l1.tool_barcode
                 AND l2.lent_at > l1.lent_at
             )
+            AND returned_at IS NULL
         ) l ON t.barcode = l.tool_barcode
         LEFT JOIN workers w ON l.worker_barcode = w.barcode
         WHERE t.deleted = 0
@@ -32,14 +34,15 @@ class Tool(BaseModel):
     @staticmethod
     def get_lending_history(barcode):
         """Holt die Ausleihhistorie für ein Werkzeug"""
-        with Database.get_db() as conn:
-            history = conn.execute('''
-                SELECT 
-                    l.*,
-                    w.firstname || ' ' || w.lastname as worker_name
-                FROM lendings l
-                JOIN workers w ON w.barcode = l.worker_barcode
-                WHERE l.tool_barcode = ?
-                ORDER BY l.lent_at DESC
-            ''', [barcode]).fetchall()
-            return history
+        sql = '''
+            SELECT 
+                l.*,
+                w.firstname || ' ' || w.lastname as worker_name,
+                datetime(l.lent_at) as lent_at,
+                datetime(l.returned_at) as returned_at
+            FROM lendings l
+            LEFT JOIN workers w ON w.barcode = l.worker_barcode
+            WHERE l.tool_barcode = ?
+            ORDER BY l.lent_at DESC
+        '''
+        return Database.query(sql, [barcode])

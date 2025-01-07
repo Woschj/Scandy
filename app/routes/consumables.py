@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify, request, redirect, url_for, flash
+from flask import Blueprint, render_template, jsonify, request, redirect, url_for, flash, abort
 from ..models.database import Database
 from ..utils.decorators import login_required, admin_required
 from datetime import datetime
@@ -25,16 +25,19 @@ def detail(barcode):
     history = Database.query('''
         SELECT 
             'Bestandsänderung' as action_type,
-            used_at as action_date,
-            worker_barcode as worker,
+            strftime('%d.%m.%Y %H:%M', cu.used_at) as action_date,
             CASE 
-                WHEN quantity > 0 THEN 'Zugang: +' || quantity
-                ELSE 'Abgang: ' || quantity
-            END as action,
-            NULL as reason
-        FROM consumable_usages 
-        WHERE consumable_barcode = ?
-        ORDER BY used_at DESC
+                WHEN cu.worker_barcode = 'admin' THEN 'Admin'
+                ELSE w.firstname || ' ' || w.lastname 
+            END as worker_name,
+            CASE
+                WHEN cu.worker_barcode = 'admin' THEN cu.quantity
+                ELSE -ABS(cu.quantity)  -- Für Mitarbeiter immer negativ machen
+            END as quantity
+        FROM consumable_usages cu
+        LEFT JOIN workers w ON cu.worker_barcode = w.barcode
+        WHERE cu.consumable_barcode = ?
+        ORDER BY cu.used_at DESC
     ''', [barcode])
     
     return render_template('consumables/details.html',
@@ -208,59 +211,43 @@ def adjust_stock(barcode):
         print(f"Fehler bei der Bestandsanpassung: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@bp.route('/<barcode>', methods=['GET', 'POST'])
+@bp.route('/<barcode>')
 @login_required
 def details(barcode):
-    """Details eines Verbrauchsmaterials anzeigen und bearbeiten"""
-    try:
-        if request.method == 'POST':
-            data = request.form
-            
-            with Database.get_db() as conn:
-                conn.execute('''
-                    UPDATE consumables 
-                    SET name = ?,
-                        category = ?,
-                        location = ?,
-                        description = ?,
-                        min_quantity = ?,
-                        modified_at = CURRENT_TIMESTAMP
-                    WHERE barcode = ? AND deleted = 0
-                ''', [
-                    data.get('name'),
-                    data.get('category'),
-                    data.get('location'),
-                    data.get('description'),
-                    data.get('min_quantity', type=int),
-                    barcode
-                ])
-                conn.commit()
-            
-            return jsonify({'success': True})
+    """Zeigt die Details eines Verbrauchsmaterials"""
+    consumable = Database.query('''
+        SELECT * FROM consumables 
+        WHERE barcode = ? AND deleted = 0
+    ''', [barcode], one=True)
+    
+    if not consumable:
+        abort(404)
         
-        # GET-Anfrage: Details anzeigen
-        with Database.get_db() as conn:
-            consumable = conn.execute('''
-                SELECT * FROM consumables 
-                WHERE barcode = ? AND deleted = 0
-            ''', [barcode]).fetchone()
-            
-            if not consumable:
-                return jsonify({'success': False, 'message': 'Verbrauchsmaterial nicht gefunden'}), 404
-            
-            # Nutzungshistorie laden
-            usage_history = conn.execute('''
-                SELECT cu.*, w.firstname || ' ' || w.lastname as worker_name
-                FROM consumable_usages cu
-                LEFT JOIN workers w ON cu.worker_barcode = w.barcode
-                WHERE cu.consumable_barcode = ?
-                ORDER BY cu.used_at DESC
-            ''', [barcode]).fetchall()
-            
-            return render_template('consumables/details.html',
-                               consumable=consumable,
-                               usage_history=usage_history)
-                               
-    except Exception as e:
-        print(f"Fehler bei Verbrauchsmaterial-Details: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
+    categories = Database.get_categories('consumables')
+    locations = Database.get_locations('consumables')
+    
+    # Entnahme-Historie
+    history = Database.query('''
+        SELECT 
+            'Bestandsänderung' as action_type,
+            strftime('%d.%m.%Y %H:%M', cu.used_at) as action_date,
+            CASE 
+                WHEN cu.worker_barcode = 'admin' THEN 'Admin'
+                ELSE w.firstname || ' ' || w.lastname 
+            END as worker_name,
+            CASE
+                WHEN cu.worker_barcode = 'admin' THEN cu.quantity
+                ELSE -ABS(cu.quantity)  -- Für Mitarbeiter immer negativ machen
+            END as quantity
+        FROM consumable_usages cu
+        LEFT JOIN workers w ON cu.worker_barcode = w.barcode
+        WHERE cu.consumable_barcode = ?
+        ORDER BY cu.used_at DESC
+    ''', [barcode])
+    
+    return render_template('consumables/details.html',
+                         consumable=consumable,
+                         categories=[c['name'] for c in categories],
+                         locations=[l['name'] for l in locations],
+                         history=history)

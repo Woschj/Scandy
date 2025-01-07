@@ -85,8 +85,8 @@
                             <div class="alert alert-warning">
                                 <i class="fas fa-user mr-2"></i>
                                 <div>
-                                    <h3 class="font-bold">Ausgeliehen an {{ tool.lent_to }}</h3>
-                                    <p>Seit: {{ tool.lent_at|format_datetime }}</p>
+                                    <h3 class="font-bold">Ausgeliehen an {{ tool.current_borrower }}</h3>
+                                    <p>Seit: {{ tool.lending_date|format_datetime }}</p>
                                 </div>
                             </div>
                         {% else %}
