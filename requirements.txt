@@ -1,7 +1,6 @@
-# Flask und Basis-Pakete
+# Flask und Web-Framework
 Flask==2.3.3
 Flask-Compress==1.13
-Flask-Login==0.6.3
 Flask-Session==0.5.0
 Werkzeug==2.3.8
 Jinja2==3.1.4
@@ -11,13 +10,12 @@ blinker==1.9.0
 
 # Datenbank und Scheduling
 APScheduler==3.9.1
-SQLAlchemy==2.0.25
 
 # Dateiverarbeitung
 python-barcode==0.14.0
 Pillow==10.2.0
-reportlab==4.0.4
 openpyxl==3.1.2
+pandas==2.1.4
 
 # Utility-Pakete
 requests==2.31.0
