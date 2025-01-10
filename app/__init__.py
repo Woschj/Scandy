@@ -30,6 +30,26 @@ class Config:
     def init_client(server_url=None):
         pass
 
+def ensure_directories_exist():
+    """Stellt sicher, dass alle benötigten Verzeichnisse existieren"""
+    from app.config import config
+    current_config = config['default']()
+    
+    # Liste der zu erstellenden Verzeichnisse
+    directories = [
+        os.path.dirname(current_config.DATABASE),
+        current_config.BACKUP_DIR,
+        current_config.UPLOAD_FOLDER
+    ]
+    
+    # Verzeichnisse erstellen
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            logging.info(f"Verzeichnis erstellt: {directory}")
+        else:
+            logging.info(f"Verzeichnis existiert bereits: {directory}")
+
 def create_app(test_config=None):
     app = Flask(__name__)
     Compress(app)  # Aktiviert gzip Komprimierung
@@ -384,5 +404,8 @@ def create_app(test_config=None):
     scheduler.add_job(backup.create_backup, 'cron', hour=7, minute=0)  # 7:00 Uhr
     scheduler.add_job(backup.create_backup, 'cron', hour=19, minute=0) # 19:00 Uhr
     scheduler.start()
+
+    # Stelle sicher, dass alle Verzeichnisse existieren
+    ensure_directories_exist()
 
     return app

@@ -2,55 +2,64 @@ import os
 from pathlib import Path
 
 class Config:
-    # Basis-Verzeichnis der Anwendung
-    BASE_DIR = Path(__file__).parent.parent
+    # Basis-Konfiguration
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev'
     
-    # Sicherheitseinstellungen
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-please-change-in-production'
-    SESSION_TYPE = 'filesystem'
+    # Datenbank-Konfiguration
+    DATABASE = os.path.join(str(Path(__file__).parent.parent), 'app', 'database', 'inventory.db')
     
-    # Datenbank-Einstellungen
-    DATABASE = os.path.join(BASE_DIR, 'app', 'database', 'inventory.db')
+    # Server-Konfiguration
+    SERVER_MODE = False  # Standard: Client-Modus
+    SERVER_URL = os.environ.get('SERVER_URL', '')  # URL des Sync-Servers
+    SYNC_INTERVAL = 300  # Sync-Intervall in Sekunden (5 Minuten)
+    CLIENT_NAME = os.environ.get('CLIENT_NAME', 'default_client')
     
-    # Upload-Einstellungen
-    UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max file size
+    # Backup-Konfiguration
+    BACKUP_DIR = os.path.join(str(Path(__file__).parent.parent), 'backups')
+    BACKUP_INTERVAL = 86400  # Backup-Intervall in Sekunden (24 Stunden)
     
-    # Backup-Einstellungen
-    BACKUP_FOLDER = os.path.join(BASE_DIR, 'backups')
-    BACKUP_INTERVAL = 24  # Stunden zwischen Backups
-    
-    # Debug und Logging
-    DEBUG = False
-    TESTING = False
-    
-    # Produktionseinstellungen
-    PREFERRED_URL_SCHEME = 'https'  # Für SSL
-    SESSION_COOKIE_SECURE = True    # Cookies nur über HTTPS
-    SESSION_COOKIE_HTTPONLY = True  # Cookies nicht via JavaScript zugreifbar
-    PERMANENT_SESSION_LIFETIME = 1800  # Session-Timeout nach 30 Minuten
+    # Upload-Konfiguration
+    UPLOAD_FOLDER = os.path.join(str(Path(__file__).parent.parent), 'uploads')
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+    @staticmethod
+    def is_pythonanywhere():
+        """Prüft ob die App auf PythonAnywhere läuft"""
+        return 'PYTHONANYWHERE_SITE' in os.environ
 
     @staticmethod
     def get_project_root():
         """Gibt den absoluten Pfad zum Projektverzeichnis zurück"""
+        if 'PYTHONANYWHERE_SITE' in os.environ:
+            return '/home/aklann/Scandy'
         return str(Path(__file__).parent.parent)
-
-    @classmethod
-    def get_absolute_database_path(cls):
-        """Gibt den absoluten Pfad zur Datenbank zurück"""
-        return os.path.join(cls.get_project_root(), 'app', 'database', 'inventory.db')
 
 class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
     SESSION_COOKIE_SECURE = False
+    
+    # Entwicklungsspezifische Einstellungen
+    TEMPLATES_AUTO_RELOAD = True
+    SEND_FILE_MAX_AGE_DEFAULT = 0
 
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
+    
+    # Sicherheitseinstellungen für Produktion
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = 1800  # 30 Minuten
+    
+    # PythonAnywhere spezifische Pfade
+    DATABASE = '/home/aklann/Scandy/app/database/inventory.db'
+    BACKUP_DIR = '/home/aklann/Scandy/backups'
+    UPLOAD_FOLDER = '/home/aklann/Scandy/uploads'
 
+# Konfiguration basierend auf Umgebung wählen
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
-    'default': ProductionConfig  # Änderung auf ProductionConfig als Standard
+    'default': DevelopmentConfig if not Config.is_pythonanywhere() else ProductionConfig
 } 
