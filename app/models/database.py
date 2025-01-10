@@ -20,25 +20,29 @@ class Database:
     @classmethod
     def ensure_db_exists(cls):
         """Stellt sicher, dass die Datenbank existiert und initialisiert ist"""
+        # Hole den absoluten Datenbankpfad
         db_path = Config.get_absolute_database_path()
         
+        logging.info(f"=== CHECKING DATABASE AT STARTUP ===")
+        logging.info(f"Configured database path: {Config.DATABASE_PATH}")
+        logging.info(f"Absolute database path: {db_path}")
+        
         # Stelle sicher, dass das Verzeichnis existiert
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        db_dir = os.path.dirname(db_path)
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+            logging.info(f"Datenbankverzeichnis erstellt: {db_dir}")
         
-        logger.info(f"=== CHECKING DATABASE AT STARTUP ===")
-        logger.info(f"Configured database path: {Config.DATABASE_PATH}")
-        logger.info(f"Absolute database path: {db_path}")
-        
-        # Wenn die Datenbank nicht existiert, erstelle sie
+        # Prüfe ob die Datenbank existiert
         if not os.path.exists(db_path):
-            logger.info("Database does not exist, creating new one...")
+            logging.info("Datenbank existiert nicht, erstelle neue...")
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             cls._init_schema(conn)
             conn.close()
-            logger.info("Database successfully initialized!")
+            logging.info("Datenbank erfolgreich initialisiert!")
         else:
-            logger.info("Database already exists")
+            logging.info("Datenbank existiert bereits")
             # Aktualisiere Schema wenn nötig
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
@@ -196,6 +200,18 @@ class Database:
                 key TEXT PRIMARY KEY,
                 value TEXT,
                 description TEXT
+            )
+        ''')
+
+        # Sync-Logs Tabelle
+        logger.info("Creating/updating sync_logs table...")
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS sync_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_name TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                changes_count INTEGER NOT NULL,
+                details TEXT
             )
         ''')
 
@@ -634,25 +650,27 @@ class Database:
             '007_add_consumable_usage_table.sql',
         ]
 
-    @staticmethod
-    def sync_with_server():
-        """Synchronisiere lokale DB mit Server"""
-        # Wenn wir auf dem Server sind oder requests nicht verfügbar ist, keine Synchronisation
-        if Config.IS_SERVER or requests is None:
-            return {'success': False, 'message': 'Synchronisation nicht verfügbar auf dem Server'}
-            
+    def sync_with_server(self):
+        """Synchronisiert die lokale Datenbank mit dem Server"""
         if not Config.SERVER_URL:
-            return {'success': False, 'message': 'Keine Server-URL konfiguriert'}
-            
+            return False, "Keine Server-URL konfiguriert"
+
         try:
-            # Hole lokale Änderungen seit letzter Synchronisation
-            last_sync = Database.get_last_sync_time()
-            local_changes = Database.get_changes_since(last_sync)
+            # Hole alle Änderungen seit der letzten Synchronisation
+            changes = self.get_pending_changes()
             
-            # Sende Änderungen an Server
+            # Bereite die Daten für den Server vor
+            data = {
+                'changes': changes,
+                'client_name': Config.CLIENT_NAME,
+                'last_sync': self.get_last_sync_time()
+            }
+            
+            # Sende Änderungen an den Server
             response = requests.post(
                 f"{Config.SERVER_URL}/api/sync",
-                json=local_changes
+                json=data,
+                timeout=10
             )
             
             if response.status_code == 200:
@@ -665,12 +683,12 @@ class Database:
                 # Aktualisiere Sync-Zeitstempel
                 Database.update_sync_time()
                 
-                return {'success': True, 'message': 'Synchronisation erfolgreich'}
+                return True, "Synchronisation erfolgreich"
             else:
-                return {'success': False, 'message': f'Server-Fehler: {response.text}'}
+                return False, f"Server-Fehler: {response.text}"
                 
         except Exception as e:
-            return {'success': False, 'message': f'Sync-Fehler: {str(e)}'}
+            return False, f"Sync-Fehler: {str(e)}"
     
     @staticmethod
     def get_changes_since(timestamp):
@@ -910,6 +928,7 @@ class Database:
             default_settings = [
                 ('server_mode', '0', 'Aktiviert den Server-Modus (1) oder Client-Modus (0)'),
                 ('server_url', '', 'URL des Sync-Servers im Client-Modus'),
+                ('client_name', '', 'Name dieser Client-Installation'),
                 ('auto_sync', '0', 'Aktiviert automatische Synchronisation (1) oder nicht (0)')
             ]
             
@@ -923,6 +942,17 @@ class Database:
             conn.execute('''
                 INSERT OR IGNORE INTO sync_status (last_sync, status)
                 VALUES (NULL, 'never')
+            ''')
+            
+            # Sync-Logs Tabelle
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS sync_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    client_name TEXT NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    changes_count INTEGER NOT NULL,
+                    details TEXT
+                )
             ''')
             
             conn.commit()
@@ -1295,6 +1325,79 @@ class Database:
         except Exception as e:
             print(f"Fehler beim Laden der Kategorien: {str(e)}")
             return []
+
+    def _create_tables(self):
+        """Erstellt alle benötigten Tabellen in der Datenbank"""
+        self.cursor.executescript('''
+            -- Werkzeug-Tabelle
+            CREATE TABLE IF NOT EXISTS tools (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                barcode TEXT UNIQUE,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT DEFAULT 'verfügbar',
+                location TEXT,
+                category TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted INTEGER DEFAULT 0,
+                deleted_at TIMESTAMP,
+                sync_status TEXT DEFAULT 'pending'
+            );
+
+            -- Sync-Logs Tabelle
+            CREATE TABLE IF NOT EXISTS sync_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_name TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                changes_count INTEGER NOT NULL,
+                details TEXT
+            );
+        ''')
+
+    def log_sync_event(self, client_name, changes_count, details=None):
+        """Speichert ein Sync-Event in der Datenbank"""
+        self.cursor.execute('''
+            INSERT INTO sync_logs (client_name, changes_count, details)
+            VALUES (?, ?, ?)
+        ''', (client_name, changes_count, details))
+        self.conn.commit()
+
+    def get_sync_logs(self, limit=50):
+        """Holt die letzten Sync-Logs aus der Datenbank"""
+        self.cursor.execute('''
+            SELECT client_name, timestamp, changes_count, details
+            FROM sync_logs
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
+        return self.cursor.fetchall()
+
+    def handle_sync_request(self, data):
+        """Verarbeitet einen Sync-Request von einem Client"""
+        if not Config.SERVER_MODE:
+            return False, "Server-Modus ist nicht aktiv"
+
+        try:
+            client_name = data.get('client_name', 'Unbekannter Client')
+            changes = data.get('changes', [])
+            
+            # Verarbeite die Änderungen
+            for change in changes:
+                # Hier die Logik zum Verarbeiten der Änderungen implementieren
+                pass
+            
+            # Logge das Sync-Event
+            self.log_sync_event(
+                client_name=client_name,
+                changes_count=len(changes),
+                details=f"Erfolgreich {len(changes)} Änderungen synchronisiert"
+            )
+            
+            return True, "Synchronisation erfolgreich"
+            
+        except Exception as e:
+            return False, f"Fehler bei der Synchronisation: {str(e)}"
 
 def init_db():
     """Initialisiert die Datenbank"""

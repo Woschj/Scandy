@@ -28,4 +28,10 @@ if __name__ == "__main__":
     # Flask-App importieren und starten
     from app import create_app
     app = create_app()
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    
+    # Produktionseinstellungen
+    if os.environ.get('FLASK_ENV') == 'development':
+        app.run(debug=True, host='0.0.0.0', port=5000)
+    else:
+        # Produktionsmodus
+        app.run(debug=False, host='0.0.0.0', port=5000) 

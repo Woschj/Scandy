@@ -1,0 +1,82 @@
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">Synchronisation</h5>
+        </div>
+        <div class="card-body">
+            {% if config.SERVER_MODE %}
+                <h6>Server-Modus aktiv</h6>
+                <p>Server-URL: http://{{ config.LOCAL_IP }}:5000</p>
+                
+                <h6>Letzte Synchronisationen</h6>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Zeitpunkt</th>
+                                <th>Änderungen</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in sync_logs %}
+                            <tr>
+                                <td>{{ log.client_name }}</td>
+                                <td>{{ log.timestamp }}</td>
+                                <td>{{ log.changes_count }}</td>
+                                <td>{{ log.details }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <h6>Client-Modus aktiv</h6>
+                <form method="post" action="{{ url_for('settings.update_settings') }}">
+                    <div class="mb-3">
+                        <label for="client_name" class="form-label">Client-Name</label>
+                        <input type="text" class="form-control" id="client_name" name="client_name" 
+                               value="{{ settings.get('client_name', '') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="server_url" class="form-label">Server-URL</label>
+                        <input type="url" class="form-control" id="server_url" name="server_url" 
+                               value="{{ settings.get('server_url', '') }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sync_status" class="form-label">Sync-Status</label>
+                        <div id="sync_status">
+                            Letzte Synchronisation: {{ last_sync }}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
+                    <button type="button" class="btn btn-secondary" onclick="syncNow()">Jetzt synchronisieren</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not config.SERVER_MODE %}
+    <script>
+        function syncNow() {
+            fetch('/api/sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Synchronisation erfolgreich');
+                    location.reload();
+                } else {
+                    alert('Fehler bei der Synchronisation: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Fehler bei der Synchronisation: ' + error);
+            });
+        }
+    </script>
+    {% endif %} 
