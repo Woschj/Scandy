@@ -15,9 +15,8 @@ from app.utils.color_settings import save_color_setting
 from werkzeug.security import generate_password_hash
 from app.models.settings import Settings
 from app.config import Config
-import pandas as pd
-from io import BytesIO
 import openpyxl
+from io import BytesIO
 from pathlib import Path
 from backup import DatabaseBackup
 
@@ -682,16 +681,13 @@ def export_table(table):
         if table == 'tools':
             data = Database.query('''
                 SELECT t.*, 
-                       CASE WHEN l.returned_at IS NULL 
-                            THEN w.firstname || ' ' || w.lastname 
-                            ELSE NULL 
-                       END as current_borrower
+                       w.firstname || ' ' || w.lastname as lent_to
                 FROM tools t
                 LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
                 LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE t.deleted = 0
             ''')
-            df = pd.DataFrame(data)
+            headers = ['barcode', 'name', 'description', 'category', 'location', 'status', 'lent_to']
             filename = 'werkzeuge.xlsx'
             
         elif table == 'workers':
@@ -703,14 +699,14 @@ def export_table(table):
                 WHERE w.deleted = 0
                 GROUP BY w.id
             ''')
-            df = pd.DataFrame(data)
+            headers = ['barcode', 'firstname', 'lastname', 'department', 'active_lendings']
             filename = 'mitarbeiter.xlsx'
             
         elif table == 'consumables':
             data = Database.query('''
                 SELECT * FROM consumables WHERE deleted = 0
             ''')
-            df = pd.DataFrame(data)
+            headers = ['barcode', 'name', 'description', 'category', 'location', 'quantity', 'min_quantity']
             filename = 'verbrauchsmaterial.xlsx'
             
         elif table == 'history':
@@ -740,15 +736,27 @@ def export_table(table):
                 JOIN workers w ON cu.worker_barcode = w.barcode
                 ORDER BY lent_at DESC
             ''')
-            df = pd.DataFrame(data)
+            headers = ['type', 'item_name', 'worker_name', 'lent_at', 'returned_at', 'quantity']
             filename = 'verlauf.xlsx'
         else:
             return 'Ungültige Tabelle', 400
 
         # Excel erstellen
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        
+        # Headers schreiben
+        for col, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col, value=header)
+        
+        # Daten schreiben
+        for row_idx, row_data in enumerate(data, 2):
+            for col_idx, header in enumerate(headers, 1):
+                ws.cell(row=row_idx, column=col_idx, value=row_data.get(header))
+        
+        # Excel in BytesIO speichern
         output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
+        wb.save(output)
         output.seek(0)
         
         return send_file(
@@ -776,35 +784,45 @@ def import_table(table):
         return redirect(url_for('admin.dashboard'))
 
     try:
-        df = pd.read_excel(file)
+        # Excel-Datei in BytesIO laden
+        file_content = BytesIO(file.read())
+        wb = openpyxl.load_workbook(file_content)
+        ws = wb.active
+        
+        # Headers aus erster Zeile lesen
+        headers = [cell.value for cell in ws[1]]
         
         if table == 'tools':
-            for _, row in df.iterrows():
+            for row in ws.iter_rows(min_row=2):
+                row_data = {headers[i]: cell.value for i, cell in enumerate(row)}
                 Database.query('''
                     INSERT OR REPLACE INTO tools 
                     (barcode, name, description, category, location)
                     VALUES (?, ?, ?, ?, ?)
-                ''', [row['barcode'], row['name'], row['description'], 
-                     row.get('category'), row.get('location')])
+                ''', [row_data.get('barcode'), row_data.get('name'), 
+                     row_data.get('description'), row_data.get('category'), 
+                     row_data.get('location')])
                 
         elif table == 'workers':
-            for _, row in df.iterrows():
+            for row in ws.iter_rows(min_row=2):
+                row_data = {headers[i]: cell.value for i, cell in enumerate(row)}
                 Database.query('''
                     INSERT OR REPLACE INTO workers 
                     (barcode, firstname, lastname, department, email)
                     VALUES (?, ?, ?, ?, ?)
-                ''', [row['barcode'], row['firstname'], row['lastname'],
-                     row.get('department'), row.get('email')])
+                ''', [row_data.get('barcode'), row_data.get('firstname'), row_data.get('lastname'),
+                     row_data.get('department'), row_data.get('email')])
                 
         elif table == 'consumables':
-            for _, row in df.iterrows():
+            for row in ws.iter_rows(min_row=2):
+                row_data = {headers[i]: cell.value for i, cell in enumerate(row)}
                 Database.query('''
                     INSERT OR REPLACE INTO consumables 
                     (barcode, name, description, quantity, min_quantity, category, location)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', [row['barcode'], row['name'], row['description'],
-                     row['quantity'], row['min_quantity'],
-                     row.get('category'), row.get('location')])
+                ''', [row_data.get('barcode'), row_data.get('name'), row_data.get('description'),
+                     row_data.get('quantity'), row_data.get('min_quantity'),
+                     row_data.get('category'), row_data.get('location')])
                 
         flash(f'Import erfolgreich', 'success')
         

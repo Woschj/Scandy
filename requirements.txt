@@ -5,15 +5,7 @@ Flask-Session==0.5.0
 Flask-Login==0.6.3
 Werkzeug==2.3.8
 Jinja2==3.1.4
-click==8.1.7
-itsdangerous==2.2.0
-blinker==1.9.0
-
-# WSGI-Server (installieren Sie den passenden für Ihr System)
-# Für Windows:
 waitress==2.1.2
-# Für Unix/Linux/MacOS:
-# gunicorn==21.2.0
 
 # Datenbank und Scheduling
 APScheduler==3.9.1
@@ -22,7 +14,6 @@ APScheduler==3.9.1
 python-barcode==0.14.0
 Pillow==11.1.0
 openpyxl==3.1.2
-pandas==2.2.3
 
 # Utility-Pakete
 requests==2.31.0
@@ -32,12 +23,3 @@ pytz==2024.2
 # Komprimierung und Caching
 Brotli==1.1.0
 cachelib==0.13.0
-
-# Abhängigkeiten von anderen Paketen
-numpy==2.2.1
-six==1.17.0
-tzdata==2024.2
-charset-normalizer==3.4.1
-idna==3.10
-urllib3==2.3.0
-certifi==2024.12.14
