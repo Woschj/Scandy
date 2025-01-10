@@ -24,8 +24,8 @@ class Config:
 
     @staticmethod
     def is_pythonanywhere():
-        """Prüft ob die App auf PythonAnywhere läuft"""
-        return 'PYTHONANYWHERE_SITE' in os.environ
+        """Überprüft, ob die Anwendung auf PythonAnywhere läuft"""
+        return 'PYTHONANYWHERE_SITE' in os.environ or os.path.exists('/var/www')
 
     @staticmethod
     def get_project_root():
