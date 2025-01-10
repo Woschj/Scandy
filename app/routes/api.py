@@ -221,28 +221,24 @@ def delete_tool(barcode):
     result = db.soft_delete_tool(barcode)
     return jsonify(result)
 
-@bp.route('/sync', methods=['POST'])
-def sync():
-    """Empfange Client-Änderungen und sende Server-Änderungen"""
-    if not Config.SERVER_MODE:
-        return jsonify({'error': 'Not a server'}), 403
-        
-    try:
-        # Empfange Client-Änderungen
-        client_changes = request.get_json()
-        
-        # Wende Client-Änderungen an
-        Database.apply_changes(client_changes)
-        
-        # Hole Server-Änderungen
-        server_changes = Database.get_changes_since(
-            client_changes.get('last_sync', 0)
-        )
-        
-        return jsonify(server_changes)
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Sync-Routen temporär deaktiviert
+"""
+@bp.route('/sync/start', methods=['POST'])
+def start_sync():
+    sync_manager = current_app.extensions.get('sync_manager')
+    if sync_manager:
+        sync_manager.start_sync_scheduler()
+        return jsonify({'success': True, 'message': 'Sync-Scheduler gestartet'})
+    return jsonify({'success': False, 'message': 'Sync-Manager nicht verfügbar'})
+
+@bp.route('/sync/stop', methods=['POST'])
+def stop_sync():
+    sync_manager = current_app.extensions.get('sync_manager')
+    if sync_manager:
+        sync_manager.stop_sync_scheduler()
+        return jsonify({'success': True, 'message': 'Sync-Scheduler gestoppt'})
+    return jsonify({'success': False, 'message': 'Sync-Manager nicht verfügbar'})
+"""
 
 @bp.route('/sync/auto', methods=['POST'])
 @admin_required

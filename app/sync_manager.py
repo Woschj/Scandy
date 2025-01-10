@@ -19,7 +19,7 @@ class SyncManager:
     def start_sync_scheduler(self):
         """Startet den Scheduler für automatische Synchronisation"""
         # Nicht auf PythonAnywhere ausführen
-        if 'PYTHONANYWHERE_SITE' in os.environ or os.path.exists('/var/www'):
+        if Config.is_pythonanywhere():
             self.app.logger.info("Sync-Scheduler auf PythonAnywhere deaktiviert")
             return
 
@@ -32,4 +32,11 @@ class SyncManager:
                 id='sync_job'
             )
             self.scheduler.start()
-            self.app.logger.info(f"Sync-Scheduler gestartet (Intervall: {self.sync_interval} Sekunden)") 
+            self.app.logger.info(f"Sync-Scheduler gestartet (Intervall: {self.sync_interval} Sekunden)")
+
+    def stop_sync_scheduler(self):
+        """Stoppt den Scheduler"""
+        if self.scheduler:
+            self.scheduler.shutdown()
+            self.scheduler = None
+            self.app.logger.info("Sync-Scheduler gestoppt") 

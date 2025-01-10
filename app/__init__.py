@@ -11,9 +11,7 @@ from app.utils.db_schema import SchemaManager
 from app.utils.color_settings import get_color_settings
 from flask_compress import Compress
 from app.models.settings import Settings
-from app.sync_manager import SyncManager
 from app.utils.auth_utils import needs_setup
-from apscheduler.schedulers.background import BackgroundScheduler
 from pathlib import Path
 import sys
 
@@ -341,6 +339,8 @@ def create_app(test_config=None):
                 return redirect(url_for('auth.login', next=request.url))
 
     with app.app_context():
+        # Sync-Manager temporär deaktiviert
+        """
         # Initialisiere Sync-Manager
         sync_manager = SyncManager(app)
         app.extensions['sync_manager'] = sync_manager
@@ -375,21 +375,11 @@ def create_app(test_config=None):
                     
             except Exception as e:
                 app.logger.error(f"Fehler beim Wiederherstellen der Sync-Einstellungen: {str(e)}")
+        """
 
     # Backup-System initialisieren
     backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
     
-    # Scheduler temporär deaktiviert
-    """
-    # Scheduler nur starten, wenn wir nicht auf PythonAnywhere sind
-    if not Config.is_pythonanywhere():
-        # Scheduler für automatische Backups einrichten
-        scheduler = BackgroundScheduler()
-        scheduler.add_job(backup.create_backup, 'cron', hour=7, minute=0)  # 7:00 Uhr
-        scheduler.add_job(backup.create_backup, 'cron', hour=19, minute=0) # 19:00 Uhr
-        scheduler.start()
-    """
-
     # Stelle sicher, dass alle Verzeichnisse existieren
     ensure_directories_exist()
 

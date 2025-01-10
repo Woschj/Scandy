@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import sys
 
 class Config:
     # Basis-Konfiguration
@@ -25,7 +26,9 @@ class Config:
     @staticmethod
     def is_pythonanywhere():
         """Überprüft, ob die Anwendung auf PythonAnywhere läuft"""
-        return 'PYTHONANYWHERE_SITE' in os.environ or os.path.exists('/var/www')
+        return ('PYTHONANYWHERE_SITE' in os.environ or 
+                os.path.exists('/var/www') or 
+                any('uwsgi' in arg.lower() for arg in sys.argv))
 
     @staticmethod
     def get_project_root():
