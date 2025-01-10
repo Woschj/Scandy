@@ -345,61 +345,36 @@ def create_app(test_config=None):
         sync_manager = SyncManager(app)
         app.extensions['sync_manager'] = sync_manager
         
-        try:
-            # Prüfe Server/Client Modus
-            mode_setting = Database.query('''
-                SELECT value FROM settings 
-                WHERE key = 'server_mode'
-            ''', one=True)
-            
-            if mode_setting:
-                if bool(int(mode_setting['value'])):
-                    Config.init_server()
-                else:
-                    server_url = Database.query('''
-                        SELECT value FROM settings 
-                        WHERE key = 'server_url'
-                    ''', one=True)
-                    Config.init_client(server_url['value'] if server_url else None)
-            
-            # Prüfe Auto-Sync Einstellung
-            auto_sync = Database.query('''
-                SELECT value FROM settings 
-                WHERE key = 'auto_sync'
-            ''', one=True)
-            
-            if auto_sync and bool(int(auto_sync['value'])):
-                sync_manager.start_sync_scheduler()
+        # Nur ausführen, wenn nicht auf PythonAnywhere
+        if not Config.is_pythonanywhere():
+            try:
+                # Prüfe Server/Client Modus
+                mode_setting = Database.query('''
+                    SELECT value FROM settings 
+                    WHERE key = 'server_mode'
+                ''', one=True)
                 
-        except Exception as e:
-            app.logger.error(f"Fehler beim Wiederherstellen der Sync-Einstellungen: {str(e)}")
-
-    # Nach den anderen context_processors
-    @app.context_processor
-    def inject_config():
-        from app.config import Config  # Import hier, um Zirkelbezüge zu vermeiden
-        return {'Config': Config}
-
-    with app.app_context():
-        # Überprüfe Datenbank beim Start
-        print("\n=== CHECKING DATABASE AT STARTUP ===")
-        Database.ensure_db_exists()
-        
-        # Überprüfe Verbrauchsmaterialien
-        try:
-            count = Database.query("SELECT COUNT(*) as count FROM consumables", one=True)
-            print(f"Gefundene Verbrauchsmaterialien: {count['count']}")
-            
-            if count['count'] > 0:
-                example = Database.query("SELECT * FROM consumables LIMIT 1", one=True)
-                print("Beispiel-Datensatz:")
-                print(dict(example))
-        except Exception as e:
-            print(f"Fehler beim Datenbankcheck: {e}")
-    
-    # Jinja Filter registrieren
-    from app.utils.filters import register_filters
-    register_filters(app)
+                if mode_setting:
+                    if bool(int(mode_setting['value'])):
+                        Config.init_server()
+                    else:
+                        server_url = Database.query('''
+                            SELECT value FROM settings 
+                            WHERE key = 'server_url'
+                        ''', one=True)
+                        Config.init_client(server_url['value'] if server_url else None)
+                
+                # Prüfe Auto-Sync Einstellung
+                auto_sync = Database.query('''
+                    SELECT value FROM settings 
+                    WHERE key = 'auto_sync'
+                ''', one=True)
+                
+                if auto_sync and bool(int(auto_sync['value'])):
+                    sync_manager.start_sync_scheduler()
+                    
+            except Exception as e:
+                app.logger.error(f"Fehler beim Wiederherstellen der Sync-Einstellungen: {str(e)}")
 
     # Backup-System initialisieren
     backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
@@ -407,7 +382,6 @@ def create_app(test_config=None):
     # Scheduler temporär deaktiviert
     """
     # Scheduler nur starten, wenn wir nicht auf PythonAnywhere sind
-    from app.config import Config
     if not Config.is_pythonanywhere():
         # Scheduler für automatische Backups einrichten
         scheduler = BackgroundScheduler()
