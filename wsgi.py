@@ -1,15 +1,14 @@
+import sys
 import os
-from waitress import serve
+
+# Pfad zum Projektverzeichnis
+project_home = os.path.expanduser('~/Scandy')
+if project_home not in sys.path:
+    sys.path.insert(0, project_home)
+
+# Import der Flask-App
 from app import create_app
-
-# Setze Umgebungsvariablen für Produktion
-os.environ['FLASK_ENV'] = 'production'
-os.environ['FLASK_APP'] = 'app'
-
-# Erstelle die Anwendung
 application = create_app()
 
-if __name__ == "__main__":
-    # Starte Waitress-Server
-    print("Starting Waitress production server...")
-    serve(application, host='0.0.0.0', port=5000, threads=4)
+if __name__ == '__main__':
+    application.run()

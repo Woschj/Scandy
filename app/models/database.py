@@ -19,54 +19,38 @@ logger = logging.getLogger(__name__)
 class Database:
     @classmethod
     def ensure_db_exists(cls):
-        """Stellt sicher, dass die Datenbank existiert und initialisiert ist"""
-        # Hole den absoluten Datenbankpfad
-        db_path = Config.get_absolute_database_path()
+        """Stellt sicher, dass die Datenbank existiert"""
+        logging.info("=== CHECKING DATABASE AT STARTUP ===")
+        logging.info(f"Configured database path: {Config.DATABASE}")
         
-        logging.info(f"=== CHECKING DATABASE AT STARTUP ===")
-        logging.info(f"Configured database path: {Config.DATABASE_PATH}")
-        logging.info(f"Absolute database path: {db_path}")
+        # Absoluten Pfad ermitteln
+        db_path = Config.DATABASE
+        db_dir = os.path.dirname(db_path)
+        
+        logging.info(f"Absolute database path: {os.path.abspath(db_path)}")
         
         # Stelle sicher, dass das Verzeichnis existiert
-        db_dir = os.path.dirname(db_path)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-            logging.info(f"Datenbankverzeichnis erstellt: {db_dir}")
+        os.makedirs(db_dir, exist_ok=True)
         
-        # Prüfe ob die Datenbank existiert
-        if not os.path.exists(db_path):
-            logging.info("Datenbank existiert nicht, erstelle neue...")
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cls._init_schema(conn)
-            conn.close()
-            logging.info("Datenbank erfolgreich initialisiert!")
-        else:
+        if os.path.exists(db_path):
             logging.info("Datenbank existiert bereits")
-            # Aktualisiere Schema wenn nötig
+        else:
+            logging.info("Erstelle neue Datenbank")
             conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cls._init_schema(conn)
             conn.close()
 
     @staticmethod
     def get_db():
-        """Gibt eine Datenbankverbindung zurück"""
-        if hasattr(g, 'db'):
-            logger.debug("Reusing existing database connection")
-            return g.db
-        
-        db_path = os.path.join('app', 'database', 'inventory.db')
-        logger.debug(f"Creating new database connection to {db_path}")
-        g.db = sqlite3.connect(db_path)
-        g.db.row_factory = sqlite3.Row
-        
+        if 'db' not in g:
+            db_path = Config.DATABASE
+            g.db = sqlite3.connect(db_path)
+            g.db.row_factory = sqlite3.Row
         return g.db
 
     @staticmethod
     def get_db_connection():
         """Direkter Datenbankzugriff für Verwaltungsaufgaben"""
-        db_path = os.path.join('app', 'database', 'inventory.db')
+        db_path = Config.DATABASE
         logger.debug(f"Creating direct database connection to {db_path}")
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
@@ -234,37 +218,27 @@ class Database:
     @staticmethod
     def query(sql, params=None, one=False):
         """Führt eine Datenbankabfrage aus"""
-        logger.info("\n=== DATABASE QUERY ===")
-        logger.info(f"SQL: {sql}")
-        logger.info(f"Parameters: {params}")
-        
         try:
-            with Database.get_db() as conn:
-                if params:
-                    cursor = conn.execute(sql, params)
+            logging.info("\n=== DATABASE QUERY ===")
+            logging.info(f"SQL: {sql}")
+            logging.info(f"Parameters: {params}")
+            
+            with Database() as conn:
+                if params is None:
+                    results = conn.execute(sql).fetchall()
                 else:
-                    cursor = conn.execute(sql)
+                    results = conn.execute(sql, params).fetchall()
                 
-                if one:
-                    result = cursor.fetchone()
+                if results:
+                    logging.info(f"Number of results: {len(results)}")
+                    logging.info(f"Example record: {dict(results[0])}")
                 else:
-                    result = cursor.fetchall()
-                    
-                logger.info(f"Number of results: {len(result) if result else 0}")
-                if result and len(result) > 0:
-                    logger.info(f"Example record: {dict(result[0] if not one else result)}")
-                else:
-                    logger.info("No results found")
-                    
-                return result
+                    logging.info("No results returned")
+                
+                return (results[0] if results else None) if one else results
                 
         except Exception as e:
-            logger.error(f"\nDatabase error:")
-            logger.error(f"Type: {type(e)}")
-            logger.error(f"Message: {str(e)}")
-            import traceback
-            logger.error("Traceback:")
-            logger.error(traceback.format_exc())
+            logging.error(f"Database error: {str(e)}")
             raise
 
     def create_lending(self, tool_barcode, worker_barcode):
@@ -1465,7 +1439,7 @@ def close_db(e=None):
 
 def show_db_structure():
     """Zeigt die Struktur der Datenbank an"""
-    db = get_db_connection()
+    db = Database.get_db_connection()
     cursor = db.cursor()
     
     # Tabellen auflisten
@@ -1487,13 +1461,9 @@ def show_db_structure():
     db.close()
     return structure
 
-def get_db_connection():
-    return Database.get_db_connection()
-
 __all__ = [
     'Database', 
     'BaseModel',
-    'get_db_connection',
     'init_database',
     'close_db',
     'show_db_structure'
