@@ -404,6 +404,8 @@ def create_app(test_config=None):
     # Backup-System initialisieren
     backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
     
+    # Scheduler temporär deaktiviert
+    """
     # Scheduler nur starten, wenn wir nicht auf PythonAnywhere sind
     from app.config import Config
     if not Config.is_pythonanywhere():
@@ -412,6 +414,7 @@ def create_app(test_config=None):
         scheduler.add_job(backup.create_backup, 'cron', hour=7, minute=0)  # 7:00 Uhr
         scheduler.add_job(backup.create_backup, 'cron', hour=19, minute=0) # 19:00 Uhr
         scheduler.start()
+    """
 
     # Stelle sicher, dass alle Verzeichnisse existieren
     ensure_directories_exist()
