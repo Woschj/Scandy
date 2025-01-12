@@ -27,6 +27,7 @@ def login():
                             [username], one=True)
         
         if user and check_password_hash(user['password'], password):
+            session.clear()
             session['is_admin'] = True
             session['user_id'] = user['id']
             session['username'] = user['username']
@@ -34,9 +35,13 @@ def login():
             # Hole die next URL aus den Argumenten
             next_url = request.args.get('next')
             
-            # Wenn keine next URL vorhanden oder ungültig, gehe zur Hauptseite
-            if not next_url or not next_url.startswith('/'):
+            # Wenn keine next URL vorhanden, gehe zur Hauptseite
+            if not next_url:
                 next_url = url_for('tools.index')
+            elif '//' in next_url:  # Wenn es eine vollständige URL ist
+                # Extrahiere den Pfad
+                parsed = urlparse(next_url)
+                next_url = parsed.path or url_for('tools.index')
                 
             return redirect(next_url)
             
