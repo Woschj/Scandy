@@ -20,26 +20,25 @@ def login():
         return redirect(url_for('auth.setup'))
     
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-        user = Database.query(
-            'SELECT * FROM users WHERE username = ?',
-            [username],
-            one=True
-        )
+        user = Database.query('SELECT * FROM users WHERE username = ?', 
+                            [username], one=True)
         
         if user and check_password_hash(user['password'], password):
-            session.clear()
+            session['is_admin'] = True
             session['user_id'] = user['id']
             session['username'] = user['username']
-            session['is_admin'] = (user['role'] == 'admin')
             
-            next_page = request.args.get('next')
-            if not next_page or urlparse(next_page).netloc != '':
-                next_page = url_for('index')
+            # Hole die next URL aus den Argumenten
+            next_url = request.args.get('next')
+            
+            # Wenn keine next URL vorhanden oder ungültig, gehe zur Hauptseite
+            if not next_url or not next_url.startswith('/'):
+                next_url = url_for('tools.index')
                 
-            return redirect(next_page)
+            return redirect(next_url)
             
         flash('Ungültiger Benutzername oder Passwort', 'error')
     

@@ -273,20 +273,26 @@ def create_app(test_config=None):
         
         # Wenn auf Render, lade Demo-Daten
         if os.environ.get('RENDER') == 'true':
-            from app.models.demo_data import load_demo_data
-            load_demo_data()
-            print("Demo-Daten wurden geladen")
-        else:
-            # Versuche das letzte Backup wiederherzustellen
-            backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
-            latest_backup = "inventory_20250110_190000.db"
-            if backup.restore_backup(latest_backup):
-                print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+            demo_data_lock = os.path.join(app.instance_path, 'demo_data.lock')
+            if not os.path.exists(demo_data_lock):
+                from app.models.demo_data import load_demo_data
+                load_demo_data()
+                print("Demo-Daten wurden geladen")
+                # Erstelle Lock-Datei
+                os.makedirs(app.instance_path, exist_ok=True)
+                with open(demo_data_lock, 'w') as f:
+                    f.write('1')
             else:
-                print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
-                if not init_db():
-                    print("Fehler bei der Datenbankinitialisierung")
-                    return None
+                # Versuche das letzte Backup wiederherzustellen
+                backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
+                latest_backup = "inventory_20250110_190000.db"
+                if backup.restore_backup(latest_backup):
+                    print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+                else:
+                    print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
+                    if not init_db():
+                        print("Fehler bei der Datenbankinitialisierung")
+                        return None
 
         # Initialisiere die Benutzer-Tabelle wenn nötig
         if needs_setup():
