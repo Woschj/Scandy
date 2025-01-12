@@ -12,6 +12,7 @@ from app.utils.color_settings import get_color_settings
 from flask_compress import Compress
 from app.models.settings import Settings
 from app.utils.auth_utils import needs_setup
+from app.models.init_db import init_db
 from pathlib import Path
 import sys
 
