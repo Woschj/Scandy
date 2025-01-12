@@ -271,17 +271,22 @@ def create_app(test_config=None):
         # Stelle sicher, dass das Datenbankverzeichnis existiert
         Database.ensure_db_exists()
         
-        # Versuche das letzte Backup wiederherzustellen
-        backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
-        latest_backup = "inventory_20250110_190000.db"  # Das neueste Backup von gestern
-        if backup.restore_backup(latest_backup):
-            print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+        # Wenn auf Render, lade Demo-Daten
+        if os.environ.get('RENDER') == 'true':
+            from app.models.demo_data import load_demo_data
+            load_demo_data()
+            print("Demo-Daten wurden geladen")
         else:
-            print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
-            # Initialisiere die Datenbankstruktur
-            if not init_db():
-                print("Fehler bei der Datenbankinitialisierung")
-                return None
+            # Versuche das letzte Backup wiederherzustellen
+            backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
+            latest_backup = "inventory_20250110_190000.db"
+            if backup.restore_backup(latest_backup):
+                print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+            else:
+                print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
+                if not init_db():
+                    print("Fehler bei der Datenbankinitialisierung")
+                    return None
 
         # Initialisiere die Benutzer-Tabelle wenn nötig
         if needs_setup():
