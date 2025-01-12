@@ -339,6 +339,143 @@ class Database:
         def close_db(error):
             cls.close_connection()
 
+    @staticmethod
+    def cleanup_sync_tables():
+        """Bereinigt die Sync-bezogenen Tabellen"""
+        conn = Database.get_db()
+        cursor = conn.cursor()
+        
+        # Lösche alle Sync-bezogenen Tabellen
+        cursor.execute("DROP TABLE IF EXISTS sync_status")
+        cursor.execute("DROP TABLE IF EXISTS sync_logs")
+        
+        # Entferne sync_status aus anderen Tabellen
+        tables = ['tools', 'workers', 'consumables', 'lendings', 'consumable_usages']
+        for table in tables:
+            cursor.execute(f"UPDATE {table} SET sync_status = NULL")
+        
+        conn.commit()
+        print("Sync-Tabellen wurden bereinigt")
+
+    @staticmethod
+    def debug_db_contents():
+        """Gibt Debug-Informationen über den Datenbankinhalt aus"""
+        conn = Database.get_db()
+        cursor = conn.cursor()
+        
+        # Hole alle Tabellennamen
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = cursor.fetchall()
+        
+        print("\n=== DATENBANK DEBUG AUSGABE ===")
+        for (table_name,) in tables:
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = cursor.fetchone()[0]
+            print(f"\n=== Tabelle {table_name} ===")
+            print(f"Anzahl Einträge: {count}")
+            
+            if count > 0:
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 1")
+                columns = [description[0] for description in cursor.description]
+                print(f"Spalten: {', '.join(columns)}")
+                
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 5")
+                rows = cursor.fetchall()
+                print("\nEinträge (max. 5):")
+                for row in rows:
+                    row_dict = dict(row)
+                    formatted_row = {}
+                    for key, value in row_dict.items():
+                        if isinstance(value, str) and len(value) > 50:
+                            formatted_row[key] = value[:47] + "..."
+                        else:
+                            formatted_row[key] = value
+                    print(f"  {formatted_row}")
+                print("-" * 80)
+
+    @staticmethod
+    def fix_users_table():
+        """Korrigiert die Benutzer-Tabelle"""
+        conn = Database.get_db()
+        cursor = conn.cursor()
+        
+        # Prüfe ob role-Spalte existiert
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'role' not in columns:
+            # Erstelle temporäre Tabelle
+            cursor.execute('''
+                CREATE TABLE users_temp (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL
+                )
+            ''')
+            
+            # Kopiere Daten
+            cursor.execute("INSERT INTO users_temp (id, username, password) SELECT id, username, password FROM users")
+            
+            # Lösche alte Tabelle
+            cursor.execute("DROP TABLE users")
+            
+            # Erstelle neue Tabelle
+            cursor.execute('''
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL UNIQUE,
+                    password TEXT NOT NULL
+                )
+            ''')
+            
+            # Kopiere Daten zurück
+            cursor.execute("INSERT INTO users SELECT * FROM users_temp")
+            
+            # Lösche temporäre Tabelle
+            cursor.execute("DROP TABLE users_temp")
+        
+        conn.commit()
+        print("Benutzer-Tabelle wurde korrigiert")
+
+    @staticmethod
+    def fix_consumable_usages():
+        """Korrigiert die Materialverbrauchsdaten"""
+        conn = Database.get_db()
+        cursor = conn.cursor()
+        
+        # Lösche ungültige Einträge (worker_barcode = 'admin')
+        cursor.execute("""
+            DELETE FROM consumable_usages 
+            WHERE worker_barcode = 'admin'
+        """)
+        
+        # Prüfe auf weitere ungültige worker_barcodes
+        cursor.execute("""
+            DELETE FROM consumable_usages 
+            WHERE worker_barcode NOT IN (
+                SELECT barcode FROM workers WHERE deleted = 0
+            )
+        """)
+        
+        conn.commit()
+        print("Materialverbrauchsdaten wurden korrigiert")
+
+    @staticmethod
+    def fix_config_paths():
+        """Korrigiert die Pfade in der Konfiguration"""
+        conn = Database.get_db()
+        cursor = conn.cursor()
+        
+        # Aktualisiere alle Pfade in den Einstellungen
+        cursor.execute("""
+            UPDATE settings 
+            SET value = REPLACE(value, '/home/aklann/Scandy/', '')
+            WHERE value LIKE '%/home/aklann/Scandy/%'
+        """)
+        
+        conn.commit()
+        print("Konfigurationspfade wurden korrigiert")
+
 class BaseModel:
     """Basisklasse für alle Datenbankmodelle"""
     TABLE_NAME = None
