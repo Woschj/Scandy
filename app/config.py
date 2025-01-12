@@ -3,11 +3,22 @@ from pathlib import Path
 import sys
 
 class Config:
+    """Basis-Konfiguration"""
+    
+    # Bestimme Basis-Verzeichnis
+    BASE_DIR = Path(__file__).parent.parent
+    
+    # Plattformunabhängige Pfade
+    DATABASE_DIR = BASE_DIR / 'app' / 'database'
+    DATABASE = str(DATABASE_DIR / 'inventory.db')
+    BACKUP_DIR = BASE_DIR / 'backups'
+    
+    # Stelle sicher dass die Verzeichnisse existieren
+    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    
     # Basis-Konfiguration
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev'
-    
-    # Datenbank-Konfiguration
-    DATABASE = os.path.join(str(Path(__file__).parent.parent), 'app', 'database', 'inventory.db')
     
     # Server-Konfiguration
     SERVER_MODE = False  # Standard: Client-Modus
@@ -16,11 +27,10 @@ class Config:
     CLIENT_NAME = os.environ.get('CLIENT_NAME', 'default_client')
     
     # Backup-Konfiguration
-    BACKUP_DIR = os.path.join(str(Path(__file__).parent.parent), 'backups')
     BACKUP_INTERVAL = 86400  # Backup-Intervall in Sekunden (24 Stunden)
     
     # Upload-Konfiguration
-    UPLOAD_FOLDER = os.path.join(str(Path(__file__).parent.parent), 'uploads')
+    UPLOAD_FOLDER = BASE_DIR / 'uploads'
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
     @staticmethod

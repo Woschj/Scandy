@@ -174,18 +174,45 @@ class DatabaseBackup:
                 logger.error(f"Backup nicht gefunden: {backup_name}")
                 return False
 
-            # Erstelle ein Backup der aktuellen Datenbank vor der Wiederherstellung
-            self.create_backup()
-
             logger.info(f"Stelle Backup wieder her: {backup_name}")
             
             # Stelle sicher, dass das Datenbankverzeichnis existiert
             self.db_path.parent.mkdir(exist_ok=True)
             
+            # Schließe alle bestehenden Datenbankverbindungen
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    conn.close()
+            except:
+                pass
+                
             # Kopiere das Backup über die aktuelle Datenbank
             shutil.copy2(backup_path, self.db_path)
-            logger.info(f"Backup erfolgreich wiederhergestellt: {backup_name}")
-            return True
+            
+            # Setze Berechtigungen
+            os.chmod(self.db_path, 0o666)
+            
+            # Teste die wiederhergestellte Datenbank
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    cursor = conn.cursor()
+                    # Teste ob die wichtigsten Tabellen existieren
+                    tables = ['tools', 'consumables', 'workers', 'lendings', 'consumable_usages']
+                    for table in tables:
+                        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                        count = cursor.fetchone()[0]
+                        logger.info(f"Tabelle {table} enthält {count} Einträge")
+                logger.info(f"Backup erfolgreich wiederhergestellt und getestet: {backup_name}")
+                
+                # Signalisiere dass ein Neustart nötig ist
+                restart_flag = self.base_dir / 'tmp' / 'needs_restart'
+                restart_flag.parent.mkdir(exist_ok=True)
+                restart_flag.touch()
+                
+                return True
+            except Exception as e:
+                logger.error(f"Fehler beim Testen der wiederhergestellten Datenbank: {str(e)}")
+                return False
 
         except Exception as e:
             logger.error(f"Fehler bei der Wiederherstellung des Backups: {str(e)}")

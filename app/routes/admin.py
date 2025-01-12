@@ -241,7 +241,8 @@ def dashboard():
 
         return render_template('admin/dashboard.html', 
                              stats=stats,
-                             backups=backups)
+                             backups=backups,
+                             Config=Config)
                              
     except Exception as e:
         logger.error(f"Fehler im Admin-Dashboard: {str(e)}")
@@ -250,7 +251,8 @@ def dashboard():
         flash('Fehler beim Laden des Dashboards', 'error')
         return render_template('admin/dashboard.html', 
                              stats={},
-                             backups=[])
+                             backups=[],
+                             Config=Config)
 
 def get_consumable_trend():
     """Hole die Top 5 Materialverbrauch der letzten 7 Tage"""

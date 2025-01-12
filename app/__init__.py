@@ -258,8 +258,35 @@ def create_app(test_config=None):
                 'accent': '174 60% 51%'
             }}
 
+    # Context Processor für Config
+    @app.context_processor
+    def inject_config():
+        return {'Config': Config}
+
     # Stelle sicher, dass die Datenbank existiert und initialisiert ist
-    Database.ensure_db_exists()
+    with app.app_context():
+        # Initialisiere Datenbankverbindung
+        Database.init_app(app)
+        
+        # Stelle sicher, dass das Datenbankverzeichnis existiert
+        Database.ensure_db_exists()
+        
+        # Versuche das letzte Backup wiederherzustellen
+        backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
+        latest_backup = "inventory_20250110_190000.db"  # Das neueste Backup von gestern
+        if backup.restore_backup(latest_backup):
+            print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+        else:
+            print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
+            # Initialisiere die Datenbankstruktur
+            if not init_db():
+                print("Fehler bei der Datenbankinitialisierung")
+                return None
+
+        # Initialisiere die Benutzer-Tabelle wenn nötig
+        if needs_setup():
+            from app.models.init_db import init_users
+            init_users()
 
     # Cache-Einstellungen
     @app.after_request
@@ -382,5 +409,36 @@ def create_app(test_config=None):
     
     # Stelle sicher, dass alle Verzeichnisse existieren
     ensure_directories_exist()
+
+    # Prüfe ob ein Neustart nach Backup-Wiederherstellung nötig ist
+    restart_flag = Path(app.root_path).parent / 'tmp' / 'needs_restart'
+    if restart_flag.exists():
+        try:
+            restart_flag.unlink()  # Lösche die Flag-Datei
+            # Importiere die nötigen Module für den Neustart
+            from werkzeug.serving import run_simple
+            import socket
+            
+            # Hole den aktuellen Port
+            port = 5000  # Standard-Port
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind(('localhost', 0))
+                port = sock.getsockname()[1]
+                sock.close()
+            except:
+                pass
+                
+            # Starte den Server neu
+            def restart_server():
+                run_simple('0.0.0.0', port, app, use_reloader=False)
+                
+            from threading import Timer
+            Timer(1.0, restart_server).start()  # Warte 1 Sekunde vor dem Neustart
+            
+            return app
+            
+        except Exception as e:
+            logging.error(f"Fehler beim Neustart des Servers: {str(e)}")
 
     return app
