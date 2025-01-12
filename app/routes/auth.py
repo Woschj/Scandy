@@ -22,6 +22,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        next_url = request.form.get('next', '')
         
         user = Database.query('SELECT * FROM users WHERE username = ?', 
                             [username], one=True)
@@ -32,18 +33,19 @@ def login():
             session['user_id'] = user['id']
             session['username'] = user['username']
             
-            # Hole die next URL aus den Argumenten
-            next_url = request.args.get('next')
-            
-            # Wenn keine next URL vorhanden, gehe zur Hauptseite
+            # Wenn keine next URL vorhanden oder ungültig, gehe zur Hauptseite
             if not next_url:
-                next_url = url_for('tools.index')
-            elif '//' in next_url:  # Wenn es eine vollständige URL ist
-                # Extrahiere den Pfad
-                parsed = urlparse(next_url)
-                next_url = parsed.path or url_for('tools.index')
+                return redirect(url_for('tools.index'))
                 
-            return redirect(next_url)
+            # Extrahiere den Pfad aus der URL
+            parsed = urlparse(next_url)
+            path = parsed.path or '/'
+            
+            # Wenn der Pfad mit der aktuellen Domain beginnt, entferne sie
+            if path.startswith(request.host_url):
+                path = path[len(request.host_url):]
+                
+            return redirect(path if path.startswith('/') else '/')
             
         flash('Ungültiger Benutzername oder Passwort', 'error')
     

@@ -16,7 +16,9 @@
                 {% endif %}
             {% endwith %}
             
-            <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next')) }}" class="space-y-4">
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+                
                 <div class="form-control">
                     <label class="label">
                         <span class="label-text">Benutzername</span>
