@@ -19,34 +19,35 @@ def login():
     if needs_setup() and not request.endpoint == 'auth.setup':
         return redirect(url_for('auth.setup'))
     
+    # Wenn bereits eingeloggt, direkt zur Hauptseite
+    if session.get('is_admin') and session.get('user_id'):
+        return redirect(url_for('admin.dashboard'))
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        next_url = request.form.get('next', '')
+        
+        print(f"Login-Versuch für: {username}")  # Debug
         
         user = Database.query('SELECT * FROM users WHERE username = ?', 
                             [username], one=True)
         
-        if user and check_password_hash(user['password'], password):
-            session.clear()
-            session['is_admin'] = True
-            session['user_id'] = user['id']
-            session['username'] = user['username']
+        print(f"Gefundener Benutzer: {user}")  # Debug
+        
+        if user:
+            is_valid = check_password_hash(user['password'], password)
+            print(f"Passwort-Check: {is_valid}")  # Debug
             
-            # Wenn keine next URL vorhanden oder ungültig, gehe zur Hauptseite
-            if not next_url:
-                return redirect(url_for('tools.index'))
-                
-            # Extrahiere den Pfad aus der URL
-            parsed = urlparse(next_url)
-            path = parsed.path or '/'
-            
-            # Wenn der Pfad mit der aktuellen Domain beginnt, entferne sie
-            if path.startswith(request.host_url):
-                path = path[len(request.host_url):]
-                
-            return redirect(path if path.startswith('/') else '/')
-            
+            if is_valid:
+                session.clear()
+                session['is_admin'] = True
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                print(f"Login erfolgreich, Session: {dict(session)}")  # Debug
+                return redirect(url_for('admin.dashboard'))
+            else:
+                print(f"Passwort falsch für Benutzer: {username}")  # Debug
+        
         flash('Ungültiger Benutzername oder Passwort', 'error')
     
     return render_template('auth/login.html')

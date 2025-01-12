@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from app.models.database import Database
+from app.models.init_db import init_users
+from werkzeug.security import generate_password_hash
 
 def load_demo_data():
     """Lädt konsistente Demo-Daten in die Datenbank"""
@@ -11,7 +13,7 @@ def load_demo_data():
     one_week = timedelta(weeks=1)
     
     with Database.get_db() as db:
-        # Lösche existierende Daten
+        # Lösche existierende Daten außer users
         tables = ['settings', 'tools', 'consumables', 'workers', 'lendings', 'consumable_usages', 'tool_status_changes']
         for table in tables:
             db.execute(f"DELETE FROM {table}")
