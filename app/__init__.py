@@ -61,7 +61,7 @@ def create_app(test_config=None):
                 static_url_path='/static')
     
     # Session-Konfiguration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')  # Produktionskey über Umgebungsvariable
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')
     app.config['SESSION_TYPE'] = 'filesystem'
     Session(app)
     
@@ -74,9 +74,6 @@ def create_app(test_config=None):
     # Verzeichnisse erstellen falls nicht vorhanden
     os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(os.path.join(app.instance_path, 'uploads'), exist_ok=True)
-    
-    # Datenbank initialisieren
-    init_database_users(app)
     
     # Blueprints registrieren
     from app.routes import main, auth, admin, tools, workers, consumables, lending, dashboard, history, quick_scan
@@ -105,35 +102,40 @@ def create_app(test_config=None):
     
     # Wenn auf Render, lade Demo-Daten
     if os.environ.get('RENDER') == 'true':
-        demo_data_lock = os.path.join(app.instance_path, 'demo_data.lock')
-        if not os.path.exists(demo_data_lock):
-            # Lösche vorhandene Benutzer
-            with Database.get_db() as db:
-                db.execute("DELETE FROM users")
-                db.commit()
-                print("Vorhandene Benutzer gelöscht")
-            
-            # Erstelle Admin-Benutzer
-            from app.models.init_db import init_users
-            if init_users('admin'):
-                print("Admin-Benutzer für Render erstellt (admin/admin)")
-            
-            # Demo-Daten laden
-            from app.models.demo_data import load_demo_data
-            load_demo_data()
-            print("Demo-Daten wurden geladen")
-            
-            # Erstelle Lock-Datei
-            os.makedirs(app.instance_path, exist_ok=True)
-            with open(demo_data_lock, 'w') as f:
-                f.write('1')
-        else:
-            # Versuche das letzte Backup wiederherzustellen
-            backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
-            latest_backup = "inventory_20250110_190000.db"
-            if backup.restore_backup(latest_backup):
-                print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+        with app.app_context():
+            demo_data_lock = os.path.join(app.instance_path, 'demo_data.lock')
+            if not os.path.exists(demo_data_lock):
+                # Lösche vorhandene Benutzer
+                with Database.get_db() as db:
+                    db.execute("DELETE FROM users")
+                    db.commit()
+                    print("Vorhandene Benutzer gelöscht")
+                
+                # Erstelle Admin-Benutzer
+                from app.models.init_db import init_users
+                if init_users(app, 'admin'):
+                    print("Admin-Benutzer für Render erstellt (admin/admin)")
+                
+                # Demo-Daten laden
+                from app.models.demo_data import load_demo_data
+                load_demo_data()
+                print("Demo-Daten wurden geladen")
+                
+                # Erstelle Lock-Datei
+                os.makedirs(app.instance_path, exist_ok=True)
+                with open(demo_data_lock, 'w') as f:
+                    f.write('1')
             else:
-                print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
+                # Versuche das letzte Backup wiederherzustellen
+                backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
+                latest_backup = "inventory_20250110_190000.db"
+                if backup.restore_backup(latest_backup):
+                    print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
+                else:
+                    print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
+    
+    # Datenbank initialisieren
+    with app.app_context():
+        init_database_users(app)
     
     return app
