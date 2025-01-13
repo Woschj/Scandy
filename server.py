@@ -1,6 +1,7 @@
 import os
 import logging
-from app.models.database import Database, init_db
+from app.models.database import Database
+from app.models.init_db import init_users
 
 def list_app_files():
     logging.info("=================")

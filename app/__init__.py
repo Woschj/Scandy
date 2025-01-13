@@ -12,7 +12,7 @@ from app.utils.color_settings import get_color_settings
 from flask_compress import Compress
 from app.models.settings import Settings
 from app.utils.auth_utils import needs_setup
-from app.models.init_db import init_db
+from app.models.init_db import init_users as init_database_users
 from pathlib import Path
 import sys
 
@@ -56,7 +56,14 @@ def ensure_directories_exist():
 
 def create_app(test_config=None):
     """Erstellt und konfiguriert die Flask-Anwendung"""
-    app = Flask(__name__)
+    app = Flask(__name__, 
+                static_folder='static',
+                static_url_path='/static')
+    
+    # Session-Konfiguration
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')  # Produktionskey über Umgebungsvariable
+    app.config['SESSION_TYPE'] = 'filesystem'
+    Session(app)
     
     # Konfiguration laden
     if test_config is None:
@@ -69,7 +76,32 @@ def create_app(test_config=None):
     os.makedirs(os.path.join(app.instance_path, 'uploads'), exist_ok=True)
     
     # Datenbank initialisieren
-    init_db(app)
+    init_database_users(app)
+    
+    # Blueprints registrieren
+    from app.routes import main, auth, admin, tools, workers, consumables, lending, dashboard, history, quick_scan
+    app.register_blueprint(main.bp)
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(admin.bp)
+    app.register_blueprint(tools.bp)
+    app.register_blueprint(workers.bp)
+    app.register_blueprint(consumables.bp)
+    app.register_blueprint(lending.bp)
+    app.register_blueprint(dashboard.bp)
+    app.register_blueprint(history.bp)
+    app.register_blueprint(quick_scan.bp)
+    
+    # Fehlerbehandlung registrieren
+    handle_errors(app)
+    
+    # Filter registrieren
+    register_filters(app)
+    
+    # Komprimierung aktivieren
+    Compress(app)
+    
+    # Stelle sicher, dass alle Verzeichnisse existieren
+    ensure_directories_exist()
     
     # Wenn auf Render, lade Demo-Daten
     if os.environ.get('RENDER') == 'true':
@@ -103,6 +135,5 @@ def create_app(test_config=None):
                 print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
             else:
                 print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
-                if not init_db():
-                    print("Fehler bei der Datenbankinitialisierung")
-                    return None
+    
+    return app
