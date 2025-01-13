@@ -1,7 +1,7 @@
 {% extends "shared/list_base.html" %}
 
 {% block actions %}
-{% if is_admin %}
+{% if session.get('is_admin') %}
 <div class="flex gap-2">
     <a href="{{ url_for('tools.add') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Neues Werkzeug
