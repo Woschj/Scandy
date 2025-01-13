@@ -83,36 +83,90 @@
                 </div>
                 <form id="addLocationForm" class="mb-4">
                     <div class="flex gap-2">
-                        <input type="text" name="location" placeholder="Neuer Standort" 
-                               class="input input-bordered input-sm flex-grow" required>
-                        <button type="submit" class="btn btn-primary btn-sm">
+                        <div class="flex-grow">
+                            <input type="text" name="location" placeholder="Neuer Standort" 
+                                   class="input input-bordered input-sm w-full" required>
+                            <div class="flex gap-2 mt-2">
+                                <label class="cursor-pointer label gap-2">
+                                    <input type="checkbox" name="tools" class="checkbox checkbox-sm checkbox-primary">
+                                    <span class="label-text">Für Werkzeuge verfügbar</span>
+                                </label>
+                                <label class="cursor-pointer label gap-2">
+                                    <input type="checkbox" name="consumables" class="checkbox checkbox-sm checkbox-secondary">
+                                    <span class="label-text">Für Verbrauchsmaterial verfügbar</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm self-start">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
                 </form>
-                <div class="mb-2">
-                    <input type="text" 
-                           id="locationSearch" 
-                           placeholder="Standort suchen..." 
-                           class="input input-bordered input-sm w-full"
-                           oninput="LocationManager.filterLocations(this.value)">
-                </div>
-                <div class="overflow-x-auto h-[300px] overflow-y-auto">
+                <div class="overflow-x-auto">
                     <table class="table table-compact w-full">
-                        <thead class="sticky top-0 bg-base-100">
+                        <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Verwendung</th>
+                                <th>Verfügbar für</th>
                                 <th class="text-right">Aktionen</th>
                             </tr>
                         </thead>
                         <tbody id="locationsList">
-                            <!-- Wird per JavaScript gefüllt -->
+                            <!-- Template für Standorte -->
+                            <template id="locationRowTemplate">
+                                <tr>
+                                    <td class="name"></td>
+                                    <td class="badges">
+                                        <span class="tools-badge badge badge-primary mr-1" style="display: none">Werkzeuge</span>
+                                        <span class="consumables-badge badge badge-secondary" style="display: none">Verbrauchsmaterial</span>
+                                    </td>
+                                    <td class="text-right">
+                                        <button class="btn btn-info btn-xs edit-btn mr-1">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-error btn-xs delete-btn">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- Modal für Standort bearbeiten -->
+        <dialog id="editLocationModal" class="modal">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">Standort bearbeiten</h3>
+                <form id="editLocationForm">
+                    <input type="hidden" name="originalName">
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">Name</span>
+                        </label>
+                        <input type="text" name="location" class="input input-bordered w-full" required>
+                    </div>
+                    <div class="form-control">
+                        <label class="cursor-pointer label">
+                            <span class="label-text">Für Werkzeuge verfügbar</span>
+                            <input type="checkbox" name="tools" class="checkbox checkbox-primary">
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="cursor-pointer label">
+                            <span class="label-text">Für Verbrauchsmaterial verfügbar</span>
+                            <input type="checkbox" name="consumables" class="checkbox checkbox-secondary">
+                        </label>
+                    </div>
+                    <div class="modal-action">
+                        <button type="submit" class="btn btn-primary">Speichern</button>
+                        <button type="button" class="btn" onclick="editLocationModal.close()">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
 
         <!-- Kategorieverwaltung -->
         <div class="card bg-base-100 shadow-xl">
@@ -125,36 +179,90 @@
                 </div>
                 <form id="addCategoryForm" class="mb-4">
                     <div class="flex gap-2">
-                        <input type="text" name="category" placeholder="Neue Kategorie" 
-                               class="input input-bordered input-sm flex-grow" required>
-                        <button type="submit" class="btn btn-primary btn-sm">
+                        <div class="flex-grow">
+                            <input type="text" name="category" placeholder="Neue Kategorie" 
+                                   class="input input-bordered input-sm w-full" required>
+                            <div class="flex gap-2 mt-2">
+                                <label class="cursor-pointer label gap-2">
+                                    <input type="checkbox" name="tools" class="checkbox checkbox-sm checkbox-primary">
+                                    <span class="label-text">Für Werkzeuge verfügbar</span>
+                                </label>
+                                <label class="cursor-pointer label gap-2">
+                                    <input type="checkbox" name="consumables" class="checkbox checkbox-sm checkbox-secondary">
+                                    <span class="label-text">Für Verbrauchsmaterial verfügbar</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm self-start">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
                 </form>
-                <div class="mb-2">
-                    <input type="text" 
-                           id="categorySearch" 
-                           placeholder="Kategorie suchen..." 
-                           class="input input-bordered input-sm w-full"
-                           oninput="CategoryManager.filterCategories(this.value)">
-                </div>
-                <div class="overflow-x-auto h-[300px] overflow-y-auto">
+                <div class="overflow-x-auto">
                     <table class="table table-compact w-full">
-                        <thead class="sticky top-0 bg-base-100">
+                        <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Verwendung</th>
+                                <th>Verfügbar für</th>
                                 <th class="text-right">Aktionen</th>
                             </tr>
                         </thead>
                         <tbody id="categoriesList">
-                            <!-- Wird per JavaScript gefüllt -->
+                            <!-- Template für Kategorien -->
+                            <template id="categoryRowTemplate">
+                                <tr>
+                                    <td class="name"></td>
+                                    <td class="badges">
+                                        <span class="tools-badge badge badge-primary mr-1" style="display: none">Werkzeuge</span>
+                                        <span class="consumables-badge badge badge-secondary" style="display: none">Verbrauchsmaterial</span>
+                                    </td>
+                                    <td class="text-right">
+                                        <button class="btn btn-info btn-xs edit-btn mr-1">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-error btn-xs delete-btn">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- Modal für Kategorie bearbeiten -->
+        <dialog id="editCategoryModal" class="modal">
+            <div class="modal-box">
+                <h3 class="font-bold text-lg mb-4">Kategorie bearbeiten</h3>
+                <form id="editCategoryForm">
+                    <input type="hidden" name="originalName">
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text">Name</span>
+                        </label>
+                        <input type="text" name="category" class="input input-bordered w-full" required>
+                    </div>
+                    <div class="form-control">
+                        <label class="cursor-pointer label">
+                            <span class="label-text">Für Werkzeuge verfügbar</span>
+                            <input type="checkbox" name="tools" class="checkbox checkbox-primary">
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="cursor-pointer label">
+                            <span class="label-text">Für Verbrauchsmaterial verfügbar</span>
+                            <input type="checkbox" name="consumables" class="checkbox checkbox-secondary">
+                        </label>
+                    </div>
+                    <div class="modal-action">
+                        <button type="submit" class="btn btn-primary">Speichern</button>
+                        <button type="button" class="btn" onclick="editCategoryModal.close()">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+        </dialog>
     </div>
 
     <!-- Wichtige Übersichten -->
@@ -210,15 +318,31 @@
         </div>
     </div>
 
-    <!-- Verbrauchstrend -->
+    <!-- Bestandsprognose -->
     <div class="card bg-base-100 shadow-xl mb-8">
         <div class="card-body">
             <h2 class="card-title">
                 <i class="fas fa-chart-line text-primary"></i>
-                Top 5 Materialverbrauch (letzte 7 Tage)
+                Bestandsprognose Verbrauchsgüter
             </h2>
-            <div style="height: 200px">
-                <canvas id="consumableTrendChart"></canvas>
+            <p class="text-sm text-base-content/70">Basierend auf dem durchschnittlichen Verbrauch der letzten 30 Tage</p>
+            
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                {% for item in consumables_forecast %}
+                <div class="card bg-base-200">
+                    <div class="card-body p-4">
+                        <h3 class="font-bold text-sm mb-2">{{ item.name }}</h3>
+                        <div class="radial-progress text-{{ 'error' if item.days_remaining < 30 else 'warning' if item.days_remaining < 60 else 'success' }}" 
+                             style="--value:{{ (item.days_remaining/90)*100 if item.days_remaining < 90 else 100 }}; --size: 8rem;">
+                            {{ item.days_remaining }} Tage
+                        </div>
+                        <div class="text-xs mt-2">
+                            <p>Aktueller Bestand: {{ item.current_amount }}</p>
+                            <p>Täglicher Verbrauch: {{ item.avg_daily_usage }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -479,6 +603,498 @@
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Chart initialisieren wenn das Element existiert
+function initChart() {
+    const chartCanvas = document.getElementById('consumableTrendChart');
+    if (chartCanvas) {
+        const ctx = chartCanvas.getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ stats.consumable_trend.labels|tojson }},
+                datasets: {{ stats.consumable_trend.datasets|tojson }}
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Abteilungsverwaltung
+const DepartmentManager = {
+    init() {
+        const form = document.getElementById('addDepartmentForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleAddDepartment(e));
+            this.loadDepartments();
+        }
+    },
+
+    async loadDepartments() {
+        const tbody = document.getElementById('departmentsList');
+        if (!tbody) return;
+
+        try {
+            const response = await fetch('/admin/departments');
+            const data = await response.json();
+            if (data.success) {
+                this.renderDepartments(data.departments);
+            } else {
+                showToast('error', 'Fehler beim Laden der Abteilungen');
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Abteilungen:', error);
+            showToast('error', 'Fehler beim Laden der Abteilungen');
+        }
+    },
+
+    renderDepartments(departments) {
+        const tbody = document.getElementById('departmentsList');
+        if (!tbody) return;
+
+        tbody.innerHTML = departments.map(dept => `
+            <tr>
+                <td>${dept}</td>
+                <td class="text-right">
+                    <button onclick="DepartmentManager.deleteDepartment('${dept}')" 
+                            class="btn btn-error btn-xs">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    async handleAddDepartment(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch('/admin/departments/add', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Abteilung hinzugefügt');
+                form.reset();
+                this.loadDepartments();
+            } else {
+                showToast('error', data.message || 'Fehler beim Hinzufügen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Hinzufügen der Abteilung');
+        }
+    },
+
+    async deleteDepartment(name) {
+        if (!confirm(`Möchten Sie die Abteilung "${name}" wirklich löschen?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/departments/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Abteilung gelöscht');
+                this.loadDepartments();
+            } else {
+                showToast('error', data.message || 'Fehler beim Löschen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Löschen der Abteilung');
+        }
+    }
+};
+
+// Standortverwaltung
+const LocationManager = {
+    init() {
+        const addForm = document.getElementById('addLocationForm');
+        const editForm = document.getElementById('editLocationForm');
+        
+        if (addForm) {
+            addForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+                formData.set('tools', addForm.querySelector('[name="tools"]').checked);
+                formData.set('consumables', addForm.querySelector('[name="consumables"]').checked);
+                
+                this.handleAddLocation(formData);
+            });
+        }
+        
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(editForm);
+                formData.set('tools', editForm.querySelector('[name="tools"]').checked);
+                formData.set('consumables', editForm.querySelector('[name="consumables"]').checked);
+                
+                this.handleEditLocation(formData);
+            });
+        }
+        
+        this.loadLocations();
+    },
+
+    async handleAddLocation(formData) {
+        try {
+            const response = await fetch('/admin/locations/add', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Standort hinzugefügt');
+                document.getElementById('addLocationForm').reset();
+                this.loadLocations();
+            } else {
+                showToast('error', data.message || 'Fehler beim Hinzufügen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Hinzufügen des Standorts');
+        }
+    },
+
+    showEditModal(location) {
+        const modal = document.getElementById('editLocationModal');
+        const form = document.getElementById('editLocationForm');
+        if (!modal || !form) return;
+        
+        form.elements.originalName.value = location.name;
+        form.elements.location.value = location.name;
+        form.elements.tools.checked = location.tools;
+        form.elements.consumables.checked = location.consumables;
+        
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            formData.set('tools', form.querySelector('[name="tools"]').checked);
+            formData.set('consumables', form.querySelector('[name="consumables"]').checked);
+            
+            await this.handleEditLocation(formData);
+            modal.close();
+            form.removeEventListener('submit', handleSubmit);
+        };
+        
+        form.addEventListener('submit', handleSubmit);
+        
+        modal.showModal();
+    },
+
+    async handleEditLocation(formData) {
+        const originalName = formData.get('originalName');
+        try {
+            const response = await fetch(`/admin/locations/${encodeURIComponent(originalName)}`, {
+                method: 'PUT',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Standort aktualisiert');
+                document.getElementById('editLocationModal').close();
+                this.loadLocations();
+            } else {
+                showToast('error', data.message || 'Fehler beim Aktualisieren');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Aktualisieren des Standorts');
+        }
+    },
+
+    async loadLocations() {
+        const tbody = document.getElementById('locationsList');
+        if (!tbody) return;
+
+        try {
+            const response = await fetch('/admin/locations');
+            const data = await response.json();
+            if (data.success) {
+                this.renderLocations(data.locations);
+            } else {
+                showToast('error', 'Fehler beim Laden der Standorte');
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Standorte:', error);
+            showToast('error', 'Fehler beim Laden der Standorte');
+        }
+    },
+
+    renderLocations(locations) {
+        const tbody = document.getElementById('locationsList');
+        const template = document.getElementById('locationRowTemplate');
+        if (!tbody || !template) return;
+
+        tbody.innerHTML = '';
+        locations.forEach(loc => {
+            const clone = template.content.cloneNode(true);
+            const row = clone.querySelector('tr');
+            
+            row.querySelector('.name').textContent = loc.name;
+            const toolsBadge = row.querySelector('.tools-badge');
+            const consumablesBadge = row.querySelector('.consumables-badge');
+            
+            if (loc.tools) toolsBadge.style.display = '';
+            if (loc.consumables) consumablesBadge.style.display = '';
+            
+            row.querySelector('.edit-btn').addEventListener('click', () => this.showEditModal(loc));
+            row.querySelector('.delete-btn').addEventListener('click', () => this.deleteLocation(loc.name));
+            
+            tbody.appendChild(row);
+        });
+    },
+
+    async deleteLocation(name) {
+        if (!confirm(`Möchten Sie den Standort "${name}" wirklich löschen?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/locations/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Standort gelöscht');
+                this.loadLocations();
+            } else {
+                showToast('error', data.message || 'Fehler beim Löschen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Löschen des Standorts');
+        }
+    }
+};
+
+// Kategorieverwaltung
+const CategoryManager = {
+    init() {
+        const addForm = document.getElementById('addCategoryForm');
+        const editForm = document.getElementById('editCategoryForm');
+        
+        if (addForm) {
+            addForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(addForm);
+                formData.set('tools', addForm.querySelector('[name="tools"]').checked);
+                formData.set('consumables', addForm.querySelector('[name="consumables"]').checked);
+                
+                this.handleAddCategory(formData);
+            });
+        }
+        
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(editForm);
+                formData.set('tools', editForm.querySelector('[name="tools"]').checked);
+                formData.set('consumables', editForm.querySelector('[name="consumables"]').checked);
+                
+                this.handleEditCategory(formData);
+            });
+        }
+        
+        this.loadCategories();
+    },
+
+    async handleAddCategory(formData) {
+        try {
+            const response = await fetch('/admin/categories/add', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Kategorie hinzugefügt');
+                document.getElementById('addCategoryForm').reset();
+                this.loadCategories();
+            } else {
+                showToast('error', data.message || 'Fehler beim Hinzufügen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Hinzufügen der Kategorie');
+        }
+    },
+
+    showEditModal(category) {
+        const modal = document.getElementById('editCategoryModal');
+        const form = document.getElementById('editCategoryForm');
+        if (!modal || !form) return;
+        
+        form.elements.originalName.value = category.name;
+        form.elements.category.value = category.name;
+        form.elements.tools.checked = category.tools;
+        form.elements.consumables.checked = category.consumables;
+        
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            formData.set('tools', form.querySelector('[name="tools"]').checked);
+            formData.set('consumables', form.querySelector('[name="consumables"]').checked);
+            
+            await this.handleEditCategory(formData);
+            modal.close();
+            form.removeEventListener('submit', handleSubmit);
+        };
+        
+        form.addEventListener('submit', handleSubmit);
+        
+        modal.showModal();
+    },
+
+    async handleEditCategory(formData) {
+        const originalName = formData.get('originalName');
+        try {
+            const response = await fetch(`/admin/categories/${encodeURIComponent(originalName)}`, {
+                method: 'PUT',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Kategorie aktualisiert');
+                document.getElementById('editCategoryModal').close();
+                this.loadCategories();
+            } else {
+                showToast('error', data.message || 'Fehler beim Aktualisieren');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Aktualisieren der Kategorie');
+        }
+    },
+
+    async loadCategories() {
+        const tbody = document.getElementById('categoriesList');
+        if (!tbody) return;
+
+        try {
+            const response = await fetch('/admin/categories');
+            const data = await response.json();
+            if (data.success) {
+                this.renderCategories(data.categories);
+            } else {
+                showToast('error', 'Fehler beim Laden der Kategorien');
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Kategorien:', error);
+            showToast('error', 'Fehler beim Laden der Kategorien');
+        }
+    },
+
+    renderCategories(categories) {
+        const tbody = document.getElementById('categoriesList');
+        const template = document.getElementById('categoryRowTemplate');
+        if (!tbody || !template) return;
+
+        tbody.innerHTML = '';
+        categories.forEach(cat => {
+            const clone = template.content.cloneNode(true);
+            const row = clone.querySelector('tr');
+            
+            row.querySelector('.name').textContent = cat.name;
+            const toolsBadge = row.querySelector('.tools-badge');
+            const consumablesBadge = row.querySelector('.consumables-badge');
+            
+            if (cat.tools) toolsBadge.style.display = '';
+            if (cat.consumables) consumablesBadge.style.display = '';
+            
+            row.querySelector('.edit-btn').addEventListener('click', () => this.showEditModal(cat));
+            row.querySelector('.delete-btn').addEventListener('click', () => this.deleteCategory(cat.name));
+            
+            tbody.appendChild(row);
+        });
+    },
+
+    async deleteCategory(name) {
+        if (!confirm(`Möchten Sie die Kategorie "${name}" wirklich löschen?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/admin/categories/${encodeURIComponent(name)}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('success', 'Kategorie gelöscht');
+                this.loadCategories();
+            } else {
+                showToast('error', data.message || 'Fehler beim Löschen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            showToast('error', 'Fehler beim Löschen der Kategorie');
+        }
+    }
+};
+
+// Initialisierung
+document.addEventListener('DOMContentLoaded', () => {
+    initChart();
+    DepartmentManager.init();
+    LocationManager.init();
+    CategoryManager.init();
+});
+
+// Hilfsfunktionen
+function showToast(type, message) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} fixed bottom-4 right-4 z-50 max-w-sm shadow-lg`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
 function returnTool(barcode) {
     if (!confirm('Möchten Sie dieses Werkzeug wirklich zurückgeben?')) {
         return;
@@ -498,582 +1114,5 @@ function returnTool(barcode) {
         alert('Fehler: ' + error);
     });
 }
-
-// Verbrauchstrend Chart
-const ctx = document.getElementById('consumableTrendChart').getContext('2d');
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: {{ stats.consumable_trend.labels|tojson }},
-        datasets: {{ stats.consumable_trend.datasets|tojson }}
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-            mode: 'index',
-            intersect: false
-        },
-        plugins: {
-            legend: {
-                display: true,
-                position: 'top'
-            },
-            tooltip: {
-                mode: 'index',
-                intersect: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    precision: 0
-                }
-            }
-        }
-    }
-});
-
-// Abteilungsverwaltung
-const DepartmentManager = {
-    init() {
-        this.bindEvents();
-        this.loadDepartments();
-    },
-
-    bindEvents() {
-        const form = document.getElementById('addDepartmentForm');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleAddDepartment(e));
-        }
-    },
-
-    loadDepartments() {
-        console.log('Lade Abteilungen...');
-        return fetch('/admin/departments', {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (!data.success) {
-                throw new Error(data.message || 'Fehler beim Laden der Abteilungen');
-            }
-            this.renderDepartments(data.departments);
-            return data.departments;
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Abteilungen:', error);
-            showToast('error', error.message || 'Fehler beim Laden der Abteilungen');
-            return [];
-        });
-    },
-
-    renderDepartments(departments) {
-        const tbody = document.getElementById('departmentsList');
-        if (!tbody) return;
-
-        // Lösche alle existierenden Einträge
-        tbody.innerHTML = '';
-
-        // Füge die aktualisierten Abteilungen hinzu
-        departments.forEach(dept => {
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-department', dept.name);
-            tr.innerHTML = `
-                <td>
-                    ${dept.name}
-                    <span class="badge badge-ghost badge-sm">${dept.worker_count} Mitarbeiter</span>
-                </td>
-                <td class="text-right">
-                    <button onclick="DepartmentManager.handleDeleteDepartment('${dept.name}')" 
-                            class="btn btn-ghost btn-xs ${dept.worker_count > 0 ? 'btn-disabled' : ''}"
-                            ${dept.worker_count > 0 ? 'title="Abteilung hat noch aktive Mitarbeiter"' : ''}>
-                        <i class="fas fa-trash text-error"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    },
-
-    handleAddDepartment(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        fetch('/admin/departments/add', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', data.message);
-                form.reset();
-                this.loadDepartments();  // Liste neu laden statt Seite neu laden
-            } else {
-                showToast('error', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Hinzufügen der Abteilung:', error);
-            showToast('error', 'Fehler beim Hinzufügen der Abteilung');
-        });
-    },
-
-    handleDeleteDepartment(name) {
-        if (!confirm(`Möchten Sie die Abteilung "${name}" wirklich löschen?`)) {
-            return;
-        }
-
-        console.log(`Versuche Abteilung zu löschen: ${name}`);
-        fetch(`/admin/departments/delete/${encodeURIComponent(name)}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (data.success) {
-                showToast('success', data.message);
-                // Entferne die Abteilung direkt aus der DOM
-                const row = document.querySelector(`tr[data-department="${name}"]`);
-                if (row) {
-                    row.remove();
-                }
-            } else {
-                showToast('error', data.message);
-                console.error('Fehler beim Löschen:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Löschen der Abteilung:', error);
-            showToast('error', 'Fehler beim Löschen der Abteilung');
-        });
-    }
-};
-
-// Standortverwaltung
-const LocationManager = {
-    locations: [], // Speichert alle Standorte
-
-    init() {
-        this.bindEvents();
-        this.loadLocations();
-    },
-
-    bindEvents() {
-        const form = document.getElementById('addLocationForm');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleAddLocation(e));
-        }
-    },
-
-    loadLocations() {
-        console.log('Lade Standorte...');
-        return fetch('/admin/locations', {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (!data.success) {
-                throw new Error(data.message || 'Fehler beim Laden der Standorte');
-            }
-            this.locations = data.locations; // Speichere alle Standorte
-            this.renderLocations(data.locations);
-            return data.locations;
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Standorte:', error);
-            showToast('error', error.message || 'Fehler beim Laden der Standorte');
-            return [];
-        });
-    },
-
-    filterLocations(searchTerm) {
-        if (!searchTerm) {
-            this.renderLocations(this.locations);
-            return;
-        }
-        
-        const filtered = this.locations.filter(loc => 
-            loc.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        this.renderLocations(filtered);
-    },
-
-    renderLocations(locations) {
-        const tbody = document.getElementById('locationsList');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        if (locations.length === 0) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td colspan="3" class="text-center text-gray-500">
-                    Keine Standorte gefunden
-                </td>
-            `;
-            tbody.appendChild(tr);
-            return;
-        }
-
-        locations.forEach(loc => {
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-location', loc.name);
-            tr.innerHTML = `
-                <td>${loc.name}</td>
-                <td>
-                    <div class="flex gap-2">
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" class="checkbox checkbox-sm" 
-                                   onclick="return LocationManager.handleUsageChange('${loc.name}', 'tools', this)"
-                                   ${loc.usage === 'tools' || loc.usage === 'both' ? 'checked' : ''}>
-                            <span class="badge badge-info text-lg">
-                                <i class="fas fa-tools text-lg"></i>&nbsp;
-                                <span class="font-bold">${loc.tools_count || 0}</span>
-                            </span>
-                        </label>
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" class="checkbox checkbox-sm"
-                                   onclick="return LocationManager.handleUsageChange('${loc.name}', 'consumables', this)"
-                                   ${loc.usage === 'consumables' || loc.usage === 'both' ? 'checked' : ''}>
-                            <span class="badge badge-success text-lg">
-                                <i class="fas fa-box text-lg"></i>&nbsp;
-                                <span class="font-bold">${loc.consumables_count || 0}</span>
-                            </span>
-                        </label>
-                    </div>
-                </td>
-                <td class="text-right">
-                    <button onclick="LocationManager.handleDeleteLocation('${loc.name}')" 
-                            class="btn btn-ghost btn-xs ${(loc.tools_count > 0 || loc.consumables_count > 0) ? 'btn-disabled' : ''}"
-                            ${(loc.tools_count > 0 || loc.consumables_count > 0) ? 'title="Standort wird noch verwendet"' : ''}>
-                        <i class="fas fa-trash text-error"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    },
-
-    handleAddLocation(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        fetch('/admin/locations/add', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', data.message);
-                form.reset();
-                this.loadLocations();
-            } else {
-                showToast('error', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Hinzufügen des Standorts:', error);
-            showToast('error', 'Fehler beim Hinzufügen des Standorts');
-        });
-    },
-
-    handleDeleteLocation(name) {
-        if (!confirm(`Möchten Sie den Standort "${name}" wirklich löschen?`)) {
-            return;
-        }
-
-        console.log(`Versuche Standort zu löschen: ${name}`);
-        fetch(`/admin/locations/delete/${encodeURIComponent(name)}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (data.success) {
-                showToast('success', data.message);
-                const row = document.querySelector(`tr[data-location="${name}"]`);
-                if (row) {
-                    row.remove();
-                }
-            } else {
-                showToast('error', data.message);
-                console.error('Fehler beim Löschen:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Löschen des Standorts:', error);
-            showToast('error', 'Fehler beim Löschen des Standorts');
-        });
-    },
-
-    handleUsageChange(name, usage, checkbox) {
-        const wasChecked = checkbox.checked;
-        
-        console.log(`Versuche Verwendung "${usage}" für Standort "${name}" zu ändern...`);
-        fetch(`/admin/locations/${encodeURIComponent(name)}/usage`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usage: usage
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (data.success) {
-                showToast('success', data.message);
-                this.loadLocations();
-            } else {
-                showToast('error', data.message);
-                console.error('Fehler beim Ändern der Verwendung:', data.message);
-                checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Ändern der Verwendung:', error);
-            showToast('error', 'Fehler beim Ändern der Verwendung');
-            checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
-        });
-    }
-};
-
-// Kategorieverwaltung
-const CategoryManager = {
-    categories: [], // Speichert alle Kategorien
-
-    init() {
-        this.bindEvents();
-        this.loadCategories();
-    },
-
-    bindEvents() {
-        const form = document.getElementById('addCategoryForm');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleAddCategory(e));
-        }
-    },
-
-    loadCategories() {
-        console.log('Lade Kategorien...');
-        return fetch('/admin/categories', {
-            method: 'GET',
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (!data.success) {
-                throw new Error(data.message || 'Fehler beim Laden der Kategorien');
-            }
-            this.categories = data.categories; // Speichere alle Kategorien
-            this.renderCategories(data.categories);
-            return data.categories;
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden der Kategorien:', error);
-            showToast('error', error.message || 'Fehler beim Laden der Kategorien');
-            return [];
-        });
-    },
-
-    filterCategories(searchTerm) {
-        if (!searchTerm) {
-            this.renderCategories(this.categories);
-            return;
-        }
-        
-        const filtered = this.categories.filter(cat => 
-            cat.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        this.renderCategories(filtered);
-    },
-
-    renderCategories(categories) {
-        const tbody = document.getElementById('categoriesList');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        if (categories.length === 0) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td colspan="3" class="text-center text-gray-500">
-                    Keine Kategorien gefunden
-                </td>
-            `;
-            tbody.appendChild(tr);
-            return;
-        }
-
-        categories.forEach(cat => {
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-category', cat.name);
-            tr.innerHTML = `
-                <td>${cat.name}</td>
-                <td>
-                    <div class="flex gap-2">
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" class="checkbox checkbox-sm" 
-                                   onclick="return CategoryManager.handleUsageChange('${cat.name}', 'tools', this)"
-                                   ${cat.usage === 'tools' || cat.usage === 'both' ? 'checked' : ''}>
-                            <span class="badge badge-info text-lg">
-                                <i class="fas fa-tools text-lg"></i>&nbsp;
-                                <span class="font-bold">${cat.tools_count || 0}</span>
-                            </span>
-                        </label>
-                        <label class="cursor-pointer flex items-center gap-2">
-                            <input type="checkbox" class="checkbox checkbox-sm"
-                                   onclick="return CategoryManager.handleUsageChange('${cat.name}', 'consumables', this)"
-                                   ${cat.usage === 'consumables' || cat.usage === 'both' ? 'checked' : ''}>
-                            <span class="badge badge-success text-lg">
-                                <i class="fas fa-box text-lg"></i>&nbsp;
-                                <span class="font-bold">${cat.consumables_count || 0}</span>
-                            </span>
-                        </label>
-                    </div>
-                </td>
-                <td class="text-right">
-                    <button onclick="CategoryManager.handleDeleteCategory('${cat.name}')" 
-                            class="btn btn-ghost btn-xs ${(cat.tools_count > 0 || cat.consumables_count > 0) ? 'btn-disabled' : ''}"
-                            ${(cat.tools_count > 0 || cat.consumables_count > 0) ? 'title="Kategorie wird noch verwendet"' : ''}>
-                        <i class="fas fa-trash text-error"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    },
-
-    handleAddCategory(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        fetch('/admin/categories/add', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', data.message);
-                form.reset();
-                this.loadCategories();
-            } else {
-                showToast('error', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Hinzufügen der Kategorie:', error);
-            showToast('error', 'Fehler beim Hinzufügen der Kategorie');
-        });
-    },
-
-    handleDeleteCategory(name) {
-        if (!confirm(`Möchten Sie die Kategorie "${name}" wirklich löschen?`)) {
-            return;
-        }
-
-        console.log(`Versuche Kategorie zu löschen: ${name}`);
-        fetch(`/admin/categories/delete/${encodeURIComponent(name)}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (data.success) {
-                showToast('success', data.message);
-                const row = document.querySelector(`tr[data-category="${name}"]`);
-                if (row) {
-                    row.remove();
-                }
-            } else {
-                showToast('error', data.message);
-                console.error('Fehler beim Löschen:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Löschen der Kategorie:', error);
-            showToast('error', 'Fehler beim Löschen der Kategorie');
-        });
-    },
-
-    handleUsageChange(name, usage, checkbox) {
-        const wasChecked = checkbox.checked;
-        
-        console.log(`Versuche Verwendung "${usage}" für Kategorie "${name}" zu ändern...`);
-        fetch(`/admin/categories/${encodeURIComponent(name)}/usage`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                usage: usage
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Server-Antwort:', data);
-            if (data.success) {
-                showToast('success', data.message);
-                this.loadCategories();
-            } else {
-                showToast('error', data.message);
-                console.error('Fehler beim Ändern der Verwendung:', data.message);
-                checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Ändern der Verwendung:', error);
-            showToast('error', 'Fehler beim Ändern der Verwendung');
-            checkbox.checked = !wasChecked; // Bei Fehler zurücksetzen
-        });
-    }
-};
-
-// Toast-Funktion
-function showToast(type, message) {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type} fixed bottom-4 right-4 z-50 max-w-sm shadow-lg`;
-    toast.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>
-            <span>${message}</span>
-        </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
-}
-
-// Initialisierung
-document.addEventListener('DOMContentLoaded', () => {
-    DepartmentManager.init();
-    LocationManager.init();
-    CategoryManager.init();
-});
 </script>
 {% endblock %} 

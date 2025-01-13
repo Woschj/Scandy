@@ -94,118 +94,26 @@ def get_warnings():
 @bp.route('/')
 @admin_required
 def dashboard():
-    """Admin Dashboard"""
-    try:
-        # Initialisiere stats Dictionary
-        stats = {}
-        
-        # Hole die finale Liste der Abteilungen
-        departments = Database.query('''
-            SELECT 
-                s.value as name,
-                (SELECT COUNT(*) 
-                FROM workers w 
-                WHERE w.department = s.value 
-                AND w.deleted = 0) as worker_count
-            FROM settings s
-            WHERE s.key LIKE 'department_%'
-            AND s.value IS NOT NULL
-            AND s.value != ''
-            ORDER BY s.value
-        ''')
-        logger.info(f"=== Abteilungsliste ===")
-        logger.info(f"Gefundene Abteilungen: {[dict(d) for d in departments]}")
-        stats['departments'] = departments
-        
-        # Backup-Liste abrufen
-        backups = backup_manager.list_backups()
-        
-        # Hole zuerst die Verbrauchstrend-Daten
-        consumable_trend_data = get_consumable_trend()
-        
-        # Formatiere die Daten für das Chart
-        consumable_trend = {
-            'labels': [],
-            'datasets': []
-        }
-        
-        # Gruppiere die Daten nach Material
-        materials = {}
-        if consumable_trend_data:
-            consumable_trend['labels'] = sorted(set(row['label'] for row in consumable_trend_data))
-            for row in consumable_trend_data:
-                if row['name'] not in materials:
-                    materials[row['name']] = []
-                materials[row['name']].append(row['count'])
-                
-            # Erstelle Datasets für jedes Material
-            colors = ['#36A2EB', '#FF6384', '#4BC0C0', '#FF9F40', '#9966FF']
-            for i, (name, data) in enumerate(materials.items()):
-                consumable_trend['datasets'].append({
-                    'label': name,
-                    'data': data,
-                    'borderColor': colors[i % len(colors)],
-                    'backgroundColor': colors[i % len(colors)].replace(')', ', 0.1)'),
-                    'borderWidth': 2,
-                    'fill': True,
-                    'tension': 0.4
-                })
-        
-        stats['consumable_trend'] = consumable_trend
-        
-        # Statistiken für Werkzeuge und Verbrauchsmaterial
-        stats.update({
-            'tools': {
-                'total': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0', one=True)['count'],
-                'lent': Database.query('SELECT COUNT(*) as count FROM lendings WHERE returned_at IS NULL', one=True)['count'],
-                'available': Database.query('''
-                    SELECT COUNT(*) as count 
-                    FROM tools 
-                    WHERE deleted = 0 
-                    AND barcode NOT IN (
-                        SELECT tool_barcode 
-                        FROM lendings 
-                        WHERE returned_at IS NULL
-                    )
-                ''', one=True)['count'],
-                'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defekt'", one=True)['count']
-            },
-            'consumables': {
-                'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
-                'sufficient': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity', one=True)['count'],
-                'warning': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5', one=True)['count'],
-                'critical': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5', one=True)['count']
-            },
-            'workers': {
-                'total': Database.query('SELECT COUNT(*) as count FROM workers WHERE deleted = 0', one=True)['count'],
-                'active_lendings': Database.query('SELECT COUNT(DISTINCT worker_barcode) as count FROM lendings WHERE returned_at IS NULL', one=True)['count']
-            }
-        })
-        
-        # Wartungsprobleme (defekte Werkzeuge)
-        maintenance_issues = Database.query('''
-            SELECT 
-                name,
-                status,
+    """Admin Dashboard anzeigen"""
+    stats = {
+        'maintenance_issues': Database.query("""
+            SELECT name, status, 
                 CASE 
                     WHEN status = 'defekt' THEN 'error'
                     ELSE 'warning'
                 END as severity
-            FROM tools
+            FROM tools 
             WHERE status = 'defekt' AND deleted = 0
-            LIMIT 5
-        ''')
-        stats['maintenance_issues'] = maintenance_issues
-
-        # Bestandswarnungen
-        inventory_warnings = Database.query('''
-            SELECT 
+            ORDER BY name
+        """),
+        'inventory_warnings': Database.query("""
+            SELECT
                 name as message,
-                CASE 
+                CASE
                     WHEN quantity < min_quantity * 0.5 THEN 'error'
                     ELSE 'warning'
                 END as type,
-                CASE 
+                CASE
                     WHEN quantity < min_quantity * 0.5 THEN 'exclamation-triangle'
                     ELSE 'exclamation'
                 END as icon
@@ -213,46 +121,39 @@ def dashboard():
             WHERE quantity < min_quantity AND deleted = 0
             ORDER BY quantity / min_quantity ASC
             LIMIT 5
-        ''')
-        stats['inventory_warnings'] = inventory_warnings
-
-        # Aktuelle Ausleihen
-        current_lendings = Database.query('''
-            SELECT l.*, t.name as tool_name, w.firstname || ' ' || w.lastname as worker_name
-            FROM lendings l
-            JOIN tools t ON l.tool_barcode = t.barcode
-            JOIN workers w ON l.worker_barcode = w.barcode
-            WHERE l.returned_at IS NULL
-            ORDER BY l.lent_at DESC
-            LIMIT 10
-        ''')
-        stats['current_lendings'] = current_lendings
-
-        # Aktuelle Materialausgaben
-        consumable_usages = Database.query('''
-            SELECT cu.*, c.name as consumable_name, w.firstname || ' ' || w.lastname as worker_name
-            FROM consumable_usages cu
-            JOIN consumables c ON cu.consumable_barcode = c.barcode
-            JOIN workers w ON cu.worker_barcode = w.barcode
-            ORDER BY cu.used_at DESC
-            LIMIT 10
-        ''')
-        stats['consumable_usages'] = consumable_usages
-
-        return render_template('admin/dashboard.html', 
-                             stats=stats,
-                             backups=backups,
-                             Config=Config)
-                             
-    except Exception as e:
-        logger.error(f"Fehler im Admin-Dashboard: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        flash('Fehler beim Laden des Dashboards', 'error')
-        return render_template('admin/dashboard.html', 
-                             stats={},
-                             backups=[],
-                             Config=Config)
+        """),
+        'consumable_trend': get_consumable_trend()
+    }
+    
+    # Aktuelle Ausleihen laden
+    current_lendings = Database.query("""
+        SELECT l.*, t.name as tool_name, w.firstname || ' ' || w.lastname as worker_name
+        FROM lendings l
+        JOIN tools t ON l.tool_barcode = t.barcode
+        JOIN workers w ON l.worker_barcode = w.barcode
+        WHERE l.returned_at IS NULL
+        ORDER BY l.lent_at DESC
+    """)
+    
+    # Materialausgaben laden
+    consumable_usages = Database.query("""
+        SELECT cu.*, c.name as consumable_name, w.firstname || ' ' || w.lastname as worker_name
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        JOIN workers w ON cu.worker_barcode = w.barcode
+        ORDER BY cu.used_at DESC
+        LIMIT 10
+    """)
+    
+    # Bestandsprognose laden
+    consumables_forecast = Database.get_consumables_forecast()
+    
+    return render_template('admin/dashboard.html',
+                         stats=stats,
+                         current_lendings=current_lendings,
+                         consumable_usages=consumable_usages,
+                         consumables_forecast=consumables_forecast,
+                         Config=Config)
 
 def get_consumable_trend():
     """Hole die Top 5 Materialverbrauch der letzten 7 Tage"""
@@ -293,7 +194,42 @@ def get_consumable_trend():
         ORDER BY tc.name, dates.date
     ''')
     
-    return trend_data
+    # Daten für das Chart aufbereiten
+    labels = []
+    datasets = []
+    current_name = None
+    current_data = []
+    
+    for row in trend_data:
+        if row['label'] not in labels:
+            labels.append(row['label'])
+        
+        if current_name != row['name']:
+            if current_name is not None:
+                datasets.append({
+                    'label': current_name,
+                    'data': current_data,
+                    'fill': False,
+                    'borderColor': f'hsl({(len(datasets) * 60) % 360}, 70%, 50%)',
+                    'tension': 0.1
+                })
+            current_name = row['name']
+            current_data = []
+        current_data.append(row['count'])
+    
+    if current_name is not None:
+        datasets.append({
+            'label': current_name,
+            'data': current_data,
+            'fill': False,
+            'borderColor': f'hsl({(len(datasets) * 60) % 360}, 70%, 50%)',
+            'tension': 0.1
+        })
+    
+    return {
+        'labels': labels,
+        'datasets': datasets
+    }
 
 # Manuelle Ausleihe
 @bp.route('/manual-lending', methods=['GET', 'POST'])
@@ -882,149 +818,492 @@ def restore_backup(filename):
     return redirect(url_for('admin.dashboard'))
 
 @bp.route('/departments', methods=['GET'])
+@admin_required
 def get_departments():
-    """Gibt alle Abteilungen zurück."""
+    """Hole alle Abteilungen"""
     try:
-        departments = Database.get_departments()
-        print("Abteilungen geladen:", departments)  # Debug-Log
+        departments = Database.query('''
+            SELECT value as name
+            FROM settings
+            WHERE key LIKE 'department_%'
+            AND value IS NOT NULL
+            AND value != ''
+            ORDER BY value
+        ''')
         return jsonify({
             'success': True,
-            'departments': departments
+            'departments': [dept['name'] for dept in departments]
         })
     except Exception as e:
-        print("Fehler beim Laden der Abteilungen:", str(e))  # Debug-Log
         return jsonify({
             'success': False,
             'message': str(e)
         }), 500
 
 @bp.route('/departments/add', methods=['POST'])
+@admin_required
 def add_department():
-    """Fügt eine neue Abteilung hinzu."""
-    name = request.form.get('department')
-    if not name:
+    """Füge eine neue Abteilung hinzu"""
+    department = request.form.get('department')
+    if not department:
         return jsonify({
             'success': False,
-            'message': 'Kein Name angegeben'
+            'message': 'Abteilungsname fehlt'
+        }), 400
+
+    try:
+        # Prüfe ob die Abteilung bereits existiert
+        existing = Database.query('''
+            SELECT 1 FROM settings 
+            WHERE key LIKE 'department_%'
+            AND value = ?
+        ''', [department], one=True)
+
+        if existing:
+            return jsonify({
+                'success': False,
+                'message': 'Abteilung existiert bereits'
+            }), 400
+
+        # Generiere einen neuen Schlüssel
+        max_id = Database.query('''
+            SELECT COALESCE(MAX(CAST(SUBSTR(key, 12) AS INTEGER)), 0) as max_id
+            FROM settings
+            WHERE key LIKE 'department_%'
+        ''', one=True)['max_id']
+        
+        new_key = f'department_{max_id + 1}'
+
+        # Füge neue Abteilung hinzu
+        Database.query('''
+            INSERT INTO settings (key, value, modified_at, sync_status)
+            VALUES (?, ?, datetime('now'), 'pending')
+        ''', [new_key, department])
+
+        return jsonify({
+            'success': True,
+            'message': 'Abteilung erfolgreich hinzugefügt'
         })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
-    success = Database.add_department(name)
-    return jsonify({
-        'success': success,
-        'message': 'Abteilung erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen der Abteilung'
-    })
-
-@bp.route('/departments/delete/<name>', methods=['DELETE'])
+@bp.route('/departments/<name>', methods=['DELETE'])
+@admin_required
 def delete_department(name):
-    """Löscht eine Abteilung."""
-    success, message = Database.delete_department(name)
-    return jsonify({
-        'success': success,
-        'message': message
-    })
+    """Lösche eine Abteilung"""
+    try:
+        Database.query('''
+            DELETE FROM settings 
+            WHERE key LIKE 'department_%'
+            AND value = ?
+        ''', [name])
+        return jsonify({
+            'success': True,
+            'message': 'Abteilung erfolgreich gelöscht'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
+# Standortverwaltung
 @bp.route('/locations', methods=['GET'])
+@admin_required
 def get_locations():
-    """Gibt alle Standorte zurück."""
-    usage = request.args.get('usage')  # Optional: 'tools' oder 'consumables'
-    locations = Database.get_locations(usage)
-    return jsonify({
-        'success': True,
-        'locations': locations
-    })
+    """Hole alle Standorte"""
+    try:
+        locations = Database.query('''
+            SELECT 
+                l1.value as name,
+                COALESCE(l2.value, '0') as tools,
+                COALESCE(l3.value, '0') as consumables
+            FROM settings l1
+            LEFT JOIN settings l2 ON l2.key = l1.key || '_tools'
+            LEFT JOIN settings l3 ON l3.key = l1.key || '_consumables'
+            WHERE l1.key LIKE 'location_%'
+            AND l1.key NOT LIKE '%_tools'
+            AND l1.key NOT LIKE '%_consumables'
+            AND l1.value IS NOT NULL
+            AND l1.value != ''
+            ORDER BY l1.value
+        ''')
+        
+        # Konvertiere die String-Werte in Booleans
+        result = []
+        for loc in locations:
+            result.append({
+                'name': loc['name'],
+                'tools': loc['tools'] == '1',
+                'consumables': loc['consumables'] == '1'
+            })
+            
+        return jsonify({
+            'success': True,
+            'locations': result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @bp.route('/locations/add', methods=['POST'])
+@admin_required
 def add_location():
-    """Fügt einen neuen Standort hinzu."""
-    name = request.form.get('location')
-    if not name:
+    """Füge einen neuen Standort hinzu"""
+    location = request.form.get('location')
+    tools = request.form.get('tools') == 'true'
+    consumables = request.form.get('consumables') == 'true'
+    
+    if not location:
         return jsonify({
             'success': False,
-            'message': 'Kein Name angegeben'
+            'message': 'Standortname fehlt'
+        }), 400
+
+    try:
+        # Prüfe ob der Standort bereits existiert
+        existing = Database.query('''
+            SELECT 1 FROM settings 
+            WHERE key LIKE 'location_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [location], one=True)
+
+        if existing:
+            return jsonify({
+                'success': False,
+                'message': 'Standort existiert bereits'
+            }), 400
+
+        # Generiere einen neuen Schlüssel
+        max_id = Database.query('''
+            SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
+            FROM settings
+            WHERE key LIKE 'location_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+        ''', one=True)['max_id']
+        
+        base_key = f'location_{max_id + 1}'
+
+        # Füge neuen Standort und seine Eigenschaften hinzu
+        Database.query('''
+            INSERT INTO settings (key, value, modified_at, sync_status)
+            VALUES 
+                (?, ?, datetime('now'), 'pending'),
+                (?, ?, datetime('now'), 'pending'),
+                (?, ?, datetime('now'), 'pending')
+        ''', [
+            base_key, location,
+            f'{base_key}_tools', '1' if tools else '0',
+            f'{base_key}_consumables', '1' if consumables else '0'
+        ])
+
+        return jsonify({
+            'success': True,
+            'message': 'Standort erfolgreich hinzugefügt'
         })
-
-    success = Database.add_location(name)
-    return jsonify({
-        'success': success,
-        'message': 'Standort erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen des Standorts'
-    })
-
-@bp.route('/locations/<name>/usage', methods=['PUT'])
-def update_location_usage(name):
-    """Aktualisiert den Verwendungszweck eines Standorts."""
-    data = request.get_json()
-    usage = data.get('usage')
-    if not usage:
+    except Exception as e:
         return jsonify({
             'success': False,
-            'message': 'Keine Verwendung angegeben'
-        })
+            'message': str(e)
+        }), 500
 
-    success = Database.update_location_usage(name, usage)
-    return jsonify({
-        'success': success,
-        'message': 'Verwendung erfolgreich aktualisiert' if success else 'Fehler beim Aktualisieren der Verwendung'
-    })
-
-@bp.route('/locations/delete/<name>', methods=['DELETE'])
+@bp.route('/locations/<name>', methods=['DELETE'])
+@admin_required
 def delete_location(name):
-    """Löscht einen Standort."""
-    success, message = Database.delete_location(name)
-    return jsonify({
-        'success': success,
-        'message': message
-    })
+    """Lösche einen Standort"""
+    try:
+        # Finde den Basis-Schlüssel für den Standort
+        location_key = Database.query('''
+            SELECT key FROM settings 
+            WHERE key LIKE 'location_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [name], one=True)
+        
+        if location_key:
+            base_key = location_key['key']
+            # Lösche den Standort und seine Eigenschaften
+            Database.query('''
+                DELETE FROM settings 
+                WHERE key IN (?, ?, ?)
+            ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+            
+        return jsonify({
+            'success': True,
+            'message': 'Standort erfolgreich gelöscht'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
+# Kategorieverwaltung
 @bp.route('/categories', methods=['GET'])
+@admin_required
 def get_categories():
-    """Gibt alle Kategorien zurück."""
-    usage = request.args.get('usage')  # Optional: 'tools' oder 'consumables'
-    categories = Database.get_categories(usage)
-    return jsonify({
-        'success': True,
-        'categories': categories
-    })
+    """Hole alle Kategorien"""
+    try:
+        categories = Database.query('''
+            SELECT 
+                c1.value as name,
+                COALESCE(c2.value, '0') as tools,
+                COALESCE(c3.value, '0') as consumables
+            FROM settings c1
+            LEFT JOIN settings c2 ON c2.key = c1.key || '_tools'
+            LEFT JOIN settings c3 ON c3.key = c1.key || '_consumables'
+            WHERE c1.key LIKE 'category_%'
+            AND c1.key NOT LIKE '%_tools'
+            AND c1.key NOT LIKE '%_consumables'
+            AND c1.value IS NOT NULL
+            AND c1.value != ''
+            ORDER BY c1.value
+        ''')
+        
+        # Konvertiere die String-Werte in Booleans
+        result = []
+        for cat in categories:
+            result.append({
+                'name': cat['name'],
+                'tools': cat['tools'] == '1',
+                'consumables': cat['consumables'] == '1'
+            })
+            
+        return jsonify({
+            'success': True,
+            'categories': result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @bp.route('/categories/add', methods=['POST'])
+@admin_required
 def add_category():
-    """Fügt eine neue Kategorie hinzu."""
-    name = request.form.get('category')
-    if not name:
+    """Füge eine neue Kategorie hinzu"""
+    category = request.form.get('category')
+    tools = request.form.get('tools') == 'true'
+    consumables = request.form.get('consumables') == 'true'
+    
+    if not category:
         return jsonify({
             'success': False,
-            'message': 'Kein Name angegeben'
+            'message': 'Kategoriename fehlt'
+        }), 400
+
+    try:
+        # Prüfe ob die Kategorie bereits existiert
+        existing = Database.query('''
+            SELECT 1 FROM settings 
+            WHERE key LIKE 'category_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [category], one=True)
+
+        if existing:
+            return jsonify({
+                'success': False,
+                'message': 'Kategorie existiert bereits'
+            }), 400
+
+        # Generiere einen neuen Schlüssel
+        max_id = Database.query('''
+            SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
+            FROM settings
+            WHERE key LIKE 'category_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+        ''', one=True)['max_id']
+        
+        base_key = f'category_{max_id + 1}'
+
+        # Füge neue Kategorie und ihre Eigenschaften hinzu
+        Database.query('''
+            INSERT INTO settings (key, value, modified_at, sync_status)
+            VALUES 
+                (?, ?, datetime('now'), 'pending'),
+                (?, ?, datetime('now'), 'pending'),
+                (?, ?, datetime('now'), 'pending')
+        ''', [
+            base_key, category,
+            f'{base_key}_tools', '1' if tools else '0',
+            f'{base_key}_consumables', '1' if consumables else '0'
+        ])
+
+        return jsonify({
+            'success': True,
+            'message': 'Kategorie erfolgreich hinzugefügt'
         })
-
-    success = Database.add_category(name)
-    return jsonify({
-        'success': success,
-        'message': 'Kategorie erfolgreich hinzugefügt' if success else 'Fehler beim Hinzufügen der Kategorie'
-    })
-
-@bp.route('/categories/<name>/usage', methods=['PUT'])
-def update_category_usage(name):
-    """Aktualisiert den Verwendungszweck einer Kategorie."""
-    data = request.get_json()
-    usage = data.get('usage')
-    if not usage:
+    except Exception as e:
         return jsonify({
             'success': False,
-            'message': 'Keine Verwendung angegeben'
-        })
+            'message': str(e)
+        }), 500
 
-    success = Database.update_category_usage(name, usage)
-    return jsonify({
-        'success': success,
-        'message': 'Verwendung erfolgreich aktualisiert' if success else 'Fehler beim Aktualisieren der Verwendung'
-    })
-
-@bp.route('/categories/delete/<name>', methods=['DELETE'])
+@bp.route('/categories/<name>', methods=['DELETE'])
+@admin_required
 def delete_category(name):
-    """Löscht eine Kategorie."""
-    success, message = Database.delete_category(name)
-    return jsonify({
-        'success': success,
-        'message': message
-    })
+    """Lösche eine Kategorie"""
+    try:
+        # Finde den Basis-Schlüssel für die Kategorie
+        category_key = Database.query('''
+            SELECT key FROM settings 
+            WHERE key LIKE 'category_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [name], one=True)
+        
+        if category_key:
+            base_key = category_key['key']
+            # Lösche die Kategorie und ihre Eigenschaften
+            Database.query('''
+                DELETE FROM settings 
+                WHERE key IN (?, ?, ?)
+            ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+            
+        return jsonify({
+            'success': True,
+            'message': 'Kategorie erfolgreich gelöscht'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/locations/<name>', methods=['PUT'])
+@admin_required
+def update_location(name):
+    """Aktualisiere einen Standort"""
+    location = request.form.get('location')
+    tools = request.form.get('tools') == 'true'
+    consumables = request.form.get('consumables') == 'true'
+    
+    if not location:
+        return jsonify({
+            'success': False,
+            'message': 'Standortname fehlt'
+        }), 400
+
+    try:
+        # Finde den Basis-Schlüssel für den Standort
+        location_key = Database.query('''
+            SELECT key FROM settings 
+            WHERE key LIKE 'location_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [name], one=True)
+        
+        if not location_key:
+            return jsonify({
+                'success': False,
+                'message': 'Standort nicht gefunden'
+            }), 404
+            
+        base_key = location_key['key']
+        
+        # Aktualisiere den Standort und seine Eigenschaften
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', [location, base_key])
+        
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', ['1' if tools else '0', f'{base_key}_tools'])
+        
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', ['1' if consumables else '0', f'{base_key}_consumables'])
+
+        return jsonify({
+            'success': True,
+            'message': 'Standort erfolgreich aktualisiert'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@bp.route('/categories/<name>', methods=['PUT'])
+@admin_required
+def update_category(name):
+    """Aktualisiere eine Kategorie"""
+    category = request.form.get('category')
+    tools = request.form.get('tools') == 'true'
+    consumables = request.form.get('consumables') == 'true'
+    
+    if not category:
+        return jsonify({
+            'success': False,
+            'message': 'Kategoriename fehlt'
+        }), 400
+
+    try:
+        # Finde den Basis-Schlüssel für die Kategorie
+        category_key = Database.query('''
+            SELECT key FROM settings 
+            WHERE key LIKE 'category_%'
+            AND key NOT LIKE '%_tools'
+            AND key NOT LIKE '%_consumables'
+            AND value = ?
+        ''', [name], one=True)
+        
+        if not category_key:
+            return jsonify({
+                'success': False,
+                'message': 'Kategorie nicht gefunden'
+            }), 404
+            
+        base_key = category_key['key']
+        
+        # Aktualisiere die Kategorie und ihre Eigenschaften
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', [category, base_key])
+        
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', ['1' if tools else '0', f'{base_key}_tools'])
+        
+        Database.query('''
+            UPDATE settings 
+            SET value = ?, modified_at = datetime('now'), sync_status = 'pending'
+            WHERE key = ?
+        ''', ['1' if consumables else '0', f'{base_key}_consumables'])
+
+        return jsonify({
+            'success': True,
+            'message': 'Kategorie erfolgreich aktualisiert'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 # Weitere Admin-Routen...

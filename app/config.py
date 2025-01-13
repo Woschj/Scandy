@@ -23,6 +23,8 @@ class Config:
     # Server-Konfiguration
     SERVER_MODE = False  # Standard: Client-Modus
     SERVER_URL = os.environ.get('SERVER_URL', '')  # URL des Sync-Servers
+    SERVER_HOST = os.environ.get('SERVER_HOST', 'localhost')  # Server-Host
+    SERVER_PORT = os.environ.get('SERVER_PORT', '5000')  # Server-Port
     SYNC_INTERVAL = 300  # Sync-Intervall in Sekunden (5 Minuten)
     CLIENT_NAME = os.environ.get('CLIENT_NAME', 'default_client')
     

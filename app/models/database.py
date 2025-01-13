@@ -339,6 +339,72 @@ class Database:
         def close_db(error):
             cls.close_connection()
 
+    @classmethod
+    def update_category_usage(cls, name, usage):
+        """Aktualisiert die Nutzungsart einer Kategorie"""
+        try:
+            with cls.get_db() as db:
+                db.execute(
+                    "UPDATE settings SET description = ? WHERE key = ? AND key LIKE 'category_%'",
+                    (usage, f"category_{name}")
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Kategorie-Nutzung: {e}")
+            return False
+
+    @classmethod
+    def update_location_usage(cls, name, usage):
+        """Aktualisiert die Nutzungsart eines Standorts"""
+        try:
+            with cls.get_db() as db:
+                db.execute(
+                    "UPDATE settings SET description = ? WHERE key = ? AND key LIKE 'location_%'",
+                    (usage, f"location_{name}")
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            print(f"Fehler beim Aktualisieren der Standort-Nutzung: {e}")
+            return False
+
+    @classmethod
+    def get_consumables_forecast(cls):
+        """Berechnet die Bestandsprognose für Verbrauchsmaterialien"""
+        try:
+            return cls.query("""
+                WITH daily_usage AS (
+                    SELECT 
+                        c.barcode,
+                        c.name,
+                        c.quantity as current_amount,
+                        CAST(SUM(cu.quantity) AS FLOAT) / 30 as avg_daily_usage
+                    FROM consumables c
+                    LEFT JOIN consumable_usages cu 
+                        ON c.barcode = cu.consumable_barcode
+                        AND cu.used_at >= date('now', '-30 days')
+                    WHERE c.deleted = 0
+                    GROUP BY c.barcode, c.name, c.quantity
+                )
+                SELECT 
+                    name,
+                    current_amount,
+                    ROUND(avg_daily_usage, 2) as avg_daily_usage,
+                    CASE 
+                        WHEN avg_daily_usage > 0 
+                        THEN ROUND(current_amount / avg_daily_usage)
+                        ELSE 999
+                    END as days_remaining
+                FROM daily_usage
+                WHERE current_amount > 0
+                ORDER BY days_remaining ASC
+                LIMIT 10
+            """)
+        except Exception as e:
+            print(f"Fehler beim Abrufen der Bestandsprognose: {e}")
+            return []
+
 class BaseModel:
     """Basisklasse für alle Datenbankmodelle"""
     TABLE_NAME = None

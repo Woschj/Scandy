@@ -6,28 +6,13 @@ bp = Blueprint('dashboard', __name__)
 
 @bp.route('/')
 def index():
-    db = Database()
-    stats = {
-        'total_tools': db.get_total_tools(),
-        'available_tools': db.get_available_tools(),
-        'total_workers': db.get_total_workers(),
-        'active_lendings': db.get_active_lendings()
-    }
+    """Dashboard-Hauptseite"""
+    # Statistiken laden
+    stats = Database.get_statistics()
     
-    settings = {
-        'server_mode': db.get_setting('server_mode'),
-        'server_url': db.get_setting('server_url'),
-        'client_name': db.get_setting('client_name'),
-        'auto_sync': db.get_setting('auto_sync')
-    }
+    # Bestandsprognose laden
+    consumables_forecast = Database.get_consumables_forecast()
     
-    # Hole Sync-Logs nur im Server-Modus
-    sync_logs = db.get_sync_logs() if Config.SERVER_MODE else []
-    last_sync = db.get_last_sync_time()
-    
-    return render_template('dashboard.html',
+    return render_template('dashboard/index.html',
                          stats=stats,
-                         settings=settings,
-                         sync_logs=sync_logs,
-                         last_sync=last_sync,
-                         config=Config) 
+                         consumables_forecast=consumables_forecast) 
