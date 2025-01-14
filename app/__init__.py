@@ -15,10 +15,19 @@ from app.utils.auth_utils import needs_setup
 from app.models.init_db import init_users as init_database_users
 from pathlib import Path
 import sys
+from flask_login import LoginManager
+from app.models.user import User
 
 # Backup-System importieren
 sys.path.append(str(Path(__file__).parent.parent))
 from backup import DatabaseBackup
+
+# Logger einrichten
+logging.basicConfig(level=logging.INFO,
+                   format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+login_manager = LoginManager()
 
 class Config:
     @staticmethod
@@ -53,6 +62,40 @@ def ensure_directories_exist():
             logging.info(f"Verzeichnis erstellt: {directory}")
         else:
             logging.info(f"Verzeichnis existiert bereits: {directory}")
+
+def cleanup_database():
+    """Bereinigt die Datenbank von ungültigen Einträgen"""
+    try:
+        logger.info("Führe automatische Datenbankbereinigung durch...")
+        with Database.get_db() as db:
+            # Finde und lösche Ausleihungen für nicht existierende Werkzeuge
+            invalid_lendings = db.execute('''
+                SELECT l.*, t.barcode as tool_exists
+                FROM lendings l
+                LEFT JOIN tools t ON l.tool_barcode = t.barcode
+                WHERE t.barcode IS NULL
+                AND l.returned_at IS NULL
+            ''').fetchall()
+            
+            if invalid_lendings:
+                logger.info(f"Gefundene ungültige Ausleihungen: {len(invalid_lendings)}")
+                for lending in invalid_lendings:
+                    logger.info(f"Ungültige Ausleihe gefunden: {dict(lending)}")
+                
+                db.execute('''
+                    DELETE FROM lendings
+                    WHERE id IN (
+                        SELECT l.id
+                        FROM lendings l
+                        LEFT JOIN tools t ON l.tool_barcode = t.barcode
+                        WHERE t.barcode IS NULL
+                        AND l.returned_at IS NULL
+                    )
+                ''')
+                db.commit()
+                logger.info(f"{len(invalid_lendings)} ungültige Ausleihungen wurden gelöscht")
+    except Exception as e:
+        logger.error(f"Fehler bei der automatischen Datenbankbereinigung: {str(e)}")
 
 def create_app(test_config=None):
     """Erstellt und konfiguriert die Flask-Anwendung"""
@@ -138,5 +181,16 @@ def create_app(test_config=None):
     # Datenbank initialisieren
     with app.app_context():
         init_database_users(app)
+    
+    # Automatische Datenbankbereinigung durchführen
+    cleanup_database()
+    
+    # Login-Manager initialisieren
+    login_manager.init_app(app)
+    login_manager.login_view = 'auth.login'
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.get_by_id(user_id)
     
     return app

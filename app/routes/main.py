@@ -9,23 +9,37 @@ bp = Blueprint('main', __name__, url_prefix='')
 def index():
     """Zeigt die Hauptseite mit Statistiken"""
     try:
-        # Werkzeug-Statistiken
-        tool_stats = {
-            'total': Database.query('SELECT COUNT(*) as count FROM tools WHERE deleted = 0', one=True)['count'],
-            'available': Database.query('''
-                SELECT COUNT(*) as count 
+        # Werkzeug-Statistiken mit verbesserter Abfrage
+        tool_stats = Database.query('''
+            WITH valid_tools AS (
+                SELECT barcode 
                 FROM tools 
-                WHERE deleted = 0 
-                AND status != 'defekt' 
-                AND barcode NOT IN (
-                    SELECT tool_barcode 
-                    FROM lendings 
-                    WHERE returned_at IS NULL
-                )
-            ''', one=True)['count'],
-            'defect': Database.query("SELECT COUNT(*) as count FROM tools WHERE deleted = 0 AND status = 'defekt'", one=True)['count']
-        }
-
+                WHERE deleted = 0
+            )
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE 
+                    WHEN NOT EXISTS (
+                        SELECT 1 FROM lendings l 
+                        WHERE l.tool_barcode = t.barcode 
+                        AND l.returned_at IS NULL
+                    ) AND status = 'verfügbar' THEN 1 
+                    ELSE 0 
+                END) as available,
+                (
+                    SELECT COUNT(DISTINCT l.tool_barcode) 
+                    FROM lendings l
+                    JOIN valid_tools vt ON l.tool_barcode = vt.barcode
+                    WHERE l.returned_at IS NULL
+                ) as lent,
+                SUM(CASE WHEN status = 'defekt' THEN 1 ELSE 0 END) as defect
+            FROM tools t
+            WHERE t.deleted = 0
+        ''', one=True)
+        
+        # Debug-Ausgabe
+        print("Tool Stats:", tool_stats)
+        
         # Verbrauchsmaterial-Statistiken
         consumable_stats = {
             'total': Database.query('SELECT COUNT(*) as count FROM consumables WHERE deleted = 0', one=True)['count'],
@@ -56,7 +70,7 @@ def index():
         import traceback
         print(traceback.format_exc())
         return render_template('index.html',
-                           tool_stats={'total': 0, 'available': 0, 'defect': 0},
+                           tool_stats={'total': 0, 'available': 0, 'lent': 0, 'defect': 0},
                            consumable_stats={'total': 0, 'sufficient': 0, 'warning': 0, 'critical': 0},
                            worker_stats={'total': 0, 'by_department': []})
 

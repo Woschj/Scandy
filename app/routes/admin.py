@@ -1266,4 +1266,51 @@ def update_category(name):
             'message': str(e)
         }), 500
 
+@bp.route('/cleanup-database', methods=['POST'])
+@admin_required
+def cleanup_database():
+    """Bereinigt die Datenbank von ungültigen Einträgen"""
+    try:
+        print("Starte Datenbankbereinigung...")
+        with Database.get_db() as db:
+            # Finde Ausleihungen für nicht existierende Werkzeuge
+            invalid_lendings = db.execute('''
+                SELECT l.*, t.barcode as tool_exists
+                FROM lendings l
+                LEFT JOIN tools t ON l.tool_barcode = t.barcode
+                WHERE t.barcode IS NULL
+                AND l.returned_at IS NULL
+            ''').fetchall()
+            
+            print(f"Gefundene ungültige Ausleihungen: {len(invalid_lendings)}")
+            for lending in invalid_lendings:
+                print(f"Ungültige Ausleihe gefunden: {dict(lending)}")
+            
+            # Lösche ungültige Ausleihungen
+            if invalid_lendings:
+                db.execute('''
+                    DELETE FROM lendings
+                    WHERE id IN (
+                        SELECT l.id
+                        FROM lendings l
+                        LEFT JOIN tools t ON l.tool_barcode = t.barcode
+                        WHERE t.barcode IS NULL
+                        AND l.returned_at IS NULL
+                    )
+                ''')
+                db.commit()
+                print(f"{len(invalid_lendings)} Ausleihungen wurden gelöscht")
+                
+            return jsonify({
+                'success': True,
+                'message': f'{len(invalid_lendings)} ungültige Ausleihungen wurden bereinigt'
+            })
+            
+    except Exception as e:
+        print(f"Fehler bei der Bereinigung: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Bereinigung: {str(e)}'
+        }), 500
+
 # Weitere Admin-Routen...
