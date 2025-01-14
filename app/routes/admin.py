@@ -240,15 +240,15 @@ def manual_lending():
         print("POST-Anfrage empfangen")
         print("Form-Daten:", request.form)
         
-        tool_barcode = request.form.get('tool_barcode')
+        item_barcode = request.form.get('tool_barcode')  # Behalte den Parameter-Namen für Kompatibilität
         worker_barcode = request.form.get('worker_barcode')
         action = request.form.get('action')  # 'lend' oder 'return'
         quantity = request.form.get('quantity', type=int)
         
-        if not tool_barcode:
+        if not item_barcode:
             return jsonify({
                 'success': False, 
-                'message': 'Werkzeug muss ausgewählt sein'
+                'message': 'Artikel muss ausgewählt sein'
             }), 400
             
         if action == 'lend' and not worker_barcode:
@@ -258,117 +258,170 @@ def manual_lending():
             }), 400
         
         try:
-            # Prüfe ob es ein Verbrauchsmaterial ist
-            consumable = Database.query('''
-                SELECT * FROM consumables 
-                WHERE barcode = ? AND deleted = 0
-            ''', [tool_barcode], one=True)
-            
-            if consumable:  # Verbrauchsmaterial-Logik
-                if not quantity or quantity <= 0:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Ungültige Menge'
-                    }), 400
+            with Database.get_db() as db:
+                # Prüfe ob der Mitarbeiter existiert
+                if worker_barcode:
+                    worker = db.execute('''
+                        SELECT * FROM workers 
+                        WHERE barcode = ? AND deleted = 0
+                    ''', [worker_barcode]).fetchone()
                     
-                if quantity > consumable['quantity']:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Nicht genügend Bestand'
-                    }), 400
+                    if not worker:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Mitarbeiter nicht gefunden'
+                        }), 404
+                
+                # Prüfe ob es ein Verbrauchsmaterial ist
+                consumable = db.execute('''
+                    SELECT * FROM consumables 
+                    WHERE barcode = ? AND deleted = 0
+                ''', [item_barcode]).fetchone()
+                
+                if consumable:  # Verbrauchsmaterial-Logik
+                    if not quantity or quantity <= 0:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Ungültige Menge'
+                        }), 400
+                        
+                    if quantity > consumable['quantity']:
+                        return jsonify({
+                            'success': False,
+                            'message': 'Nicht genügend Bestand'
+                        }), 400
+                        
+                    # Neue Verbrauchsmaterial-Ausgabe erstellen
+                    db.execute('''
+                        INSERT INTO consumable_usages 
+                        (consumable_barcode, worker_barcode, quantity, used_at, modified_at, sync_status)
+                        VALUES (?, ?, ?, datetime('now'), datetime('now'), 'pending')
+                    ''', [item_barcode, worker_barcode, quantity])
                     
-                # Neue Verbrauchsmaterial-Ausgabe erstellen
-                Database.query('''
-                    INSERT INTO consumable_usages 
-                    (consumable_barcode, worker_barcode, quantity, used_at, modified_at, sync_status)
-                    VALUES (?, ?, ?, datetime('now'), datetime('now'), 'pending')
-                ''', [tool_barcode, worker_barcode, quantity])
-                
-                # Bestand aktualisieren
-                Database.query('''
-                    UPDATE consumables
-                    SET quantity = quantity - ?,
-                        modified_at = datetime('now'),
-                        sync_status = 'pending'
-                    WHERE barcode = ?
-                ''', [quantity, tool_barcode])
-                
-                return jsonify({
-                    'success': True,
-                    'message': 'Verbrauchsmaterial erfolgreich ausgegeben'
-                })
-            
-            # Werkzeug-Logik
-            if action == 'lend':
-                # Prüfe ob das Werkzeug bereits ausgeliehen ist
-                existing_lending = Database.query('''
-                    SELECT * FROM lendings
-                    WHERE tool_barcode = ?
-                    AND returned_at IS NULL
-                ''', [tool_barcode], one=True)
-                
-                if existing_lending:
+                    # Bestand aktualisieren
+                    db.execute('''
+                        UPDATE consumables
+                        SET quantity = quantity - ?,
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE barcode = ?
+                    ''', [quantity, item_barcode])
+                    
+                    db.commit()
                     return jsonify({
-                        'success': False, 
-                        'message': 'Dieses Werkzeug ist bereits ausgeliehen'
-                    }), 400
+                        'success': True,
+                        'message': f'{quantity}x {consumable["name"]} wurde an {worker["firstname"]} {worker["lastname"]} ausgegeben'
+                    })
                 
-                # Neue Ausleihe erstellen
-                Database.query('''
-                    INSERT INTO lendings (tool_barcode, worker_barcode, lent_at, modified_at, sync_status)
-                    VALUES (?, ?, datetime('now'), datetime('now'), 'pending')
-                ''', [tool_barcode, worker_barcode])
+                # Werkzeug-Logik
+                tool = db.execute('''
+                    SELECT t.*, 
+                           CASE 
+                               WHEN EXISTS (
+                                   SELECT 1 FROM lendings l 
+                                   WHERE l.tool_barcode = t.barcode 
+                                   AND l.returned_at IS NULL
+                               ) THEN 'ausgeliehen'
+                               ELSE t.status
+                           END as current_status,
+                           (
+                               SELECT w.firstname || ' ' || w.lastname
+                               FROM lendings l
+                               JOIN workers w ON l.worker_barcode = w.barcode
+                               WHERE l.tool_barcode = t.barcode
+                               AND l.returned_at IS NULL
+                               LIMIT 1
+                           ) as current_worker_name,
+                           (
+                               SELECT l.worker_barcode
+                               FROM lendings l
+                               WHERE l.tool_barcode = t.barcode
+                               AND l.returned_at IS NULL
+                               LIMIT 1
+                           ) as current_worker_barcode
+                    FROM tools t
+                    WHERE t.barcode = ? AND t.deleted = 0
+                ''', [item_barcode]).fetchone()
                 
-                # Status des Werkzeugs aktualisieren
-                Database.query('''
-                    UPDATE tools 
-                    SET status = 'ausgeliehen',
-                        modified_at = datetime('now'),
-                        sync_status = 'pending'
-                    WHERE barcode = ?
-                ''', [tool_barcode])
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Werkzeug erfolgreich ausgeliehen'
-                })
-            else:  # action == 'return'
-                # Prüfe ob eine aktive Ausleihe existiert
-                lending = Database.query('''
-                    SELECT * FROM lendings
-                    WHERE tool_barcode = ?
-                    AND returned_at IS NULL
-                ''', [tool_barcode], one=True)
-                
-                if not lending:
+                if not tool:
                     return jsonify({
                         'success': False,
-                        'message': 'Keine aktive Ausleihe für dieses Werkzeug gefunden'
-                    }), 400
+                        'message': 'Werkzeug nicht gefunden'
+                    }), 404
                 
-                # Rückgabe verarbeiten
-                Database.query('''
-                    UPDATE lendings 
-                    SET returned_at = datetime('now'),
-                        modified_at = datetime('now'),
-                        sync_status = 'pending'
-                    WHERE tool_barcode = ? 
-                    AND returned_at IS NULL
-                ''', [tool_barcode])
-                
-                # Status des Werkzeugs aktualisieren
-                Database.query('''
-                    UPDATE tools 
-                    SET status = 'verfügbar',
-                        modified_at = datetime('now'),
-                        sync_status = 'pending'
-                    WHERE barcode = ?
-                ''', [tool_barcode])
-                
-                return jsonify({
-                    'success': True, 
-                    'message': 'Werkzeug erfolgreich zurückgegeben'
-                })
+                if action == 'lend':
+                    if tool['current_status'] == 'ausgeliehen':
+                        return jsonify({
+                            'success': False,
+                            'message': f'Dieses Werkzeug ist bereits an {tool["current_worker_name"]} ausgeliehen'
+                        }), 400
+                        
+                    if tool['current_status'] == 'defekt':
+                        return jsonify({
+                            'success': False,
+                            'message': 'Dieses Werkzeug ist als defekt markiert'
+                        }), 400
+                    
+                    # Neue Ausleihe erstellen
+                    db.execute('''
+                        INSERT INTO lendings 
+                        (tool_barcode, worker_barcode, lent_at, modified_at, sync_status)
+                        VALUES (?, ?, datetime('now'), datetime('now'), 'pending')
+                    ''', [item_barcode, worker_barcode])
+                    
+                    # Status des Werkzeugs aktualisieren
+                    db.execute('''
+                        UPDATE tools 
+                        SET status = 'ausgeliehen',
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE barcode = ?
+                    ''', [item_barcode])
+                    
+                    db.commit()
+                    return jsonify({
+                        'success': True,
+                        'message': f'Werkzeug {tool["name"]} wurde an {worker["firstname"]} {worker["lastname"]} ausgeliehen'
+                    })
+                    
+                else:  # action == 'return'
+                    if tool['current_status'] != 'ausgeliehen':
+                        return jsonify({
+                            'success': False,
+                            'message': 'Dieses Werkzeug ist nicht ausgeliehen'
+                        }), 400
+                    
+                    # Wenn ein Mitarbeiter angegeben wurde, prüfe ob er berechtigt ist
+                    if worker_barcode and tool['current_worker_barcode'] != worker_barcode:
+                        return jsonify({
+                            'success': False,
+                            'message': f'Dieses Werkzeug wurde von {tool["current_worker_name"]} ausgeliehen'
+                        }), 403
+                    
+                    # Rückgabe verarbeiten
+                    db.execute('''
+                        UPDATE lendings 
+                        SET returned_at = datetime('now'),
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE tool_barcode = ? 
+                        AND returned_at IS NULL
+                    ''', [item_barcode])
+                    
+                    # Status des Werkzeugs aktualisieren
+                    db.execute('''
+                        UPDATE tools 
+                        SET status = 'verfügbar',
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE barcode = ?
+                    ''', [item_barcode])
+                    
+                    db.commit()
+                    return jsonify({
+                        'success': True,
+                        'message': f'Werkzeug {tool["name"]} wurde zurückgegeben'
+                    })
                 
         except Exception as e:
             print("Fehler bei der Ausleihe:", str(e))
@@ -381,22 +434,30 @@ def manual_lending():
     tools = Database.query('''
         SELECT t.*,
                CASE 
-                   WHEN l.id IS NOT NULL THEN 'ausgeliehen'
+                   WHEN EXISTS (
+                       SELECT 1 FROM lendings l 
+                       WHERE l.tool_barcode = t.barcode 
+                       AND l.returned_at IS NULL
+                   ) THEN 'ausgeliehen'
                    WHEN t.status = 'defekt' THEN 'defekt'
                    ELSE 'verfügbar'
                END as current_status,
-               w.firstname || ' ' || w.lastname as lent_to,
-               l.lent_at as lending_date
+               (
+                   SELECT w.firstname || ' ' || w.lastname
+                   FROM lendings l
+                   JOIN workers w ON l.worker_barcode = w.barcode
+                   WHERE l.tool_barcode = t.barcode
+                   AND l.returned_at IS NULL
+                   LIMIT 1
+               ) as current_worker,
+               (
+                   SELECT l.lent_at
+                   FROM lendings l
+                   WHERE l.tool_barcode = t.barcode
+                   AND l.returned_at IS NULL
+                   LIMIT 1
+               ) as lending_date
         FROM tools t
-        LEFT JOIN (
-            SELECT l1.* 
-            FROM lendings l1
-            LEFT JOIN lendings l2 ON l1.tool_barcode = l2.tool_barcode 
-                AND l1.lent_at < l2.lent_at
-            WHERE l2.id IS NULL 
-            AND l1.returned_at IS NULL
-        ) l ON t.barcode = l.tool_barcode
-        LEFT JOIN workers w ON l.worker_barcode = w.barcode
         WHERE t.deleted = 0
         ORDER BY t.name
     ''')
@@ -407,7 +468,15 @@ def manual_lending():
     ''')
 
     consumables = Database.query('''
-        SELECT * FROM consumables WHERE deleted = 0
+        SELECT c.*,
+               CASE 
+                   WHEN quantity <= 0 THEN 'nicht_verfügbar'
+                   WHEN quantity <= min_quantity THEN 'kritisch'
+                   WHEN quantity <= min_quantity * 2 THEN 'niedrig'
+                   ELSE 'verfügbar'
+               END as status
+        FROM consumables c 
+        WHERE deleted = 0
         ORDER BY name
     ''')
 
@@ -907,243 +976,131 @@ def delete_department(name):
 @bp.route('/locations', methods=['GET'])
 @admin_required
 def get_locations():
-    """Hole alle Standorte"""
     try:
-        locations = Database.query('''
-            SELECT 
-                l1.value as name,
-                COALESCE(l2.value, '0') as tools,
-                COALESCE(l3.value, '0') as consumables
-            FROM settings l1
-            LEFT JOIN settings l2 ON l2.key = l1.key || '_tools'
-            LEFT JOIN settings l3 ON l3.key = l1.key || '_consumables'
-            WHERE l1.key LIKE 'location_%'
-            AND l1.key NOT LIKE '%_tools'
-            AND l1.key NOT LIKE '%_consumables'
-            AND l1.value IS NOT NULL
-            AND l1.value != ''
-            ORDER BY l1.value
-        ''')
-        
-        # Konvertiere die String-Werte in Booleans
-        result = []
-        for loc in locations:
-            result.append({
-                'name': loc['name'],
-                'tools': loc['tools'] == '1',
-                'consumables': loc['consumables'] == '1'
-            })
-            
-        return jsonify({
-            'success': True,
-            'locations': result
-        })
+        with Database.get_db() as db:
+            cursor = db.execute(
+                "SELECT value as name FROM settings WHERE key LIKE 'location_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            locations = [dict(row) for row in cursor.fetchall()]
+            return jsonify({'success': True, 'locations': locations})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        print(f"Fehler beim Laden der Standorte: {e}")
+        return jsonify({'success': False, 'message': 'Fehler beim Laden der Standorte'})
 
 @bp.route('/locations/add', methods=['POST'])
 @admin_required
 def add_location():
-    location = request.form.get('location')
-    tools = request.form.get('tools') == 'true'
-    consumables = request.form.get('consumables') == 'true'
-    
+    location = request.form.get('location', '').strip()
     if not location:
-        return jsonify({'success': False, 'message': 'Kein Standortname angegeben'})
-        
+        return jsonify({'success': False, 'message': 'Kein Standort angegeben'})
+
     try:
         with Database.get_db() as db:
-            # Prüfe ob Standort bereits existiert
-            existing = db.execute(
+            # Prüfen ob der Standort bereits existiert
+            cursor = db.execute(
                 "SELECT value FROM settings WHERE key LIKE 'location_%' AND value = ?",
-                [location]
-            ).fetchone()
-            
-            if existing:
+                (location,)
+            )
+            if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Standort existiert bereits'})
-            
-            # Hole nächste ID
-            result = db.execute("""
-                SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
-                FROM settings
-                WHERE key LIKE 'location_%'
-            """).fetchone()
-            next_id = result['max_id'] + 1
-            
-            # Bestimme Verwendungszweck
-            usage = 'both' if tools and consumables else 'tools' if tools else 'consumables' if consumables else None
-            
-            # Füge neuen Standort hinzu
+
+            # Neue ID für den Standort generieren
+            cursor = db.execute(
+                "SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id FROM settings WHERE key LIKE 'location_%'"
+            )
+            result = cursor.fetchone()
+            next_id = 1 if result['max_id'] is None else result['max_id'] + 1
+
+            # Standort hinzufügen
             db.execute(
-                "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
-                [f"location_{next_id}", location, usage]
+                "INSERT INTO settings (key, value) VALUES (?, ?)",
+                (f'location_{next_id}', location)
             )
             db.commit()
-            
             return jsonify({'success': True})
-            
     except Exception as e:
         print(f"Fehler beim Hinzufügen des Standorts: {e}")
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': 'Fehler beim Hinzufügen des Standorts'})
 
 @bp.route('/locations/<name>', methods=['DELETE'])
 @admin_required
 def delete_location(name):
-    """Lösche einen Standort"""
     try:
         with Database.get_db() as db:
-            # Finde den Basis-Schlüssel für den Standort
-            location_key = db.execute('''
-                SELECT key FROM settings 
-                WHERE key LIKE 'location_%'
-                AND key NOT LIKE '%_tools'
-                AND key NOT LIKE '%_consumables'
-                AND value = ?
-            ''', [name]).fetchone()
-            
-            if location_key:
-                base_key = location_key['key']
-                # Lösche den Standort und seine Eigenschaften
-                db.execute('''
-                    DELETE FROM settings 
-                    WHERE key IN (?, ?, ?)
-                ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
-                db.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Standort erfolgreich gelöscht'
-            })
+            db.execute(
+                "DELETE FROM settings WHERE key LIKE 'location_%' AND value = ?",
+                (name,)
+            )
+            db.commit()
+            return jsonify({'success': True})
     except Exception as e:
         print(f"Fehler beim Löschen des Standorts: {e}")
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        return jsonify({'success': False, 'message': 'Fehler beim Löschen des Standorts'})
 
 # Kategorieverwaltung
 @bp.route('/categories', methods=['GET'])
 @admin_required
 def get_categories():
-    """Hole alle Kategorien"""
     try:
-        categories = Database.query('''
-            SELECT 
-                c1.value as name,
-                COALESCE(c2.value, '0') as tools,
-                COALESCE(c3.value, '0') as consumables
-            FROM settings c1
-            LEFT JOIN settings c2 ON c2.key = c1.key || '_tools'
-            LEFT JOIN settings c3 ON c3.key = c1.key || '_consumables'
-            WHERE c1.key LIKE 'category_%'
-            AND c1.key NOT LIKE '%_tools'
-            AND c1.key NOT LIKE '%_consumables'
-            AND c1.value IS NOT NULL
-            AND c1.value != ''
-            ORDER BY c1.value
-        ''')
-        
-        # Konvertiere die String-Werte in Booleans
-        result = []
-        for cat in categories:
-            result.append({
-                'name': cat['name'],
-                'tools': cat['tools'] == '1',
-                'consumables': cat['consumables'] == '1'
-            })
-            
-        return jsonify({
-            'success': True,
-            'categories': result
-        })
+        with Database.get_db() as db:
+            cursor = db.execute(
+                "SELECT value as name FROM settings WHERE key LIKE 'category_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            categories = [dict(row) for row in cursor.fetchall()]
+            return jsonify({'success': True, 'categories': categories})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        print(f"Fehler beim Laden der Kategorien: {e}")
+        return jsonify({'success': False, 'message': 'Fehler beim Laden der Kategorien'})
 
 @bp.route('/categories/add', methods=['POST'])
 @admin_required
 def add_category():
-    category = request.form.get('category')
-    tools = request.form.get('tools') == 'true'
-    consumables = request.form.get('consumables') == 'true'
-    
+    category = request.form.get('category', '').strip()
     if not category:
-        return jsonify({'success': False, 'message': 'Kein Kategoriename angegeben'})
-        
+        return jsonify({'success': False, 'message': 'Keine Kategorie angegeben'})
+
     try:
         with Database.get_db() as db:
-            # Prüfe ob Kategorie bereits existiert
-            existing = db.execute(
+            # Prüfen ob die Kategorie bereits existiert
+            cursor = db.execute(
                 "SELECT value FROM settings WHERE key LIKE 'category_%' AND value = ?",
-                [category]
-            ).fetchone()
-            
-            if existing:
+                (category,)
+            )
+            if cursor.fetchone():
                 return jsonify({'success': False, 'message': 'Kategorie existiert bereits'})
-            
-            # Hole nächste ID
-            result = db.execute("""
-                SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
-                FROM settings
-                WHERE key LIKE 'category_%'
-            """).fetchone()
-            next_id = result['max_id'] + 1
-            
-            # Bestimme Verwendungszweck
-            usage = 'both' if tools and consumables else 'tools' if tools else 'consumables' if consumables else None
-            
-            # Füge neue Kategorie hinzu
+
+            # Neue ID für die Kategorie generieren
+            cursor = db.execute(
+                "SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id FROM settings WHERE key LIKE 'category_%'"
+            )
+            result = cursor.fetchone()
+            next_id = 1 if result['max_id'] is None else result['max_id'] + 1
+
+            # Kategorie hinzufügen
             db.execute(
-                "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
-                [f"category_{next_id}", category, usage]
+                "INSERT INTO settings (key, value) VALUES (?, ?)",
+                (f'category_{next_id}', category)
             )
             db.commit()
-            
             return jsonify({'success': True})
-            
     except Exception as e:
         print(f"Fehler beim Hinzufügen der Kategorie: {e}")
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': 'Fehler beim Hinzufügen der Kategorie'})
 
 @bp.route('/categories/<name>', methods=['DELETE'])
 @admin_required
 def delete_category(name):
-    """Lösche eine Kategorie"""
     try:
         with Database.get_db() as db:
-            # Finde den Basis-Schlüssel für die Kategorie
-            category_key = db.execute('''
-                SELECT key FROM settings 
-                WHERE key LIKE 'category_%'
-                AND key NOT LIKE '%_tools'
-                AND key NOT LIKE '%_consumables'
-                AND value = ?
-            ''', [name]).fetchone()
-            
-            if category_key:
-                base_key = category_key['key']
-                # Lösche die Kategorie und ihre Eigenschaften
-                db.execute('''
-                    DELETE FROM settings 
-                    WHERE key IN (?, ?, ?)
-                ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
-                db.commit()
-            
-            return jsonify({
-                'success': True,
-                'message': 'Kategorie erfolgreich gelöscht'
-            })
+            db.execute(
+                "DELETE FROM settings WHERE key LIKE 'category_%' AND value = ?",
+                (name,)
+            )
+            db.commit()
+            return jsonify({'success': True})
     except Exception as e:
         print(f"Fehler beim Löschen der Kategorie: {e}")
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        return jsonify({'success': False, 'message': 'Fehler beim Löschen der Kategorie'})
 
 @bp.route('/locations/<name>', methods=['PUT'])
 @admin_required

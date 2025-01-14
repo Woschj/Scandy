@@ -92,87 +92,75 @@
                 }
 
                 const requestData = {
-                    item_type: itemData.type || '',
-                    item_barcode: itemData.barcode || '',
-                    worker_barcode: workerData.barcode || '',
-                    amount: itemData.amount || 1
+                    tool_barcode: itemData.barcode,
+                    worker_barcode: workerData.barcode,
+                    action: itemData.type === 'tool' ? 'lend' : 'consume',
+                    quantity: itemData.amount || 1
                 };
                 
                 debug('LENDING', 'Prepared request data:', requestData);
-                debug('LENDING', 'Sending request to /admin/process_lending...');
 
-                const response = await fetch('/admin/process_lending', {
+                const response = await fetch('/admin/manual-lending', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
                     },
-                    credentials: 'same-origin',
                     body: JSON.stringify(requestData)
                 });
 
                 debug('LENDING', 'Response received:', {
                     status: response.status,
-                    statusText: response.statusText,
-                    headers: Object.fromEntries(response.headers.entries())
+                    statusText: response.statusText
                 });
 
-                const textResponse = await response.text();
-                debug('LENDING', 'Raw response text:', textResponse);
-
-                let result;
-                try {
-                    result = JSON.parse(textResponse);
-                    debug('LENDING', 'Parsed JSON response:', result);
-                } catch (parseError) {
-                    debug('LENDING', 'JSON Parse Error:', parseError);
-                    throw new Error(`Ungültiges Antwortformat: ${textResponse}`);
-                }
+                const result = await response.json();
+                debug('LENDING', 'Parsed response:', result);
                 
-                if (!response.ok) {
-                    debug('LENDING', 'Request failed:', result);
-                    throw new Error(result.message || 'Fehler bei der Ausleihe');
-                }
-
-                // Bei Erfolg Broadcast senden
                 if (result.success) {
                     this.broadcastChange();
+                    showToast('success', result.message || 'Aktion erfolgreich durchgeführt');
+                    return true;
+                } else {
+                    showToast('error', result.message || 'Ein Fehler ist aufgetreten');
+                    return false;
                 }
 
-                debug('LENDING', 'Request completed successfully');
-                return result;
-
             } catch (error) {
-                debug('LENDING', 'Error in processLending:', {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack
-                });
-                throw error;
+                debug('LENDING', 'Error in processLending:', error);
+                showToast('error', `Fehler: ${error.message}`);
+                return false;
             }
         },
 
         async returnItem(barcode) {
             try {
-                const formData = new FormData();
-                formData.append('tool_barcode', barcode);
-                formData.append('action', 'return');
+                const requestData = {
+                    tool_barcode: barcode,
+                    action: 'return'
+                };
 
                 const response = await fetch('/admin/manual-lending', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
                 });
 
                 const result = await response.json();
+                
                 if (result.success) {
                     this.broadcastChange();
+                    showToast('success', result.message || 'Werkzeug erfolgreich zurückgegeben');
+                    return true;
                 } else {
-                    alert(result.message || 'Ein Fehler ist aufgetreten');
+                    showToast('error', result.message || 'Ein Fehler ist aufgetreten');
+                    return false;
                 }
             } catch (error) {
                 console.error('Fehler bei der Rückgabe:', error);
-                throw new Error(`Fehler bei der Rückgabe: ${error.message}`);
+                showToast('error', `Fehler bei der Rückgabe: ${error.message}`);
+                return false;
             }
         },
 
@@ -213,6 +201,39 @@
                 debug('RETURN', 'Error in returnTool:', error);
                 throw error;
             }
+        },
+
+        async lendItem(toolBarcode, workerBarcode) {
+            try {
+                const requestData = {
+                    tool_barcode: toolBarcode,
+                    worker_barcode: workerBarcode,
+                    action: 'lend'
+                };
+
+                const response = await fetch('/admin/manual-lending', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.broadcastChange();
+                    showToast('success', result.message || 'Werkzeug erfolgreich ausgeliehen');
+                    return true;
+                } else {
+                    showToast('error', result.message || 'Ein Fehler ist aufgetreten');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Fehler bei der Ausleihe:', error);
+                showToast('error', `Fehler bei der Ausleihe: ${error.message}`);
+                return false;
+            }
         }
     };
 
@@ -238,6 +259,35 @@ window.ManualLending = {
         const confirmButton = document.getElementById('confirmButton');
         if (confirmButton) {
             confirmButton.disabled = !(this.selectedItem && this.selectedWorker);
+        }
+    },
+
+    async returnTool(barcode) {
+        try {
+            const requestData = {
+                tool_barcode: barcode,
+                action: 'return'
+            };
+
+            const response = await fetch('/admin/manual-lending', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('success', result.message || 'Werkzeug erfolgreich zurückgegeben');
+                window.location.reload();
+            } else {
+                showToast('error', result.message || 'Ein Fehler ist aufgetreten');
+            }
+        } catch (error) {
+            console.error('Fehler bei der Rückgabe:', error);
+            showToast('error', `Fehler bei der Rückgabe: ${error.message}`);
         }
     },
 
@@ -281,7 +331,7 @@ window.ManualLending = {
         const [type, id, barcode, name] = value.split(':');
         this.selectedWorker = { 
             id, 
-            barcode: barcode,  // Barcode unverändert speichern
+            barcode: barcode,
             name 
         };
         document.getElementById('previewWorker').textContent = `${name} (${barcode})`;
@@ -291,12 +341,9 @@ window.ManualLending = {
     async processLending() {
         try {
             if (!this.selectedItem || !this.selectedWorker) {
-                console.error('No item or worker selected');
+                showToast('error', 'Bitte Artikel und Mitarbeiter auswählen');
                 return;
             }
-
-            console.log('Selected Worker:', this.selectedWorker);  // Debug-Ausgabe
-            console.log('Selected Item:', this.selectedItem);      // Debug-Ausgabe
 
             const itemData = {
                 type: this.selectedItem.type,
@@ -307,34 +354,18 @@ window.ManualLending = {
             };
 
             const workerData = {
-                barcode: this.selectedWorker.barcode.includes('worker:') 
-                    ? this.selectedWorker.barcode.replace('worker:', '')
-                    : this.selectedWorker.barcode
+                barcode: this.selectedWorker.barcode
             };
 
             const result = await window.LendingService.processLending(itemData, workerData);
 
-            if (result.success) {
-                // Toast oder Alert für Feedback
-                const message = this.selectedItem.type === 'consumable' 
-                    ? `${this.selectedItem.name} wurde erfolgreich an ${this.selectedWorker.name} ausgegeben`
-                    : `${this.selectedItem.name} wurde erfolgreich an ${this.selectedWorker.name} ausgeliehen`;
-                
-                // Toast anzeigen (falls vorhanden)
-                if (window.toast) {
-                    window.toast.success(message);
-                } else {
-                    alert(message);
-                }
-                
-                location.reload();
-            } else {
-                alert(result.message || 'Fehler bei der Ausleihe');
+            if (result) {
+                window.location.reload();
             }
 
         } catch (error) {
             console.error('Error in processLending:', error);
-            alert('Fehler bei der Ausleihe: ' + error.message);
+            showToast('error', 'Fehler bei der Ausleihe: ' + error.message);
         }
     }
 }; 

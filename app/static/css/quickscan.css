@@ -1,9 +1,11 @@
 /* QuickScan Styles */
 .scan-area {
     position: relative;
-    min-height: 40px;
+    min-height: 60px;
     border-radius: 0.5rem;
     overflow: hidden;
+    background: rgba(var(--b1) / 0.1);
+    backdrop-filter: blur(8px);
 }
 
 .scan-animation {
@@ -17,9 +19,16 @@
     left: 0;
     width: 100%;
     height: 2px;
-    background: hsl(var(--p));
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        hsl(var(--p) / 0.3) 20%, 
+        hsl(var(--p)) 50%,
+        hsl(var(--p) / 0.3) 80%,
+        transparent 100%
+    );
+    box-shadow: 0 0 8px hsl(var(--p) / 0.5);
     animation: scanning 1.5s ease-in-out infinite;
-    opacity: 0.7;
+    z-index: 10;
 }
 
 .scan-overlay {
@@ -32,12 +41,15 @@
 @keyframes scanning {
     0% {
         top: 0;
+        opacity: 0.8;
     }
     50% {
         top: calc(100% - 2px);
+        opacity: 1;
     }
     100% {
         top: 0;
+        opacity: 0.8;
     }
 }
 
@@ -86,18 +98,35 @@
 
 /* Steps */
 .steps {
-    --connector-size: 1px;
-    --size: 1.25rem;
-    margin: 0.5rem 0;
+    --connector-size: 2px;
+    --step-padding: 1rem;
+}
+
+.steps .step {
+    --size: 2rem;
 }
 
 .steps .step:before {
     height: var(--connector-size);
-    transform: translateY(-50%);
+    background-color: hsl(var(--b3));
 }
 
-.step-primary ~ .step:before {
-    --tw-bg-opacity: 0.2;
+.steps .step.step-primary:before {
+    background-color: hsl(var(--p));
+}
+
+.steps .step:after {
+    width: var(--size);
+    height: var(--size);
+    background-color: hsl(var(--b3));
+    border: var(--connector-size) solid hsl(var(--b2));
+    font-size: 0.8rem;
+}
+
+.steps .step.step-primary:after {
+    background-color: hsl(var(--p));
+    border-color: hsl(var(--p));
+    color: hsl(var(--pc));
 }
 
 /* Content Area */
@@ -201,4 +230,44 @@
 #toast-container .alert-warning {
     background-color: hsl(var(--wa));
     color: hsl(var(--wac));
+}
+
+/* Scanning Animation */
+.scan-step {
+    transition: all 0.3s ease-in-out;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scan-step.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
+
+/* Confirmation Barcodes */
+canvas {
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
+
+/* Success Animation */
+@keyframes success-pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.success-icon {
+    animation: success-pulse 0.5s ease-out forwards;
 } 

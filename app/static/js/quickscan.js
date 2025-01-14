@@ -1,557 +1,280 @@
-// IIFE um globalen Scope zu vermeiden
-(function() {
-    class QuickScan {
-        constructor() {
-            // Warte auf DOM-Laden
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => this.init());
-            } else {
-                this.init();
-            }
-        }
-
-        init() {
-            this.modal = document.getElementById('quickScanModal');
-            if (!this.modal) {
-                console.error('QuickScan Modal nicht gefunden');
-                return;
-            }
-
-            this.currentStep = 1;
-            this.scanMode = 'scanner';
-            this.codeReader = new ZXing.BrowserMultiFormatReader();
-            this.isScanning = false;
-            this.isProcessing = false;
-            
-            this.scannedData = {
-                item: null,
-                worker: null,
-                confirmationCode: null
-            };
-            
-            this.setupEventListeners();
-            console.log('QuickScan initialisiert');
-        }
-
-        setupEventListeners() {
-            // Scanner Input Events
-            const itemInput = document.getElementById('itemScanInput');
-            if (itemInput) {
-                itemInput.addEventListener('keyup', (e) => {
-                    if (e.key === 'Enter' && e.target.value) {
-                        this.handleItemScan(e.target.value);
-                        e.target.value = '';
-                    }
-                });
-            }
-
-            const workerInput = document.getElementById('workerScanInput');
-            if (workerInput) {
-                workerInput.addEventListener('keyup', (e) => {
-                    if (e.key === 'Enter' && e.target.value) {
-                        this.handleWorkerScan(e.target.value);
-                        e.target.value = '';
-                    }
-                });
-            }
-
-            // Modal Events
-            this.modal.addEventListener('close', () => {
-                this.resetScan();
-                this.stopWebcam();
-            });
-
-            // Modus-Umschaltung Events
-            document.getElementById('scannerModeBtn')?.addEventListener('click', () => this.switchMode('scanner'));
-            document.getElementById('webcamModeBtn')?.addEventListener('click', () => this.switchMode('webcam'));
-        }
-
-        async switchMode(mode) {
-            console.log('Wechsle zu Modus:', mode);
-            this.scanMode = mode;
-            
-            // Update Button States
-            document.getElementById('scannerModeBtn').classList.toggle('btn-active', mode === 'scanner');
-            document.getElementById('webcamModeBtn').classList.toggle('btn-active', mode === 'webcam');
-            
-            // Toggle Visibility
-            const scannerMode = document.getElementById('step1');
-            const webcamMode = document.getElementById('webcamMode');
-            
-            if (mode === 'webcam') {
-                if (webcamMode) {
-                    webcamMode.classList.remove('hidden');
-                    await this.startWebcam();
-                }
-                if (scannerMode) scannerMode.classList.add('hidden');
-            } else {
-                if (webcamMode) webcamMode.classList.add('hidden');
-                if (scannerMode) {
-                    scannerMode.classList.remove('hidden');
-                    const input = document.getElementById('itemScanInput');
-                    if (input) {
-                        input.value = '';
-                        input.focus();
-                    }
-                }
-                this.stopWebcam();
-            }
-        }
-
-        async startWebcam() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-                const video = document.getElementById('video');
-                if (video) {
-                    video.srcObject = stream;
-                    await video.play();
+const QuickScan = {
+    currentStep: 1,
+    scannedItem: null,
+    scannedWorker: null,
+    confirmationBarcode: null,
+    
+    init() {
+        this.reset();
+        this.setupEventListeners();
+    },
+    
+    setupEventListeners() {
+        // Event-Listener für Item-Scan
+        const itemInput = document.getElementById('itemScanInput');
+        if (itemInput) {
+            itemInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const barcode = e.target.value.trim();
                     
-                    this.isScanning = true;
-                    this.startWebcamScanning();
-                }
-            } catch (error) {
-                this.showError('Webcam nicht verfügbar');
-                this.switchMode('scanner');
-            }
-        }
-
-        stopWebcam() {
-            this.isScanning = false;
-            const video = document.getElementById('video');
-            if (video?.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-        }
-
-        async startWebcamScanning() {
-            while (this.isScanning) {
-                try {
-                    const result = await this.codeReader.decodeFromVideoElement(
-                        document.getElementById('video')
-                    );
-                    if (result) {
-                        if (this.currentStep === 1) {
-                            await this.handleItemScan(result.text);
-                        } else if (this.currentStep === 3) {
-                            await this.handleWorkerScan(result.text);
-                        } else if (this.currentStep === 4) {
-                            if (result.text === this.scannedData.finalConfirmationCode) {
-                                await this.processLending();
-                            }
+                    // Wenn ein Bestätigungsbarcode aktiv ist, prüfen ob Enter oder der richtige Barcode
+                    if (this.confirmationBarcode) {
+                        if (barcode === '' || barcode === this.confirmationBarcode) {
+                            this.confirmItem();
                         }
+                    } else if (barcode.length >= 4) {
+                        await this.handleItemScan(barcode);
                     }
-                } catch (error) {
-                    // Ignoriere Fehler und scanne weiter
+                    e.target.value = '';
                 }
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+            });
         }
-
-        async handleItemScan(barcode) {
-            try {
-                // Prüfe ob es ein Bestätigungscode ist
-                if (barcode.startsWith('CONFIRM-')) {
-                    if (barcode === this.scannedData.confirmationCode) {
-                        this.moveToStep(3);
-                        // Fokus auf Worker-Scan setzen
-                        const workerInput = document.getElementById('workerScanInput');
-                        if (workerInput) {
-                            workerInput.disabled = false;
-                            workerInput.focus();
+        
+        // Event-Listener für Worker-Scan
+        const workerInput = document.getElementById('workerScanInput');
+        if (workerInput) {
+            workerInput.addEventListener('keypress', async (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const barcode = e.target.value.trim();
+                    
+                    // Wenn ein Bestätigungsbarcode aktiv ist, prüfen ob Enter oder der richtige Barcode
+                    if (this.confirmationBarcode) {
+                        if (barcode === '' || barcode === this.confirmationBarcode) {
+                            this.processAction();
                         }
-                        return;
-                    } else if (barcode === this.scannedData.finalConfirmationCode) {
-                        this.processLending();
-                        return;
+                    } else if (barcode.length >= 4) {
+                        await this.handleWorkerScan(barcode);
+                    }
+                    e.target.value = '';
+                }
+            });
+        }
+    },
+    
+    async handleItemScan(barcode) {
+        try {
+            // Prüfe zuerst ob es ein Werkzeug ist
+            const toolResponse = await fetch(`/api/inventory/tools/${barcode}`);
+            let data;
+            
+            if (toolResponse.ok) {
+                const response = await toolResponse.json();
+                if (response.success) {
+                    data = response.data;
+                    data.itemType = 'tool';
+                } else {
+                    showToast('error', response.message || 'Fehler beim Laden des Werkzeugs');
+                    return;
+                }
+            } else {
+                // Wenn kein Werkzeug gefunden, prüfe ob es ein Verbrauchsmaterial ist
+                const consumableResponse = await fetch(`/api/inventory/consumables/${barcode}`);
+                if (consumableResponse.ok) {
+                    const response = await consumableResponse.json();
+                    if (response.success) {
+                        data = response.data;
+                        data.itemType = 'consumable';
                     } else {
-                        throw new Error('Ungültiger Bestätigungscode');
+                        showToast('error', response.message || 'Fehler beim Laden des Verbrauchsmaterials');
+                        return;
                     }
+                } else {
+                    showToast('error', 'Artikel nicht gefunden');
+                    return;
                 }
-
-                // Normaler Item-Scan
-                console.log('Verarbeite Item-Scan:', barcode);
-                const response = await fetch(`/api/scan`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        barcode: barcode,
-                        step: 'tool'
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Artikel nicht gefunden');
-                }
-                
-                if (!data.success && data.error) {
-                    throw new Error(data.error);
-                }
-                
-                this.scannedData.item = data.item;
-                this.updateItemInfo(data.item);
-            } catch (error) {
-                this.showError(error.message);
             }
-        }
-
-        updateItemInfo(item) {
-            // Update Step 1 Info
-            document.getElementById('scannedItemInfo').classList.remove('hidden');
-            document.getElementById('itemDetails').innerHTML = `
-                <strong>${item.name}</strong><br>
-                ${item.type === 'tool' ? 'Werkzeug' : 'Verbrauchsmaterial'}<br>
-                Status: ${item.status || 'Verfügbar'}
-            `;
             
-            // Update Step 2 Info
-            document.getElementById('confirmItemName').textContent = item.name;
-            const action = item.status === 'ausgeliehen' ? 'Rückgabe' : 'Ausleihe';
-            document.getElementById('confirmItemStatus').textContent = 
-                `${item.type === 'tool' ? 'Werkzeug' : 'Verbrauchsmaterial'} - ${action}`;
-
-            // Generiere und zeige Bestätigungsbarcode
-            this.generateConfirmationBarcode(item, action);
-        }
-
-        async generateConfirmationBarcode(item, action) {
-            try {
-                const confirmationCode = `CONFIRM-${Date.now()}`;
-                this.scannedData.confirmationCode = confirmationCode;
-                this.scannedData.action = action.toLowerCase();
-
-                // Zeige Barcode und Anweisungen
-                const confirmArea = document.getElementById('step2');
-                confirmArea.innerHTML = `
-                    <div class="bg-base-200 rounded-lg p-4">
-                        <div class="alert alert-info shadow-sm text-sm py-2 mb-3">
-                            <div class="flex flex-col">
-                                <span id="confirmItemName" class="font-medium">${item.name}</span>
-                                <span id="confirmItemStatus" class="text-xs">
-                                    ${action} durchführen
-                                </span>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <div class="bg-white p-4 rounded-lg mb-2">
-                                <svg id="confirmationBarcode"></svg>
-                            </div>
-                            <p class="text-sm text-center mb-4">
-                                Scannen Sie diesen Barcode oder drücken Sie Enter um die ${action} zu bestätigen
-                            </p>
-                            <div class="form-control">
-                                <input type="text" 
-                                       id="confirmInput"
-                                       class="input input-bordered w-full text-center" 
-                                       placeholder="Enter drücken zum Bestätigen"
-                                       autocomplete="off">
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Generiere Barcode mit JsBarcode
-                JsBarcode("#confirmationBarcode", confirmationCode, {
-                    format: "code128",
+            this.scannedItem = data;
+            
+            // Bestimme Aktion und Farbe basierend auf Artikeltyp und Status
+            let action, actionText, statusClass, details;
+            
+            if (data.itemType === 'tool') {
+                if (data.current_status === 'verfügbar') {
+                    action = 'lend';
+                    actionText = 'Wird ausgeliehen';
+                    statusClass = 'badge-success';
+                } else if (data.current_status === 'ausgeliehen') {
+                    action = 'return';
+                    actionText = 'Wird zurückgegeben';
+                    statusClass = 'badge-warning';
+                } else if (data.current_status === 'defekt') {
+                    action = null;
+                    actionText = 'Defekt - keine Aktion möglich';
+                    statusClass = 'badge-error';
+                }
+                details = `${data.category} | ${data.location}`;
+            } else {
+                action = 'consume';
+                actionText = 'Wird ausgegeben';
+                statusClass = data.quantity <= data.min_quantity ? 'badge-warning' : 'badge-success';
+                details = `Bestand: ${data.quantity} | Mindestbestand: ${data.min_quantity}`;
+            }
+            
+            // Zeige Artikeldetails
+            document.getElementById('itemName').textContent = data.name;
+            document.getElementById('itemStatus').className = `badge badge-lg ${statusClass}`;
+            document.getElementById('itemStatus').textContent = data.status_text;
+            document.getElementById('itemAction').textContent = actionText;
+            document.getElementById('itemDetails').textContent = details;
+            
+            if (action) {
+                // Generiere Bestätigungsbarcode
+                this.confirmationBarcode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const canvas = document.getElementById('itemConfirmBarcode');
+                JsBarcode(canvas, this.confirmationBarcode, {
+                    format: "CODE128",
                     width: 2,
-                    height: 100,
-                    displayValue: true,
-                    text: `${action} bestätigen`,
-                    fontOptions: "bold",
-                    textAlign: "center",
-                    textPosition: "bottom",
-                    textMargin: 2,
-                    fontSize: 14,
-                    background: "#ffffff",
-                    lineColor: "#000000",
-                    margin: 10
+                    height: 50,
+                    displayValue: true
                 });
-
-                // Event-Listener für Enter-Taste
-                const confirmInput = document.getElementById('confirmInput');
-                if (confirmInput) {
-                    confirmInput.addEventListener('keyup', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            this.moveToStep(3);
-                            // Fokus auf Worker-Scan setzen
-                            const workerInput = document.getElementById('workerScanInput');
-                            if (workerInput) {
-                                workerInput.disabled = false;
-                                workerInput.focus();
-                            }
-                        }
-                    });
-                    // Setze Fokus nach kurzem Delay
-                    setTimeout(() => {
-                        confirmInput.focus();
-                    }, 100);
-                }
-
-                this.moveToStep(2);
-            } catch (error) {
-                this.showError('Fehler beim Generieren des Bestätigungscodes: ' + error.message);
+                document.getElementById('scannedItemInfo').classList.remove('hidden');
+            } else {
+                showToast('error', 'Keine Aktion für diesen Artikel möglich');
             }
+            
+        } catch (error) {
+            showToast('error', 'Fehler beim Scannen des Artikels');
+            console.error(error);
         }
-
-        async handleWorkerScan(barcode) {
-            try {
-                console.log('Verarbeite Worker-Scan:', barcode);
-                const response = await fetch(`/api/scan`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        barcode: barcode,
-                        step: 'worker'
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Mitarbeiter nicht gefunden');
-                }
-                
-                if (!data.success && data.error) {
-                    throw new Error(data.error);
-                }
-                
-                this.scannedData.worker = data.worker;
-                this.updateWorkerInfo(data.worker);
-                this.showFinalConfirmation();
-            } catch (error) {
-                this.showError(error.message);
+    },
+    
+    confirmItem() {
+        this.confirmationBarcode = null;
+        this.goToStep(2);
+        document.getElementById('workerScanInput').focus();
+    },
+    
+    async handleWorkerScan(barcode) {
+        try {
+            const response = await fetch(`/api/inventory/workers/${barcode}`);
+            if (!response.ok) {
+                throw new Error('Mitarbeiter nicht gefunden');
             }
-        }
-
-        updateWorkerInfo(worker) {
-            document.getElementById('scannedWorkerInfo').classList.remove('hidden');
-            document.getElementById('workerName').textContent = 
-                `${worker.firstname} ${worker.lastname}`;
-            document.getElementById('workerDepartment').textContent = 
-                worker.department || 'Keine Abteilung';
-        }
-
-        showFinalConfirmation() {
-            const action = this.scannedData.item.status === 'ausgeliehen' ? 'Rückgabe' : 'Ausleihe';
-            const confirmationCode = `CONFIRM-FINAL-${Date.now()}`;
-            this.scannedData.finalConfirmationCode = confirmationCode;
-
-            // Zeige finale Bestätigung
-            const confirmArea = document.getElementById('step4');
-            confirmArea.innerHTML = `
-                <div class="bg-base-200 rounded-lg p-4">
-                    <div class="alert ${action === 'Rückgabe' ? 'alert-warning' : 'alert-info'} shadow-sm text-sm py-2 mb-3">
-                        <div class="flex flex-col gap-2">
-                            <h3 class="font-bold">Finale Bestätigung - ${action}</h3>
-                            <div class="divider my-0"></div>
-                            <div>
-                                <p class="font-medium">Werkzeug/Material:</p>
-                                <p>${this.scannedData.item.name}</p>
-                                <p class="text-xs opacity-70">Barcode: ${this.scannedData.item.barcode}</p>
-                                <p class="text-xs opacity-70">Status: ${this.scannedData.item.status}</p>
-                            </div>
-                            <div class="divider my-0"></div>
-                            <div>
-                                <p class="font-medium">Mitarbeiter:</p>
-                                <p>${this.scannedData.worker.firstname} ${this.scannedData.worker.lastname}</p>
-                                <p class="text-xs opacity-70">${this.scannedData.worker.department || ''}</p>
-                                <p class="text-xs opacity-70">Barcode: ${this.scannedData.worker.barcode}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div class="bg-white p-4 rounded-lg mb-2">
-                            <svg id="finalConfirmationBarcode"></svg>
-                        </div>
-                        <p class="text-sm text-center mb-4">
-                            Scannen Sie diesen Barcode oder drücken Sie Enter um die ${action} abzuschließen
-                        </p>
-                        <div class="form-control">
-                            <input type="text" 
-                                   id="finalConfirmInput"
-                                   class="input input-bordered w-full text-center" 
-                                   placeholder="Enter drücken zum Bestätigen"
-                                   autocomplete="off">
-                        </div>
-                    </div>
-                </div>
+            const data = await response.json();
+            
+            this.scannedWorker = data;
+            
+            // Aktualisiere finale Übersicht
+            document.getElementById('finalItemInfo').innerHTML = `
+                <div class="font-bold">${this.scannedItem.name}</div>
+                <div class="text-sm opacity-70">${this.scannedItem.itemType === 'tool' ? 'Werkzeug' : 'Verbrauchsmaterial'}</div>
+                <div class="badge badge-sm mt-2">${this.determineAction() === 'lend' ? 'Ausleihen' : 
+                                                 this.determineAction() === 'return' ? 'Rückgabe' : 'Ausgabe'}</div>
             `;
-
-            // Generiere Barcode
-            JsBarcode("#finalConfirmationBarcode", confirmationCode, {
-                format: "code128",
+            
+            document.getElementById('finalWorkerInfo').innerHTML = `
+                <div class="font-bold">${data.firstname} ${data.lastname}</div>
+                <div class="text-sm opacity-70">${data.department}</div>
+            `;
+            
+            // Generiere finalen Bestätigungsbarcode
+            this.confirmationBarcode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const canvas = document.getElementById('finalConfirmBarcode');
+            JsBarcode(canvas, this.confirmationBarcode, {
+                format: "CODE128",
                 width: 2,
-                height: 100,
-                displayValue: true,
-                text: `${action} abschließen`,
-                fontOptions: "bold",
-                textAlign: "center",
-                textPosition: "bottom",
-                textMargin: 2,
-                fontSize: 14,
-                background: "#ffffff",
-                lineColor: "#000000",
-                margin: 10
+                height: 50,
+                displayValue: true
             });
-
-            // Event-Listener für Enter-Taste
-            const finalConfirmInput = document.getElementById('finalConfirmInput');
-            if (finalConfirmInput) {
-                finalConfirmInput.addEventListener('keyup', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.processLending();
-                    }
-                });
-                // Setze Fokus nach kurzem Delay
-                setTimeout(() => {
-                    finalConfirmInput.focus();
-                }, 100);
-            }
-
-            this.moveToStep(4);
+            
+            document.getElementById('workerInfo').classList.remove('hidden');
+            
+        } catch (error) {
+            showToast('error', 'Fehler: ' + error.message);
         }
-
-        moveToStep(step) {
-            console.log('Wechsle zu Schritt:', step);
-            this.currentStep = step;
+    },
+    
+    async processAction() {
+        try {
+            const action = this.determineAction();
             
-            // Update Progress Steps
-            document.querySelectorAll('.steps-horizontal .step').forEach((el, index) => {
-                el.classList.toggle('step-primary', index < step);
+            const response = await fetch('/api/quickscan/process_lending', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    item_barcode: this.scannedItem.barcode,
+                    worker_barcode: this.scannedWorker.barcode,
+                    quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
+                })
             });
             
-            // Show/Hide Steps
-            ['step1', 'step2', 'step3', 'step4'].forEach((stepId, index) => {
-                const stepElement = document.getElementById(stepId);
-                if (stepElement) {
-                    stepElement.classList.toggle('hidden', index + 1 !== step);
-                }
-            });
+            const result = await response.json();
             
-            // Focus Management
-            setTimeout(() => {
-                if (step === 1) {
-                    const input = document.getElementById('itemScanInput');
-                    if (input) {
-                        input.disabled = false;
-                        input.focus();
-                    }
-                } else if (step === 2) {
-                    const input = document.getElementById('confirmInput');
-                    if (input) {
-                        input.disabled = false;
-                        input.focus();
-                    }
-                } else if (step === 3) {
-                    const input = document.getElementById('workerScanInput');
-                    if (input) {
-                        input.disabled = false;
-                        input.focus();
-                    }
-                } else if (step === 4) {
-                    const input = document.getElementById('finalConfirmInput');
-                    if (input) {
-                        input.disabled = false;
-                        input.focus();
-                    }
-                }
-            }, 100);
-        }
-
-        async processLending() {
-            if (this.isProcessing) {
-                console.log('Verarbeitung läuft bereits...');
-                return;
-            }
-
-            if (!this.scannedData.item || !this.scannedData.worker) {
-                this.showError('Unvollständige Daten für Ausleihe');
-                return;
-            }
-            
-            try {
-                this.isProcessing = true;
-                console.log('Verarbeite Ausleihe/Rückgabe:', {
-                    tool: this.scannedData.item,
-                    worker: this.scannedData.worker
-                });
-
-                const response = await fetch('/api/quickscan/process_lending', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        tool_barcode: this.scannedData.item.barcode,
-                        worker_barcode: this.scannedData.worker.barcode
-                    })
-                });
+            if (result.success) {
+                document.getElementById('successMessage').textContent = result.message;
+                this.goToStep(3); // Success Step
                 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Fehler beim Verarbeiten');
-                }
-                
-                if (!data.success && data.error) {
-                    throw new Error(data.error);
-                }
-                
-                this.showSuccess(data.message || 'Vorgang erfolgreich abgeschlossen');
-                this.modal.close();
+                // Reset nach 2 Sekunden
                 setTimeout(() => {
+                    this.reset();
+                    // Seite neu laden um die Änderungen zu sehen
                     window.location.reload();
-                }, 1500);
-            } catch (error) {
-                this.showError(error.message);
-                this.isProcessing = false;
+                }, 2000);
+            } else {
+                showToast('error', result.message || 'Fehler beim Verarbeiten der Aktion');
             }
-        }
-
-        resetScan() {
-            this.currentStep = 1;
-            this.isProcessing = false;
-            this.scannedData = { 
-                item: null, 
-                worker: null, 
-                confirmationCode: null,
-                finalConfirmationCode: null 
-            };
-            this.moveToStep(1);
             
-            // Reset inputs
-            ['itemScanInput', 'workerScanInput', 'confirmInput', 'finalConfirmInput'].forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.value = '';
-                    input.disabled = false;
-                }
-            });
-            
-            // Reset info displays
-            ['scannedItemInfo', 'scannedWorkerInfo'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('hidden');
-            });
+        } catch (error) {
+            showToast('error', 'Fehler beim Verarbeiten der Aktion');
+            console.error(error);
         }
-
-        showError(message) {
-            console.error('Fehler:', message);
-            window.toast?.show(message, 'error') || alert(message);
+    },
+    
+    determineAction() {
+        if (this.scannedItem.itemType === 'tool') {
+            return this.scannedItem.current_status === 'verfügbar' ? 'lend' : 'return';
         }
-
-        showSuccess(message) {
-            console.log('Erfolg:', message);
-            window.toast?.show(message, 'success') || alert(message);
+        return 'consume';
+    },
+    
+    goToStep(step) {
+        // Verstecke alle Schritte
+        document.querySelectorAll('.scan-step').forEach(el => el.classList.add('hidden'));
+        
+        // Zeige aktuellen Schritt
+        const stepElement = document.getElementById(step === 3 ? 'successStep' : `step${step}`);
+        if (stepElement) {
+            stepElement.classList.remove('hidden');
         }
+        
+        // Aktualisiere Fortschrittsanzeige
+        document.querySelectorAll('.steps .step').forEach((el, index) => {
+            if (index < step - 1) {
+                el.classList.add('step-primary');
+            } else {
+                el.classList.remove('step-primary');
+            }
+        });
+        
+        this.currentStep = step;
+    },
+    
+    reset() {
+        this.scannedItem = null;
+        this.scannedWorker = null;
+        this.confirmationBarcode = null;
+        this.goToStep(1);
+        
+        // Reset UI
+        document.querySelectorAll('.scan-step').forEach(el => el.classList.add('hidden'));
+        document.getElementById('step1').classList.remove('hidden');
+        document.getElementById('itemScanInput').value = '';
+        document.getElementById('workerScanInput').value = '';
+        document.getElementById('itemScanInput').focus();
     }
+};
 
-    // Initialisierung
-    window.quickScan = new QuickScan();
-})(); 
+// QuickScan initialisieren wenn Modal geöffnet wird
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('quickScanModal');
+    if (modal) {
+        modal.addEventListener('show', () => {
+            QuickScan.init();
+        });
+    }
+}); 

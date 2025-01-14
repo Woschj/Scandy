@@ -76,7 +76,7 @@ def create_app(test_config=None):
     os.makedirs(os.path.join(app.instance_path, 'uploads'), exist_ok=True)
     
     # Blueprints registrieren
-    from app.routes import main, auth, admin, tools, workers, consumables, lending, dashboard, history, quick_scan
+    from app.routes import main, auth, admin, tools, workers, consumables, lending, dashboard, history, quick_scan, api
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(admin.bp)
@@ -87,6 +87,7 @@ def create_app(test_config=None):
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(history.bp)
     app.register_blueprint(quick_scan.bp)
+    app.register_blueprint(api.bp)
     
     # Fehlerbehandlung registrieren
     handle_errors(app)

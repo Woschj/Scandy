@@ -38,14 +38,9 @@
 <body class="min-h-screen bg-base-200">
     <div class="flex flex-col min-h-screen">
         <!-- QuickScan-Trigger (außerhalb der Sidebar) -->
-        <div class="w-24 h-24 fixed left-0 top-0 -mt-3 ml-[-10px] z-[9999]"
-            id="quickScanTrigger"
-            onclick="showQuickScan()"
-            title="Quick Scan öffnen">
+        <div class="w-24 h-24 fixed left-0 top-0 -mt-3 ml-[-10px] z-[9999]" id="quickScanTrigger" onclick="document.getElementById('quickScanModal').showModal(); QuickScan.init();" title="Quick Scan öffnen">
             <div class="w-full h-full rounded-full overflow-hidden transition-all duration-300 flex items-center justify-center bg-base-100 hover:bg-base-200/95 hover:bg-gradient-to-br hover:from-primary/20 hover:to-base-200 cursor-pointer relative shadow-lg hover:shadow-2xl hover:scale-110">
-                <img src="{{ url_for('static', filename='images/scandy-logo.svg') }}" 
-                    alt="Scandy Logo" 
-                    class="w-20 h-20 object-contain transition-transform duration-300">
+                <img src="/static/images/scandy-logo.svg" alt="Scandy Logo" class="w-20 h-20 object-contain transition-transform duration-300">
                 <!-- Scanner Animation -->
                 <div class="absolute w-full h-0.5 bg-primary/50 -top-1 left-0 animate-scanner after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-primary/30"></div>
             </div>
@@ -168,33 +163,52 @@
     </div>
 
     <!-- QuickScan Modal -->
-    {% if request.endpoint != 'quick_scan.quick_scan' %}
     {% include 'components/quickscan_modal.html' %}
 
-    <!-- Skripte bereinigen - nur einmal einbinden -->
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
-    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast toast-top toast-end"></div>
+
+    <!-- Toast Script -->
+    <script>
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `alert ${type === 'error' ? 'alert-error' : 'alert-success'} mb-2`;
+        
+        toast.innerHTML = `
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="${type === 'error' 
+                            ? 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+                            : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => container.removeChild(toast), 300);
+        }, 3000);
+    }
+    </script>
+
+    <!-- QuickScan Script -->
     <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Logo-Klick Handler
-        const quickScanTrigger = document.getElementById('quickScanTrigger');
-        const quickScanModal = document.getElementById('quickScanModal');
-        
-        if (quickScanTrigger && quickScanModal) {
-            quickScanTrigger.addEventListener('click', function() {
-                quickScanModal.showModal();
-                // Fokus auf Input nach kurzem Delay
-                setTimeout(() => {
-                    const input = document.getElementById('itemScanInput');
-                    if (input) input.focus();
-                }, 100);
-            });
-        }
-    });
-    </script>
-    {% endif %}
+    <!-- Eigene Services -->
+    <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
+
+    <!-- Seiten-spezifische Scripts -->
+    {% block scripts %}
+    <!-- Externe Bibliotheken -->
+    <script src="https://unpkg.com/@zxing/library@latest" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css"></script>
+    {% endblock %}
 
     <!-- Zusätzliche Styles für Webcam-Scanning -->
     <style>
@@ -238,18 +252,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Externe Bibliotheken -->
-    <script src="https://unpkg.com/@zxing/library@latest" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css"></script>
-
-    <!-- Eigene Services -->
-    <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
-
-    <!-- Seiten-spezifische Scripts -->
-    {% block scripts %}{% endblock %}
 
     <!-- Base Template Scripts -->
     <script defer>

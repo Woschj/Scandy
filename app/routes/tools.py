@@ -198,34 +198,57 @@ def delete(id):
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required
 def add():
-    """Neues Werkzeug hinzufügen"""
+    """Fügt ein neues Werkzeug hinzu"""
     if request.method == 'POST':
-        name = request.form.get('name')
         barcode = request.form.get('barcode')
+        name = request.form.get('name')
         description = request.form.get('description')
         category = request.form.get('category')
         location = request.form.get('location')
         
+        if not all([barcode, name, category, location]):
+            flash('Bitte alle Pflichtfelder ausfüllen', 'error')
+            return redirect(url_for('tools.add'))
+            
         try:
+            # Prüfe ob Barcode bereits existiert
+            existing = Database.query('SELECT 1 FROM tools WHERE barcode = ?', [barcode], one=True)
+            if existing:
+                flash('Ein Werkzeug mit diesem Barcode existiert bereits', 'error')
+                return redirect(url_for('tools.add'))
+            
             Database.query('''
-                INSERT INTO tools 
-                (name, barcode, description, category, location, status)
+                INSERT INTO tools (barcode, name, description, category, location, status)
                 VALUES (?, ?, ?, ?, ?, 'verfügbar')
-            ''', [name, barcode, description, category, location])
+            ''', [barcode, name, description, category, location])
             
             flash('Werkzeug erfolgreich hinzugefügt', 'success')
             return redirect(url_for('tools.index'))
             
         except Exception as e:
-            flash(f'Fehler beim Hinzufügen: {str(e)}', 'error')
+            print(f"Fehler beim Hinzufügen des Werkzeugs: {str(e)}")
+            flash('Fehler beim Hinzufügen des Werkzeugs', 'error')
+            return redirect(url_for('tools.add'))
     
-    # Hole vordefinierte Kategorien und Standorte aus den Einstellungen
-    categories = Database.get_categories('tools')
-    locations = Database.get_locations('tools')
-    
-    return render_template('tools/add.html',
-                         categories=[c['name'] for c in categories],
-                         locations=[l['name'] for l in locations])
+    try:
+        # Lade Kategorien und Standorte aus der settings-Tabelle
+        with Database.get_db() as db:
+            cursor = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'category_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            categories = [row['value'] for row in cursor.fetchall()]
+            
+            cursor = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'location_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            locations = [row['value'] for row in cursor.fetchall()]
+            
+        return render_template('tools/add.html', categories=categories, locations=locations)
+        
+    except Exception as e:
+        print(f"Fehler beim Laden der Auswahloptionen: {str(e)}")
+        flash('Fehler beim Laden der Auswahloptionen', 'error')
+        return redirect(url_for('tools.index'))
 
 @bp.route('/<string:barcode>/status', methods=['POST'])
 @login_required
@@ -291,5 +314,63 @@ def change_status(barcode):
             'success': False,
             'message': f'Fehler bei der Statusänderung: {str(e)}'
         }), 500
+
+@bp.route('/<barcode>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit(barcode):
+    """Bearbeitet ein bestehendes Werkzeug"""
+    try:
+        with Database.get_db() as db:
+            # Lade das Werkzeug
+            tool = db.execute('''
+                SELECT * FROM tools 
+                WHERE barcode = ? AND deleted = 0
+            ''', [barcode]).fetchone()
+            
+            if not tool:
+                flash('Werkzeug nicht gefunden', 'error')
+                return redirect(url_for('tools.index'))
+
+            if request.method == 'POST':
+                name = request.form.get('name')
+                description = request.form.get('description')
+                category = request.form.get('category')
+                location = request.form.get('location')
+                
+                if not all([name, category, location]):
+                    flash('Bitte alle Pflichtfelder ausfüllen', 'error')
+                    return redirect(url_for('tools.edit', barcode=barcode))
+                
+                # Aktualisiere das Werkzeug
+                db.execute('''
+                    UPDATE tools 
+                    SET name = ?, description = ?, category = ?, location = ?
+                    WHERE barcode = ?
+                ''', [name, description, category, location, barcode])
+                db.commit()
+                
+                flash('Werkzeug erfolgreich aktualisiert', 'success')
+                return redirect(url_for('tools.detail', barcode=barcode))
+            
+            # Lade Kategorien und Standorte aus der settings-Tabelle
+            cursor = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'category_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            categories = [row['value'] for row in cursor.fetchall()]
+            
+            cursor = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'location_%' AND value IS NOT NULL AND value != '' ORDER BY value"
+            )
+            locations = [row['value'] for row in cursor.fetchall()]
+            
+            return render_template('tools/edit.html', 
+                                tool=tool,
+                                categories=categories,
+                                locations=locations)
+            
+    except Exception as e:
+        print(f"Fehler beim Bearbeiten des Werkzeugs: {str(e)}")
+        flash('Fehler beim Bearbeiten des Werkzeugs', 'error')
+        return redirect(url_for('tools.index'))
 
 # Weitere Tool-Routen...
