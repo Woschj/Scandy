@@ -1,3 +1,11 @@
+{% extends "base.html" %}
+
+{% block head %}
+    <!-- Lending Service -->
+    <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
     <div class="card">
         <div class="card-header">
             <h5 class="card-title">Synchronisation</h5>
@@ -56,6 +64,46 @@
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title">Aktuelle Ausleihen</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Artikel</th>
+                            <th>Barcode</th>
+                            <th>Ausgeliehen an</th>
+                            <th>Datum</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lending in current_lendings %}
+                        <tr>
+                            <td>{{ lending.item_name }}</td>
+                            <td>{{ lending.item_barcode }}</td>
+                            <td>{{ lending.worker_name }}</td>
+                            <td>{{ lending.action_date }}</td>
+                            <td>
+                                {% if lending.category == 'Werkzeug' %}
+                                    <button class="btn btn-sm btn-error" 
+                                            data-barcode="{{ lending.item_barcode }}"
+                                            title="Werkzeug zurückgeben">
+                                        <i class="fas fa-undo-alt"></i> Zurückgeben
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     {% if not config.SERVER_MODE %}
     <script>
         function syncNow() {
@@ -80,3 +128,4 @@
         }
     </script>
     {% endif %} 
+{% endblock %} 

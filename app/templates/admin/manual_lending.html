@@ -1,10 +1,12 @@
-{% extends "base.html" %}
+etwas an den{% extends "base.html" %}
 
 {% block title %}Manuelle Ausleihe{% endblock %}
 
 {% block head %}
 <!-- Table Functions Script -->
 <script src="{{ url_for('static', filename='js/table-functions.js') }}" defer></script>
+<!-- Lending Service -->
+<script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}
@@ -258,10 +260,11 @@
                     </td>
                     <td class="px-4 py-2">
                         {% if lending.category == 'Werkzeug' %}
-                        <button onclick="returnTool('{{ lending.item_barcode }}')"
-                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded">
-                            Rückgabe
-                        </button>
+                            <button class="btn btn-sm btn-error" 
+                                    data-barcode="{{ lending.item_barcode }}"
+                                    title="Werkzeug zurückgeben">
+                                <i class="fas fa-undo-alt"></i> Zurückgeben
+                            </button>
                         {% endif %}
                     </td>
                 </tr>
@@ -557,27 +560,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function returnTool(barcode) {
-    const formData = new FormData();
-    formData.append('tool_barcode', barcode);
-    formData.append('action', 'return');
-    formData.append('worker_barcode', ''); // Leerer String für Rückgabe
+    if (!confirm('Möchten Sie dieses Werkzeug wirklich zurückgeben?')) {
+        return;
+    }
     
-    fetch('/admin/manual-lending', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            window.location.reload();
-        } else {
-            alert(result.message || 'Ein Fehler ist aufgetreten');
-        }
-    })
-    .catch(error => {
-        console.error('Fehler bei der Rückgabe:', error);
-        alert(`Fehler bei der Rückgabe: ${error.message}`);
-    });
+    window.LendingService.returnItem(barcode)
+        .then(success => {
+            if (success) {
+                window.location.reload();
+            }
+        });
 }
 </script>
 

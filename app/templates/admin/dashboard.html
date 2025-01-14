@@ -2,6 +2,12 @@
 
 {% block title %}Admin Dashboard{% endblock %}
 
+{% block head %}
+{{ super() }}
+<!-- Lending Service -->
+<script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Verwaltungskarten -->
@@ -333,9 +339,10 @@
                                 <td>{{ lending.worker_name }}</td>
                                 <td>{{ lending.lent_at|format_datetime }}</td>
                                 <td>
-                                    <button onclick="returnTool('{{ lending.tool_barcode }}')"
-                                            class="btn btn-sm btn-primary">
-                                        Rückgabe
+                                    <button class="btn btn-sm btn-error" 
+                                            data-barcode="{{ lending.tool_barcode }}"
+                                            title="Werkzeug zurückgeben">
+                                        <i class="fas fa-undo-alt"></i> Zurückgeben
                                     </button>
                                 </td>
                             </tr>

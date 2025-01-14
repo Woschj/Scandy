@@ -117,8 +117,8 @@
                 debug('LENDING', 'Parsed response:', result);
                 
                 if (result.success) {
-                    this.broadcastChange();
                     showToast('success', result.message || 'Aktion erfolgreich durchgeführt');
+                    this.broadcastChange();
                     return true;
                 } else {
                     showToast('error', result.message || 'Ein Fehler ist aufgetreten');
@@ -134,38 +134,48 @@
 
         async returnItem(barcode) {
             try {
+                debug('RETURN', 'ReturnItem called with barcode:', barcode);
+                
                 const requestData = {
-                    tool_barcode: barcode,
+                    item_barcode: barcode,
                     action: 'return'
                 };
+
+                debug('RETURN', 'Sending request data:', requestData);
 
                 const response = await fetch('/admin/manual-lending', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify(requestData)
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const result = await response.json();
+                debug('RETURN', 'Return result:', result);
                 
                 if (result.success) {
-                    this.broadcastChange();
                     showToast('success', result.message || 'Werkzeug erfolgreich zurückgegeben');
+                    this.broadcastChange();
                     return true;
                 } else {
                     showToast('error', result.message || 'Ein Fehler ist aufgetreten');
                     return false;
                 }
             } catch (error) {
-                console.error('Fehler bei der Rückgabe:', error);
+                debug('RETURN', 'Error in returnItem:', error);
                 showToast('error', `Fehler bei der Rückgabe: ${error.message}`);
                 return false;
             }
         },
 
-        async returnTool(toolBarcode) {
-            debug('RETURN', 'ReturnTool called with barcode:', toolBarcode);
+        async returnTool(barcode) {
+            debug('RETURN', 'ReturnTool called with barcode:', barcode);
             
             try {
                 const response = await fetch('/admin/process_return', {
@@ -177,7 +187,7 @@
                     },
                     credentials: 'same-origin',
                     body: JSON.stringify({
-                        item_barcode: toolBarcode
+                        item_barcode: barcode
                     })
                 });
 
@@ -264,24 +274,31 @@ window.ManualLending = {
 
     async returnTool(barcode) {
         try {
-            const requestData = {
-                tool_barcode: barcode,
-                action: 'return'
-            };
-
+            console.log('Starte Rückgabe für:', barcode);
+            
             const response = await fetch('/admin/manual-lending', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify({
+                    item_barcode: barcode,
+                    action: 'return'
+                })
             });
 
             const result = await response.json();
+            console.log('Rückgabe Ergebnis:', result);
             
             if (result.success) {
                 showToast('success', result.message || 'Werkzeug erfolgreich zurückgegeben');
-                window.location.reload();
+                // Broadcast-Event senden und Seite neu laden
+                if (window.LendingService) {
+                    window.LendingService.broadcastChange();
+                } else {
+                    window.location.reload();
+                }
             } else {
                 showToast('error', result.message || 'Ein Fehler ist aufgetreten');
             }
@@ -451,3 +468,22 @@ function processReturn(barcode) {
         showToast('Ein Fehler ist aufgetreten', 'error');
     });
 } 
+
+// Event-Listener für Rückgabe-Buttons
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initialisiere Rückgabe-Buttons');
+    const returnButtons = document.querySelectorAll('[data-barcode]');
+    returnButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const barcode = button.getAttribute('data-barcode');
+            console.log('Rückgabe-Button geklickt für Barcode:', barcode);
+            if (barcode) {
+                window.LendingService.returnItem(barcode);
+            } else {
+                console.error('Kein Barcode gefunden für Button:', button);
+            }
+        });
+    });
+}); 

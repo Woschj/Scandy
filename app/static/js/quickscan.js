@@ -149,13 +149,17 @@ const QuickScan = {
     
     async handleWorkerScan(barcode) {
         try {
+            console.log('Verarbeite Worker-Scan:', barcode);
             const response = await fetch(`/api/inventory/workers/${barcode}`);
+            const result = await response.json();
+            
+            // Die API sendet die Daten direkt ohne success-Flag
             if (!response.ok) {
                 throw new Error('Mitarbeiter nicht gefunden');
             }
-            const data = await response.json();
             
-            this.scannedWorker = data;
+            this.scannedWorker = result; // Direkte Verwendung der Antwort
+            console.log('Gescannter Mitarbeiter:', this.scannedWorker);
             
             // Aktualisiere finale Übersicht
             document.getElementById('finalItemInfo').innerHTML = `
@@ -166,8 +170,8 @@ const QuickScan = {
             `;
             
             document.getElementById('finalWorkerInfo').innerHTML = `
-                <div class="font-bold">${data.firstname} ${data.lastname}</div>
-                <div class="text-sm opacity-70">${data.department}</div>
+                <div class="font-bold">${this.scannedWorker.firstname} ${this.scannedWorker.lastname}</div>
+                <div class="text-sm opacity-70">${this.scannedWorker.department || ''}</div>
             `;
             
             // Generiere finalen Bestätigungsbarcode
@@ -181,8 +185,10 @@ const QuickScan = {
             });
             
             document.getElementById('workerInfo').classList.remove('hidden');
+            this.goToStep(2);
             
         } catch (error) {
+            console.error('Worker-Scan Fehler:', error);
             showToast('error', 'Fehler: ' + error.message);
         }
     },
@@ -199,6 +205,7 @@ const QuickScan = {
                 body: JSON.stringify({
                     item_barcode: this.scannedItem.barcode,
                     worker_barcode: this.scannedWorker.barcode,
+                    action: action,
                     quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
                 })
             });

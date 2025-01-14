@@ -251,8 +251,8 @@ def return_tool():
             # Aktualisiere Ausleihe
             conn.execute("""
                 UPDATE lendings 
-                SET returned_at = datetime('now'),
-                    modified_at = datetime('now'),
+                SET returned_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
+                    modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                     sync_status = 'pending'
                 WHERE tool_barcode = ? 
                 AND returned_at IS NULL
@@ -262,7 +262,7 @@ def return_tool():
             conn.execute("""
                 UPDATE tools 
                 SET status = 'verfügbar',
-                    modified_at = datetime('now'),
+                    modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                     sync_status = 'pending'
                 WHERE barcode = ?
             """, [tool_barcode])
@@ -767,8 +767,8 @@ def quickscan_process_lending():
                     # Rückgabe verarbeiten
                     db.execute('''
                         UPDATE lendings 
-                        SET returned_at = datetime('now'),
-                            modified_at = datetime('now'),
+                        SET returned_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
+                            modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                             sync_status = 'pending'
                         WHERE tool_barcode = ? 
                         AND returned_at IS NULL
@@ -777,7 +777,7 @@ def quickscan_process_lending():
                     db.execute('''
                         UPDATE tools 
                         SET status = 'verfügbar',
-                            modified_at = datetime('now'),
+                            modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                             sync_status = 'pending'
                         WHERE barcode = ?
                     ''', [item_barcode])
