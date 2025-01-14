@@ -15,9 +15,17 @@ def index():
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Login-Seite"""
-    # Wenn Setup benötigt wird und wir nicht bereits auf der Setup-Seite sind
-    if needs_setup() and not request.endpoint == 'auth.setup':
-        return redirect(url_for('auth.setup'))
+    # Prüfe ob ein Admin-Benutzer existiert
+    with Database.get_db() as db:
+        user_exists = db.execute('SELECT COUNT(*) FROM users').fetchone()[0] > 0
+        
+        if not user_exists:
+            # Erstelle Standard-Admin mit Passwort 'admin'
+            try:
+                init_users()
+                flash('Standard-Admin-Account wurde erstellt (Passwort: admin)', 'info')
+            except Exception as e:
+                flash(f'Fehler beim Erstellen des Admin-Accounts: {str(e)}', 'error')
     
     # Wenn bereits eingeloggt, direkt zur Hauptseite
     if session.get('is_admin') and session.get('user_id'):
@@ -54,32 +62,36 @@ def login():
 
 @bp.route('/setup', methods=['GET', 'POST'])
 def setup():
-    """Ersteinrichtung der Anwendung"""
-    # Wenn Setup bereits durchgeführt wurde
-    if not needs_setup():
-        flash('Setup wurde bereits durchgeführt', 'info')
-        return redirect(url_for('auth.login'))
+    """Ersteinrichtung durchführen"""
+    # Prüfe ob bereits ein Admin existiert
+    with Database.get_db() as db:
+        user_exists = db.execute('SELECT COUNT(*) FROM users').fetchone()[0] > 0
+        
+        if user_exists:
+            flash('Setup wurde bereits durchgeführt', 'warning')
+            return redirect(url_for('main.index'))
     
     if request.method == 'POST':
         password = request.form.get('password')
-        password_confirm = request.form.get('password_confirm')
+        confirm = request.form.get('confirm_password')
         
-        if not password:
-            flash('Bitte ein Passwort eingeben', 'error')
-        elif password != password_confirm:
+        if not password or not confirm:
+            flash('Bitte beide Passwörter eingeben', 'error')
+            return redirect(url_for('auth.setup'))
+            
+        if password != confirm:
             flash('Passwörter stimmen nicht überein', 'error')
-        elif len(password) < 8:
-            flash('Passwort muss mindestens 8 Zeichen lang sein', 'error')
-        else:
-            try:
-                if init_users(password):
-                    flash('Setup erfolgreich abgeschlossen', 'success')
-                    return redirect(url_for('auth.login'))
-            except Exception as e:
-                print(f"Setup-Fehler: {str(e)}")
-                flash(f'Fehler beim Setup: {str(e)}', 'error')
-    
-    # Direkt das Setup-Template rendern, ohne base.html
+            return redirect(url_for('auth.setup'))
+            
+        try:
+            if init_users(password=password):
+                flash('Setup erfolgreich abgeschlossen', 'success')
+                return redirect(url_for('auth.login'))
+            else:
+                flash('Setup konnte nicht durchgeführt werden', 'error')
+        except Exception as e:
+            flash(f'Fehler beim Setup: {str(e)}', 'error')
+            
     return render_template('auth/setup.html')
 
 @bp.route('/logout')
