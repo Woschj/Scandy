@@ -1,37 +1,25 @@
-# Scandy - Inventarverwaltung
+# Scandy - Werkzeug- und Materialverwaltung
 
-Eine webbasierte Anwendung zur Verwaltung von Werkzeugen und Verbrauchsmaterialien.
+## Demo-Datenbank
 
-## Deployment auf Render.com
+Die Datei `app/database/inventory.db` enthält eine SQLite-Datenbank mit Demodaten. Diese dient zu Demonstrations- und Testzwecken und enthält:
 
-1. Erstellen Sie einen Account auf [Render.com](https://render.com)
-2. Verbinden Sie Ihr GitHub-Repository
-3. Klicken Sie auf "New Web Service"
-4. Wählen Sie Ihr Repository aus
-5. Konfigurieren Sie den Service:
-   - Name: scandy (oder Ihr gewünschter Name)
-   - Environment: Python
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn "app:create_app()" --bind 0.0.0.0:$PORT`
-   
-## Wichtige Hinweise
+- Beispielwerkzeuge
+- Beispiel-Verbrauchsmaterialien
+- Beispiel-Mitarbeiter
+- Beispiel-Abteilungen und Standorte
+- Beispiel-Ausleihvorgänge und Materialentnahmen
 
-- Die Datenbank wird im Filesystem gespeichert. Render.com verwendet ein ephemeres Filesystem, d.h. Änderungen gehen beim Neustart verloren.
-- Für produktive Nutzung sollten Sie einen persistenten Speicher einrichten (z.B. PostgreSQL).
-- Backups werden im `backups`-Verzeichnis gespeichert.
+**Hinweis**: Diese Datenbank enthält nur Testdaten und sollte nicht für den produktiven Einsatz verwendet werden.
 
-## Lokale Entwicklung
+## Datenbankschema
 
-1. Python 3.8 oder höher installieren
-2. Repository klonen
-3. Virtuelle Umgebung erstellen: `python -m venv venv`
-4. Abhängigkeiten installieren: `pip install -r requirements.txt`
-5. Server starten: `flask run`
+Das Schema der Datenbank ist in der Datei `schema.sql` dokumentiert. Es enthält die Struktur aller Tabellen und Indizes.
 
-## Features
+## Entwicklung
 
-- Werkzeug- und Materialverwaltung
-- Barcode-Scanning
-- Ausleihverwaltung
-- Bestandsüberwachung
-- Backup/Restore-Funktion 
+Für die Entwicklung können Sie die Demo-Datenbank als Ausgangspunkt verwenden:
+
+1. Stellen Sie sicher, dass der Ordner `app/database` existiert
+2. Die Datenbank `inventory.db` wird automatisch mit dem Repository geladen
+3. Für eigene Tests können Sie die Datenbank kopieren und den Pfad in der Konfiguration anpassen 
