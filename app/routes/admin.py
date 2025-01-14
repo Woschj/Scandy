@@ -91,6 +91,40 @@ def get_warnings():
         LIMIT 5
     ''')
 
+def get_backup_info():
+    """Hole Informationen über vorhandene Backups"""
+    backups = []
+    backup_dir = Path(__file__).parent.parent.parent / 'backups'
+    
+    if backup_dir.exists():
+        for backup_file in sorted(backup_dir.glob('*.db'), reverse=True):
+            # Backup-Statistiken aus der Datei lesen
+            stats = None
+            try:
+                with sqlite3.connect(str(backup_file)) as conn:
+                    cursor = conn.cursor()
+                    stats = {
+                        'tools': cursor.execute('SELECT COUNT(*) FROM tools WHERE deleted = 0').fetchone()[0],
+                        'consumables': cursor.execute('SELECT COUNT(*) FROM consumables WHERE deleted = 0').fetchone()[0],
+                        'workers': cursor.execute('SELECT COUNT(*) FROM workers WHERE deleted = 0').fetchone()[0],
+                        'active_lendings': cursor.execute('SELECT COUNT(*) FROM lendings WHERE returned_at IS NULL').fetchone()[0]
+                    }
+            except:
+                stats = None
+            
+            # Unix-Timestamp in datetime umwandeln
+            created_timestamp = backup_file.stat().st_mtime
+            created_datetime = datetime.fromtimestamp(created_timestamp)
+            
+            backups.append({
+                'name': backup_file.name,
+                'size': backup_file.stat().st_size,
+                'created': created_datetime,
+                'stats': stats
+            })
+    
+    return backups
+
 @bp.route('/')
 @admin_required
 def dashboard():
@@ -135,24 +169,13 @@ def dashboard():
         ORDER BY l.lent_at DESC
     """)
     
-    # Materialausgaben laden
-    consumable_usages = Database.query("""
-        SELECT cu.*, c.name as consumable_name, w.firstname || ' ' || w.lastname as worker_name
-        FROM consumable_usages cu
-        JOIN consumables c ON cu.consumable_barcode = c.barcode
-        JOIN workers w ON cu.worker_barcode = w.barcode
-        ORDER BY cu.used_at DESC
-        LIMIT 10
-    """)
-    
-    # Bestandsprognose laden
-    consumables_forecast = Database.get_consumables_forecast()
+    # Backup-Informationen laden
+    backups = get_backup_info()
     
     return render_template('admin/dashboard.html',
                          stats=stats,
                          current_lendings=current_lendings,
-                         consumable_usages=consumable_usages,
-                         consumables_forecast=consumables_forecast,
+                         backups=backups,
                          Config=Config)
 
 def get_consumable_trend():
