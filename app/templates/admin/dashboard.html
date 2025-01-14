@@ -4,38 +4,6 @@
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <!-- Server & Sync kompakter -->
-    <div class="mb-8">
-        <div class="card bg-base-100 shadow-xl">
-            <div class="card-body p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <i class="fas fa-sync text-lg"></i>
-                        <div>
-                            <h2 class="font-bold">Server & Sync</h2>
-                            <div class="text-sm">
-                                {% if Config.SERVER_MODE %}
-                                <span class="badge badge-primary">Server</span>
-                                <span class="text-sm ml-2">http://{{ Config.SERVER_HOST }}:{{ Config.SERVER_PORT }}</span>
-                                {% else %}
-                                <span class="badge">Client</span>
-                                {% if Config.SERVER_URL %}
-                                <span class="text-sm ml-2">{{ Config.SERVER_URL }}</span>
-                                {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('admin.server_settings') }}" 
-                       class="btn btn-primary btn-sm">
-                        <i class="fas fa-cog mr-2"></i>
-                        Einstellungen
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Verwaltungskarten -->
     <div class="grid grid-cols-3 gap-6 mb-8">
         <!-- Abteilungsverwaltung -->

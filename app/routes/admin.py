@@ -843,68 +843,61 @@ def get_departments():
 @bp.route('/departments/add', methods=['POST'])
 @admin_required
 def add_department():
-    """Füge eine neue Abteilung hinzu"""
     department = request.form.get('department')
     if not department:
-        return jsonify({
-            'success': False,
-            'message': 'Abteilungsname fehlt'
-        }), 400
-
-    try:
-        # Prüfe ob die Abteilung bereits existiert
-        existing = Database.query('''
-            SELECT 1 FROM settings 
-            WHERE key LIKE 'department_%'
-            AND value = ?
-        ''', [department], one=True)
-
-        if existing:
-            return jsonify({
-                'success': False,
-                'message': 'Abteilung existiert bereits'
-            }), 400
-
-        # Generiere einen neuen Schlüssel
-        max_id = Database.query('''
-            SELECT COALESCE(MAX(CAST(SUBSTR(key, 12) AS INTEGER)), 0) as max_id
-            FROM settings
-            WHERE key LIKE 'department_%'
-        ''', one=True)['max_id']
+        return jsonify({'success': False, 'message': 'Kein Abteilungsname angegeben'})
         
-        new_key = f'department_{max_id + 1}'
-
-        # Füge neue Abteilung hinzu
-        Database.query('''
-            INSERT INTO settings (key, value, modified_at, sync_status)
-            VALUES (?, ?, datetime('now'), 'pending')
-        ''', [new_key, department])
-
-        return jsonify({
-            'success': True,
-            'message': 'Abteilung erfolgreich hinzugefügt'
-        })
+    try:
+        with Database.get_db() as db:
+            # Prüfe ob Abteilung bereits existiert
+            existing = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'department_%' AND value = ?",
+                [department]
+            ).fetchone()
+            
+            if existing:
+                return jsonify({'success': False, 'message': 'Abteilung existiert bereits'})
+            
+            # Hole nächste ID
+            result = db.execute("""
+                SELECT COALESCE(MAX(CAST(SUBSTR(key, 12) AS INTEGER)), 0) as max_id
+                FROM settings
+                WHERE key LIKE 'department_%'
+            """).fetchone()
+            next_id = result['max_id'] + 1
+            
+            # Füge neue Abteilung hinzu
+            db.execute(
+                "INSERT INTO settings (key, value) VALUES (?, ?)",
+                [f"department_{next_id}", department]
+            )
+            db.commit()
+            
+            return jsonify({'success': True})
+            
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        print(f"Fehler beim Hinzufügen der Abteilung: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @bp.route('/departments/<name>', methods=['DELETE'])
 @admin_required
 def delete_department(name):
     """Lösche eine Abteilung"""
     try:
-        Database.query('''
-            DELETE FROM settings 
-            WHERE key LIKE 'department_%'
-            AND value = ?
-        ''', [name])
+        with Database.get_db() as db:
+            db.execute('''
+                DELETE FROM settings 
+                WHERE key LIKE 'department_%'
+                AND value = ?
+            ''', [name])
+            db.commit()
+            
         return jsonify({
             'success': True,
             'message': 'Abteilung erfolgreich gelöscht'
         })
     except Exception as e:
+        print(f"Fehler beim Löschen der Abteilung: {e}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -954,94 +947,78 @@ def get_locations():
 @bp.route('/locations/add', methods=['POST'])
 @admin_required
 def add_location():
-    """Füge einen neuen Standort hinzu"""
     location = request.form.get('location')
     tools = request.form.get('tools') == 'true'
     consumables = request.form.get('consumables') == 'true'
     
     if not location:
-        return jsonify({
-            'success': False,
-            'message': 'Standortname fehlt'
-        }), 400
-
-    try:
-        # Prüfe ob der Standort bereits existiert
-        existing = Database.query('''
-            SELECT 1 FROM settings 
-            WHERE key LIKE 'location_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-            AND value = ?
-        ''', [location], one=True)
-
-        if existing:
-            return jsonify({
-                'success': False,
-                'message': 'Standort existiert bereits'
-            }), 400
-
-        # Generiere einen neuen Schlüssel
-        max_id = Database.query('''
-            SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
-            FROM settings
-            WHERE key LIKE 'location_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-        ''', one=True)['max_id']
+        return jsonify({'success': False, 'message': 'Kein Standortname angegeben'})
         
-        base_key = f'location_{max_id + 1}'
-
-        # Füge neuen Standort und seine Eigenschaften hinzu
-        Database.query('''
-            INSERT INTO settings (key, value, modified_at, sync_status)
-            VALUES 
-                (?, ?, datetime('now'), 'pending'),
-                (?, ?, datetime('now'), 'pending'),
-                (?, ?, datetime('now'), 'pending')
-        ''', [
-            base_key, location,
-            f'{base_key}_tools', '1' if tools else '0',
-            f'{base_key}_consumables', '1' if consumables else '0'
-        ])
-
-        return jsonify({
-            'success': True,
-            'message': 'Standort erfolgreich hinzugefügt'
-        })
+    try:
+        with Database.get_db() as db:
+            # Prüfe ob Standort bereits existiert
+            existing = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'location_%' AND value = ?",
+                [location]
+            ).fetchone()
+            
+            if existing:
+                return jsonify({'success': False, 'message': 'Standort existiert bereits'})
+            
+            # Hole nächste ID
+            result = db.execute("""
+                SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
+                FROM settings
+                WHERE key LIKE 'location_%'
+            """).fetchone()
+            next_id = result['max_id'] + 1
+            
+            # Bestimme Verwendungszweck
+            usage = 'both' if tools and consumables else 'tools' if tools else 'consumables' if consumables else None
+            
+            # Füge neuen Standort hinzu
+            db.execute(
+                "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
+                [f"location_{next_id}", location, usage]
+            )
+            db.commit()
+            
+            return jsonify({'success': True})
+            
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        print(f"Fehler beim Hinzufügen des Standorts: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @bp.route('/locations/<name>', methods=['DELETE'])
 @admin_required
 def delete_location(name):
     """Lösche einen Standort"""
     try:
-        # Finde den Basis-Schlüssel für den Standort
-        location_key = Database.query('''
-            SELECT key FROM settings 
-            WHERE key LIKE 'location_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-            AND value = ?
-        ''', [name], one=True)
-        
-        if location_key:
-            base_key = location_key['key']
-            # Lösche den Standort und seine Eigenschaften
-            Database.query('''
-                DELETE FROM settings 
-                WHERE key IN (?, ?, ?)
-            ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+        with Database.get_db() as db:
+            # Finde den Basis-Schlüssel für den Standort
+            location_key = db.execute('''
+                SELECT key FROM settings 
+                WHERE key LIKE 'location_%'
+                AND key NOT LIKE '%_tools'
+                AND key NOT LIKE '%_consumables'
+                AND value = ?
+            ''', [name]).fetchone()
             
-        return jsonify({
-            'success': True,
-            'message': 'Standort erfolgreich gelöscht'
-        })
+            if location_key:
+                base_key = location_key['key']
+                # Lösche den Standort und seine Eigenschaften
+                db.execute('''
+                    DELETE FROM settings 
+                    WHERE key IN (?, ?, ?)
+                ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+                db.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Standort erfolgreich gelöscht'
+            })
     except Exception as e:
+        print(f"Fehler beim Löschen des Standorts: {e}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -1091,94 +1068,78 @@ def get_categories():
 @bp.route('/categories/add', methods=['POST'])
 @admin_required
 def add_category():
-    """Füge eine neue Kategorie hinzu"""
     category = request.form.get('category')
     tools = request.form.get('tools') == 'true'
     consumables = request.form.get('consumables') == 'true'
     
     if not category:
-        return jsonify({
-            'success': False,
-            'message': 'Kategoriename fehlt'
-        }), 400
-
-    try:
-        # Prüfe ob die Kategorie bereits existiert
-        existing = Database.query('''
-            SELECT 1 FROM settings 
-            WHERE key LIKE 'category_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-            AND value = ?
-        ''', [category], one=True)
-
-        if existing:
-            return jsonify({
-                'success': False,
-                'message': 'Kategorie existiert bereits'
-            }), 400
-
-        # Generiere einen neuen Schlüssel
-        max_id = Database.query('''
-            SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
-            FROM settings
-            WHERE key LIKE 'category_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-        ''', one=True)['max_id']
+        return jsonify({'success': False, 'message': 'Kein Kategoriename angegeben'})
         
-        base_key = f'category_{max_id + 1}'
-
-        # Füge neue Kategorie und ihre Eigenschaften hinzu
-        Database.query('''
-            INSERT INTO settings (key, value, modified_at, sync_status)
-            VALUES 
-                (?, ?, datetime('now'), 'pending'),
-                (?, ?, datetime('now'), 'pending'),
-                (?, ?, datetime('now'), 'pending')
-        ''', [
-            base_key, category,
-            f'{base_key}_tools', '1' if tools else '0',
-            f'{base_key}_consumables', '1' if consumables else '0'
-        ])
-
-        return jsonify({
-            'success': True,
-            'message': 'Kategorie erfolgreich hinzugefügt'
-        })
+    try:
+        with Database.get_db() as db:
+            # Prüfe ob Kategorie bereits existiert
+            existing = db.execute(
+                "SELECT value FROM settings WHERE key LIKE 'category_%' AND value = ?",
+                [category]
+            ).fetchone()
+            
+            if existing:
+                return jsonify({'success': False, 'message': 'Kategorie existiert bereits'})
+            
+            # Hole nächste ID
+            result = db.execute("""
+                SELECT COALESCE(MAX(CAST(SUBSTR(key, 10) AS INTEGER)), 0) as max_id
+                FROM settings
+                WHERE key LIKE 'category_%'
+            """).fetchone()
+            next_id = result['max_id'] + 1
+            
+            # Bestimme Verwendungszweck
+            usage = 'both' if tools and consumables else 'tools' if tools else 'consumables' if consumables else None
+            
+            # Füge neue Kategorie hinzu
+            db.execute(
+                "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
+                [f"category_{next_id}", category, usage]
+            )
+            db.commit()
+            
+            return jsonify({'success': True})
+            
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        print(f"Fehler beim Hinzufügen der Kategorie: {e}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @bp.route('/categories/<name>', methods=['DELETE'])
 @admin_required
 def delete_category(name):
     """Lösche eine Kategorie"""
     try:
-        # Finde den Basis-Schlüssel für die Kategorie
-        category_key = Database.query('''
-            SELECT key FROM settings 
-            WHERE key LIKE 'category_%'
-            AND key NOT LIKE '%_tools'
-            AND key NOT LIKE '%_consumables'
-            AND value = ?
-        ''', [name], one=True)
-        
-        if category_key:
-            base_key = category_key['key']
-            # Lösche die Kategorie und ihre Eigenschaften
-            Database.query('''
-                DELETE FROM settings 
-                WHERE key IN (?, ?, ?)
-            ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+        with Database.get_db() as db:
+            # Finde den Basis-Schlüssel für die Kategorie
+            category_key = db.execute('''
+                SELECT key FROM settings 
+                WHERE key LIKE 'category_%'
+                AND key NOT LIKE '%_tools'
+                AND key NOT LIKE '%_consumables'
+                AND value = ?
+            ''', [name]).fetchone()
             
-        return jsonify({
-            'success': True,
-            'message': 'Kategorie erfolgreich gelöscht'
-        })
+            if category_key:
+                base_key = category_key['key']
+                # Lösche die Kategorie und ihre Eigenschaften
+                db.execute('''
+                    DELETE FROM settings 
+                    WHERE key IN (?, ?, ?)
+                ''', [base_key, f'{base_key}_tools', f'{base_key}_consumables'])
+                db.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Kategorie erfolgreich gelöscht'
+            })
     except Exception as e:
+        print(f"Fehler beim Löschen der Kategorie: {e}")
         return jsonify({
             'success': False,
             'message': str(e)
