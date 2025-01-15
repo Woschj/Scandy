@@ -226,21 +226,6 @@ const QuickScan = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             };
-
-            // CSRF-Token aus dem Meta-Tag holen
-            const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (metaToken) {
-                headers['X-CSRFToken'] = metaToken;
-            } else {
-                // Alternativ aus dem versteckten Input-Feld
-                const inputToken = document.querySelector('input[name="csrf_token"]')?.value;
-                if (inputToken) {
-                    headers['X-CSRFToken'] = inputToken;
-                } else {
-                    console.error('Kein CSRF-Token gefunden');
-                    throw new Error('Sicherheitstoken fehlt - Bitte laden Sie die Seite neu');
-                }
-            }
             
             console.log('Request Headers:', headers);
             
@@ -291,7 +276,7 @@ const QuickScan = {
                 // Verzögere das Neuladen der Seite
                 setTimeout(() => {
                     window.location.reload();
-                }, 2000);
+                }, 3000);
             } else {
                 throw new Error(result.message || 'Fehler beim Verarbeiten der Aktion');
             }

@@ -17,7 +17,6 @@ from pathlib import Path
 import sys
 from flask_login import LoginManager
 from app.models.user import User
-from flask_wtf.csrf import CSRFProtect
 
 # Backup-System importieren
 sys.path.append(str(Path(__file__).parent.parent))
@@ -107,15 +106,8 @@ def create_app(test_config=None):
     # Basis-Konfiguration
     app.config.update(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-key-123'),
-        SESSION_TYPE='filesystem',
-        WTF_CSRF_SECRET_KEY=os.environ.get('WTF_CSRF_SECRET_KEY', 'csrf-key-456'),
-        WTF_CSRF_TIME_LIMIT=None,  # CSRF-Token läuft nicht ab
-        WTF_CSRF_SSL_STRICT=False  # Erlaubt CSRF-Token auch ohne HTTPS
+        SESSION_TYPE='filesystem'
     )
-    
-    # CSRF-Schutz initialisieren
-    csrf = CSRFProtect()
-    csrf.init_app(app)
     
     # Session-Konfiguration
     Session(app)

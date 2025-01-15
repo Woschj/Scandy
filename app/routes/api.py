@@ -699,7 +699,20 @@ def scan():
 def quickscan_process_lending():
     """Verarbeitet eine Ausleihe oder Ausgabe im QuickScan"""
     try:
+        # Prüfe ob der Request JSON enthält
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'message': 'Content-Type muss application/json sein'
+            }), 400
+            
         data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'Keine JSON-Daten empfangen'
+            }), 400
+            
         item_barcode = data.get('item_barcode')
         worker_barcode = data.get('worker_barcode')
         quantity = data.get('quantity', 1)
