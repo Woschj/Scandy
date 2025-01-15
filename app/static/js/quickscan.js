@@ -221,36 +221,25 @@ const QuickScan = {
             
             console.log('Sende Anfrage:', requestData);
             
-            // CSRF-Token aus verschiedenen möglichen Quellen holen
-            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (!csrfToken) {
-                csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
-            }
-            if (!csrfToken) {
-                // Versuche den Token aus dem Cookie zu lesen
-                const cookies = document.cookie.split(';');
-                for (let cookie of cookies) {
-                    const [name, value] = cookie.trim().split('=');
-                    if (name === 'csrf_token') {
-                        csrfToken = value;
-                        break;
-                    }
-                }
-            }
-            
-            console.log('CSRF Token gefunden:', csrfToken ? 'Ja' : 'Nein');
-            
             // Headers vorbereiten
             const headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             };
 
-            if (csrfToken) {
-                headers['X-CSRFToken'] = csrfToken;
+            // CSRF-Token aus dem Meta-Tag holen
+            const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (metaToken) {
+                headers['X-CSRFToken'] = metaToken;
             } else {
-                console.error('Kein CSRF-Token gefunden');
-                throw new Error('Sicherheitstoken fehlt - Bitte laden Sie die Seite neu');
+                // Alternativ aus dem versteckten Input-Feld
+                const inputToken = document.querySelector('input[name="csrf_token"]')?.value;
+                if (inputToken) {
+                    headers['X-CSRFToken'] = inputToken;
+                } else {
+                    console.error('Kein CSRF-Token gefunden');
+                    throw new Error('Sicherheitstoken fehlt - Bitte laden Sie die Seite neu');
+                }
             }
             
             console.log('Request Headers:', headers);
@@ -258,7 +247,7 @@ const QuickScan = {
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
                 headers: headers,
-                credentials: 'include',
+                credentials: 'same-origin',
                 body: JSON.stringify(requestData)
             });
             

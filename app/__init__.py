@@ -104,13 +104,20 @@ def create_app(test_config=None):
                 static_folder='static',
                 static_url_path='/static')
     
+    # Basis-Konfiguration
+    app.config.update(
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-key-123'),
+        SESSION_TYPE='filesystem',
+        WTF_CSRF_SECRET_KEY=os.environ.get('WTF_CSRF_SECRET_KEY', 'csrf-key-456'),
+        WTF_CSRF_TIME_LIMIT=None,  # CSRF-Token läuft nicht ab
+        WTF_CSRF_SSL_STRICT=False  # Erlaubt CSRF-Token auch ohne HTTPS
+    )
+    
     # CSRF-Schutz initialisieren
     csrf = CSRFProtect()
     csrf.init_app(app)
     
     # Session-Konfiguration
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')
-    app.config['SESSION_TYPE'] = 'filesystem'
     Session(app)
     
     # Konfiguration laden
