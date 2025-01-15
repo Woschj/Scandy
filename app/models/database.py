@@ -141,6 +141,11 @@ class Database:
                 cursor.execute(sql, params)
             else:
                 cursor.execute(sql)
+            
+            # Automatisches Commit für INSERT, UPDATE, DELETE
+            if sql.strip().upper().startswith(('INSERT', 'UPDATE', 'DELETE')):
+                conn.commit()
+                logging.info("Änderungen committed")
                 
             if one:
                 result = cursor.fetchone()
@@ -168,17 +173,18 @@ class Database:
         try:
             departments = cls.query("""
                 SELECT 
-                    REPLACE(key, 'department_', '') as name,
-                    value,
-                    COUNT(workers.id) as worker_count
-                FROM settings
-                LEFT JOIN workers ON workers.department = settings.value AND workers.deleted = 0
-                WHERE key LIKE 'department_%'
-                GROUP BY settings.key, settings.value
-                ORDER BY value
+                    s.value as name,
+                    COUNT(w.id) as worker_count
+                FROM settings s
+                LEFT JOIN workers w ON w.department = s.value AND w.deleted = 0
+                WHERE s.key LIKE 'department_%'
+                AND s.value IS NOT NULL 
+                AND s.value != ''
+                GROUP BY s.value
+                ORDER BY s.value
             """)
             
-            return [{'name': dept['value'], 'worker_count': dept['worker_count']} for dept in departments]
+            return [{'name': dept['name'], 'worker_count': dept['worker_count']} for dept in departments]
         except Exception as e:
             logging.error(f"Fehler beim Laden der Abteilungen: {str(e)}")
             return []
@@ -190,27 +196,28 @@ class Database:
             # Basis-Query
             query = """
                 SELECT 
-                    REPLACE(key, 'location_', '') as name,
-                    value,
-                    description as usage,
-                    (SELECT COUNT(*) FROM tools WHERE location = settings.value AND deleted = 0) as tools_count,
-                    (SELECT COUNT(*) FROM consumables WHERE location = settings.value AND deleted = 0) as consumables_count
-                FROM settings
-                WHERE key LIKE 'location_%'
+                    s.value as name,
+                    s.description as usage,
+                    (SELECT COUNT(*) FROM tools WHERE location = s.value AND deleted = 0) as tools_count,
+                    (SELECT COUNT(*) FROM consumables WHERE location = s.value AND deleted = 0) as consumables_count
+                FROM settings s
+                WHERE s.key LIKE 'location_%'
+                AND s.value IS NOT NULL 
+                AND s.value != ''
             """
             
             # Füge Verwendungszweck-Filter hinzu
             if usage == 'tools':
-                query += " AND (description = 'tools' OR description = 'both')"
+                query += " AND (s.description = 'tools' OR s.description = 'both')"
             elif usage == 'consumables':
-                query += " AND (description = 'consumables' OR description = 'both')"
+                query += " AND (s.description = 'consumables' OR s.description = 'both')"
             
-            query += " ORDER BY value"
+            query += " ORDER BY s.value"
             
             locations = cls.query(query)
             return [
                 {
-                    'name': loc['value'],
+                    'name': loc['name'],
                     'usage': loc['usage'],
                     'tools_count': loc['tools_count'],
                     'consumables_count': loc['consumables_count']
@@ -228,27 +235,28 @@ class Database:
             # Basis-Query
             query = """
                 SELECT 
-                    REPLACE(key, 'category_', '') as name,
-                    value,
-                    description as usage,
-                    (SELECT COUNT(*) FROM tools WHERE category = settings.value AND deleted = 0) as tools_count,
-                    (SELECT COUNT(*) FROM consumables WHERE category = settings.value AND deleted = 0) as consumables_count
-                FROM settings
-                WHERE key LIKE 'category_%'
+                    s.value as name,
+                    s.description as usage,
+                    (SELECT COUNT(*) FROM tools WHERE category = s.value AND deleted = 0) as tools_count,
+                    (SELECT COUNT(*) FROM consumables WHERE category = s.value AND deleted = 0) as consumables_count
+                FROM settings s
+                WHERE s.key LIKE 'category_%'
+                AND s.value IS NOT NULL 
+                AND s.value != ''
             """
             
             # Füge Verwendungszweck-Filter hinzu
             if usage == 'tools':
-                query += " AND (description = 'tools' OR description = 'both')"
+                query += " AND (s.description = 'tools' OR s.description = 'both')"
             elif usage == 'consumables':
-                query += " AND (description = 'consumables' OR description = 'both')"
+                query += " AND (s.description = 'consumables' OR s.description = 'both')"
             
-            query += " ORDER BY value"
+            query += " ORDER BY s.value"
             
             categories = cls.query(query)
             return [
                 {
-                    'name': cat['value'],
+                    'name': cat['name'],
                     'usage': cat['usage'],
                     'tools_count': cat['tools_count'],
                     'consumables_count': cat['consumables_count']

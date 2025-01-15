@@ -112,18 +112,24 @@ function deleteWorker(barcode) {
         return;
     }
     
-    fetch(`/admin/workers/${barcode}/delete`, {
-        method: 'DELETE'
+    fetch(`/workers/${barcode}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => {
-        if (response.ok) {
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
             location.reload();
         } else {
-            alert('Fehler beim Löschen des Mitarbeiters');
+            alert(data.message || 'Fehler beim Löschen des Mitarbeiters');
         }
     })
     .catch(error => {
-        alert('Fehler: ' + error);
+        console.error('Fehler:', error);
+        alert('Fehler beim Löschen des Mitarbeiters');
     });
 }
 </script>

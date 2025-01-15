@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block head %}
-    <!-- Lending Service wird bereits in base.html geladen -->
+    <!-- Lending Service -->
+    <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
 {% endblock %}
 
 {% block content %}

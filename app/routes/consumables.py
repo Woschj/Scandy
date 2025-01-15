@@ -251,3 +251,126 @@ def details(barcode):
                          categories=[c['name'] for c in categories],
                          locations=[l['name'] for l in locations],
                          history=history)
+
+@bp.route('/<barcode>/delete', methods=['POST'])
+@admin_required
+def delete_by_barcode(barcode):
+    """Löscht ein Verbrauchsmaterial anhand des Barcodes (Soft Delete)"""
+    try:
+        with Database.get_db() as conn:
+            # Prüfe ob das Verbrauchsmaterial existiert
+            consumable = conn.execute(
+                'SELECT * FROM consumables WHERE barcode = ? AND deleted = 0',
+                [barcode]
+            ).fetchone()
+            
+            if not consumable:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Verbrauchsmaterial nicht gefunden'
+                }), 404
+            
+            # In den Papierkorb verschieben (soft delete)
+            conn.execute('''
+                UPDATE consumables 
+                SET deleted = 1,
+                    deleted_at = datetime('now'),
+                    modified_at = datetime('now')
+                WHERE barcode = ?
+            ''', [barcode])
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Verbrauchsmaterial wurde in den Papierkorb verschoben'
+            })
+            
+    except Exception as e:
+        print(f"Fehler beim Löschen des Verbrauchsmaterials: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'message': f'Fehler beim Löschen: {str(e)}'
+        }), 500
+
+@bp.route('/<barcode>/forecast')
+@login_required
+def forecast(barcode):
+    """Berechnet eine Bestandsprognose für ein Verbrauchsmaterial"""
+    try:
+        with Database.get_db() as conn:
+            # Hole das Verbrauchsmaterial
+            consumable = conn.execute('''
+                SELECT * FROM consumables 
+                WHERE barcode = ? AND deleted = 0
+            ''', [barcode]).fetchone()
+            
+            if not consumable:
+                return jsonify({
+                    'success': False,
+                    'message': 'Verbrauchsmaterial nicht gefunden'
+                }), 404
+            
+            # Berechne durchschnittlichen Verbrauch pro Tag
+            usage_stats = conn.execute('''
+                WITH daily_usage AS (
+                    SELECT 
+                        date(used_at) as usage_date,
+                        SUM(CASE
+                            WHEN worker_barcode = 'admin' THEN quantity
+                            ELSE -ABS(quantity)
+                        END) as daily_quantity
+                    FROM consumable_usages
+                    WHERE consumable_barcode = ?
+                    GROUP BY date(used_at)
+                )
+                SELECT 
+                    COUNT(DISTINCT usage_date) as days_with_usage,
+                    AVG(CASE WHEN daily_quantity < 0 THEN ABS(daily_quantity) ELSE 0 END) as avg_daily_usage,
+                    MAX(ABS(daily_quantity)) as max_daily_usage,
+                    MIN(usage_date) as first_usage,
+                    MAX(usage_date) as last_usage
+                FROM daily_usage
+            ''', [barcode]).fetchone()
+            
+            if not usage_stats['days_with_usage']:
+                return jsonify({
+                    'success': True,
+                    'message': 'Keine Verbrauchsdaten verfügbar',
+                    'data': {
+                        'current_stock': consumable['quantity'],
+                        'min_stock': consumable['min_quantity'],
+                        'avg_daily_usage': 0,
+                        'days_until_min': None,
+                        'days_until_empty': None
+                    }
+                })
+            
+            avg_daily_usage = usage_stats['avg_daily_usage'] or 0
+            current_stock = consumable['quantity']
+            min_stock = consumable['min_quantity']
+            
+            # Berechne Tage bis Mindestbestand und bis leer
+            days_until_min = None if avg_daily_usage == 0 else int((current_stock - min_stock) / avg_daily_usage)
+            days_until_empty = None if avg_daily_usage == 0 else int(current_stock / avg_daily_usage)
+            
+            return jsonify({
+                'success': True,
+                'data': {
+                    'current_stock': current_stock,
+                    'min_stock': min_stock,
+                    'avg_daily_usage': round(avg_daily_usage, 2),
+                    'days_until_min': days_until_min,
+                    'days_until_empty': days_until_empty,
+                    'first_usage': usage_stats['first_usage'],
+                    'last_usage': usage_stats['last_usage'],
+                    'max_daily_usage': usage_stats['max_daily_usage']
+                }
+            })
+            
+    except Exception as e:
+        print(f"Fehler bei der Bestandsprognose: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Bestandsprognose: {str(e)}'
+        }), 500

@@ -14,6 +14,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <!-- Eigene Styles nach den Framework Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/quickscan.css') }}">
@@ -178,24 +181,47 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast toast-top toast-end"></div>
 
-    <!-- Externe Bibliotheken -->
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-
     <!-- Toast Script -->
-    <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <script>
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `alert ${type === 'error' ? 'alert-error' : 'alert-success'} mb-2`;
+        
+        toast.innerHTML = `
+            <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="${type === 'error' 
+                            ? 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+                            : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}" />
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => container.removeChild(toast), 300);
+        }, 3000);
+    }
+    </script>
+
+    <!-- QuickScan Script -->
+    <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
 
     <!-- Eigene Services -->
-    <script src="{{ url_for('static', filename='js/lending-service.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/quickscan.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
 
     <!-- Seiten-spezifische Scripts -->
-    {% block scripts %}{% endblock %}
+    {% block scripts %}
+    <!-- Externe Bibliotheken -->
+    <script src="https://unpkg.com/@zxing/library@latest" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css"></script>
+    {% endblock %}
 
     <!-- Zusätzliche Styles für Webcam-Scanning -->
     <style>

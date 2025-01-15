@@ -1,267 +1,159 @@
 {% extends "base.html" %}
 
-{% block title %}{{ consumable.name }}{% endblock %}
-
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold">{{ consumable.name }}</h1>
-            <div class="flex gap-2">
-                <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">
-                    <i class="fas fa-arrow-left mr-2"></i>
-                    Zurück
-                </a>
-                <button class="btn btn-primary" onclick="editConsumable()">
-                    <i class="fas fa-edit mr-2"></i>
-                    Bearbeiten
-                </button>
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <h2 class="card-title">{{ consumable.name }}</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Bestandsinformationen -->
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Bestandsinformationen</h3>
+                <div class="stats shadow">
+                    <div class="stat">
+                        <div class="stat-title">Aktueller Bestand</div>
+                        <div class="stat-value">{{ consumable.quantity }}</div>
+                        <div class="stat-desc">Mindestbestand: {{ consumable.min_quantity }}</div>
+                    </div>
+                </div>
+                
+                <!-- Bestandsprognose -->
+                <div class="mt-4">
+                    <h4 class="text-md font-semibold mb-2">Bestandsprognose</h4>
+                    <div id="forecast-data" class="stats shadow">
+                        <div class="stat">
+                            <div class="stat-title">Wird geladen...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Weitere Informationen -->
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Details</h3>
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td class="font-semibold">Barcode</td>
+                                <td><code>{{ consumable.barcode }}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">Kategorie</td>
+                                <td>{{ consumable.category or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">Standort</td>
+                                <td>{{ consumable.location or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">Beschreibung</td>
+                                <td>{{ consumable.description or '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-
-        <!-- Details Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Basis-Informationen -->
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Details</h2>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Barcode</label>
-                            <p class="font-mono">{{ consumable.barcode }}</p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Aktueller Bestand</label>
-                            <p class="flex items-center gap-2">
-                                {{ consumable.quantity }} Stück
-                                {% if consumable.quantity <= consumable.min_quantity %}
-                                    <span class="badge badge-warning">Nachbestellen</span>
+        
+        <!-- Bestandsverlauf -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold mb-2">Bestandsverlauf</h3>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Mitarbeiter</th>
+                            <th>Änderung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in history %}
+                        <tr>
+                            <td>{{ entry.action_date }}</td>
+                            <td>{{ entry.worker_name }}</td>
+                            <td>
+                                {% if entry.quantity > 0 %}
+                                <span class="text-success">+{{ entry.quantity }}</span>
+                                {% else %}
+                                <span class="text-error">{{ entry.quantity }}</span>
                                 {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Mindestbestand</label>
-                            <p>{{ consumable.min_quantity }} Stück</p>
-                        </div>
-                        {% if consumable.category %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
-                            <p>{{ consumable.category }}</p>
-                        </div>
-                        {% endif %}
-                        {% if consumable.location %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Standort</label>
-                            <p>{{ consumable.location }}</p>
-                        </div>
-                        {% endif %}
-                        {% if consumable.description %}
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Beschreibung</label>
-                            <p>{{ consumable.description }}</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bestandsverlauf -->
-            <div class="card bg-base-100 shadow-xl">
-                <div class="card-body">
-                    <h2 class="card-title">Bestandsverlauf</h2>
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-4">
-                            <div class="flex-1">
-                                <label class="text-sm font-medium text-base-content/60">Letzte Änderung</label>
-                                <p>{{ consumable.modified_at|format_datetime }}</p>
-                            </div>
-                            <button class="btn btn-primary" onclick="adjustStock()">
-                                <i class="fas fa-plus-minus mr-2"></i>
-                                Bestand anpassen
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Letzte Entnahmen -->
-            <div class="card bg-base-100 shadow-xl col-span-2">
-                <div class="card-body">
-                    <h2 class="card-title">Letzte Entnahmen</h2>
-                    {% if history %}
-                    <div class="overflow-x-auto">
-                        <table class="table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Datum</th>
-                                    <th>Mitarbeiter</th>
-                                    <th>Menge</th>
-                                    <th>Grund</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for usage in history %}
-                                <tr>
-                                    <td>{{ usage.action_date }}</td>
-                                    <td>{{ usage.worker_name }}</td>
-                                    <td class="{% if usage.quantity > 0 %}text-success{% else %}text-error{% endif %}">
-                                        {% if usage.quantity > 0 %}+{% endif %}{{ usage.quantity }} Stück
-                                    </td>
-                                    <td>{% if usage.worker_name == 'Admin' %}Bestandskorrektur{% else %}Entnahme{% endif %}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-base-content/60">Keine Entnahmen vorhanden</p>
-                    {% endif %}
-                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Edit Modal -->
-<dialog id="editModal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Verbrauchsmaterial bearbeiten</h3>
-        <form method="POST" id="editForm">
-            <div class="space-y-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Name</span>
-                    </label>
-                    <input type="text" name="name" class="input input-bordered" value="{{ consumable.name }}" required>
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Mindestbestand</span>
-                    </label>
-                    <input type="number" name="min_quantity" class="input input-bordered" value="{{ consumable.min_quantity }}" required>
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Kategorie</span>
-                    </label>
-                    <select name="category" class="select select-bordered" required>
-                        <option value="">Bitte wählen...</option>
-                        {% for category in categories %}
-                            <option value="{{ category }}" {% if category == consumable.category %}selected{% endif %}>
-                                {{ category }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Standort</span>
-                    </label>
-                    <select name="location" class="select select-bordered" required>
-                        <option value="">Bitte wählen...</option>
-                        {% for location in locations %}
-                            <option value="{{ location }}" {% if location == consumable.location %}selected{% endif %}>
-                                {{ location }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Beschreibung</span>
-                    </label>
-                    <textarea name="description" class="textarea textarea-bordered">{{ consumable.description }}</textarea>
-                </div>
-            </div>
-            <div class="modal-action">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" onclick="closeEditModal()">Abbrechen</button>
-            </div>
-        </form>
-    </div>
-</dialog>
-
-<!-- Stock Adjustment Modal -->
-<dialog id="stockModal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4">Bestand anpassen</h3>
-        <form method="POST" id="stockForm">
-            <div class="space-y-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Aktuelle Menge: {{ consumable.quantity }} Stück</span>
-                    </label>
-                    <input type="number" name="quantity" class="input input-bordered" required>
-                </div>
-            </div>
-            <div class="modal-action">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <button type="button" class="btn" onclick="closeStockModal()">Abbrechen</button>
-            </div>
-        </form>
-    </div>
-</dialog>
-
+{% block scripts %}
+{{ super() }}
 <script>
-function editConsumable() {
-    document.getElementById('editModal').showModal();
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').close();
-}
-
-function adjustStock() {
-    document.getElementById('stockModal').showModal();
-}
-
-function closeStockModal() {
-    document.getElementById('stockModal').close();
-}
-
-// Form-Handler
-document.getElementById('editForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    
-    fetch(window.location.pathname, {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('editModal').close();
-            // Dispatch ein Event für die Übersichtsseite
-            window.dispatchEvent(new CustomEvent('consumableUpdated'));
-            window.location.reload();
-        } else {
-            alert('Fehler beim Speichern: ' + data.message);
-        }
-    });
-});
-
-document.getElementById('stockForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    try {
-        const response = await fetch(window.location.pathname + '/adjust-stock', {
-            method: 'POST',
-            body: formData
+document.addEventListener('DOMContentLoaded', function() {
+    // Lade Bestandsprognose
+    fetch(`/consumables/{{ consumable.barcode }}/forecast`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const forecastData = data.data;
+                let html = '';
+                
+                if (forecastData.avg_daily_usage > 0) {
+                    html = `
+                        <div class="stat">
+                            <div class="stat-title">Durchschnittlicher Tagesverbrauch</div>
+                            <div class="stat-value">${forecastData.avg_daily_usage}</div>
+                            <div class="stat-desc">Max. Tagesverbrauch: ${forecastData.max_daily_usage}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-title">Prognose</div>
+                            <div class="stat-value">
+                                ${forecastData.days_until_empty !== null ? 
+                                  `${forecastData.days_until_empty} Tage` : 
+                                  'Nicht verfügbar'}
+                            </div>
+                            <div class="stat-desc">
+                                ${forecastData.days_until_min !== null ? 
+                                  `Mindestbestand in ${forecastData.days_until_min} Tagen` : 
+                                  'Keine Prognose möglich'}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html = `
+                        <div class="stat">
+                            <div class="stat-title">Bestandsprognose</div>
+                            <div class="stat-value text-sm">Keine Verbrauchsdaten</div>
+                            <div class="stat-desc">Für eine Prognose werden Verbrauchsdaten benötigt</div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('forecast-data').innerHTML = html;
+            } else {
+                document.getElementById('forecast-data').innerHTML = `
+                    <div class="stat">
+                        <div class="stat-title">Fehler</div>
+                        <div class="stat-value text-error text-sm">Prognose nicht verfügbar</div>
+                        <div class="stat-desc">${data.message || 'Unbekannter Fehler'}</div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden der Prognose:', error);
+            document.getElementById('forecast-data').innerHTML = `
+                <div class="stat">
+                    <div class="stat-title">Fehler</div>
+                    <div class="stat-value text-error text-sm">Prognose nicht verfügbar</div>
+                    <div class="stat-desc">Verbindungsfehler</div>
+                </div>
+            `;
         });
-        if (response.ok) {
-            // Dispatch ein Event für die Übersichtsseite
-            window.dispatchEvent(new CustomEvent('consumableUpdated'));
-            window.location.reload();
-        } else {
-            const data = await response.json();
-            alert(data.message || 'Ein Fehler ist aufgetreten');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Ein Fehler ist aufgetreten');
-    }
 });
 </script>
 {% endblock %} 

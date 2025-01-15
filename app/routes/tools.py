@@ -64,7 +64,8 @@ def index():
             return render_template('tools/index.html',
                                tools=tools,
                                categories=[c['category'] for c in categories],
-                               locations=[l['location'] for l in locations])
+                               locations=[l['location'] for l in locations],
+                               is_admin=session.get('is_admin', False))
                                
     except Exception as e:
         print(f"Fehler beim Laden der Werkzeuge: {str(e)}")
@@ -176,24 +177,6 @@ def update(id):
         print(f"Fehler beim Aktualisieren des Werkzeugs: {str(e)}")
         flash(f'Fehler beim Aktualisieren: {str(e)}', 'error')
         return redirect(url_for('tools.index'))
-
-@bp.route('/<int:id>/delete', methods=['POST'])
-@admin_required
-def delete(id):
-    """Löscht ein Werkzeug (Soft Delete)"""
-    try:
-        Database.query('''
-            UPDATE tools 
-            SET deleted = 1,
-                deleted_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', [id])
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        print(f"Fehler beim Löschen des Werkzeugs: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required
@@ -372,5 +355,59 @@ def edit(barcode):
         print(f"Fehler beim Bearbeiten des Werkzeugs: {str(e)}")
         flash('Fehler beim Bearbeiten des Werkzeugs', 'error')
         return redirect(url_for('tools.index'))
+
+@bp.route('/<barcode>/delete', methods=['POST'])
+@admin_required
+def delete_by_barcode(barcode):
+    """Löscht ein Werkzeug anhand des Barcodes (Soft Delete)"""
+    try:
+        with Database.get_db() as conn:
+            # Prüfe ob das Werkzeug existiert
+            tool = conn.execute(
+                'SELECT * FROM tools WHERE barcode = ? AND deleted = 0',
+                [barcode]
+            ).fetchone()
+            
+            if not tool:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Werkzeug nicht gefunden'
+                }), 404
+            
+            # Prüfe ob das Werkzeug ausgeliehen ist
+            lending = conn.execute('''
+                SELECT * FROM lendings 
+                WHERE tool_barcode = ? 
+                AND returned_at IS NULL
+            ''', [barcode]).fetchone()
+            
+            if lending:
+                return jsonify({
+                    'success': False,
+                    'message': 'Ausgeliehene Werkzeuge können nicht gelöscht werden'
+                }), 400
+            
+            # In den Papierkorb verschieben (soft delete)
+            conn.execute('''
+                UPDATE tools 
+                SET deleted = 1,
+                    deleted_at = datetime('now'),
+                    modified_at = datetime('now')
+                WHERE barcode = ?
+            ''', [barcode])
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Werkzeug wurde in den Papierkorb verschoben'
+            })
+            
+    except Exception as e:
+        print(f"Fehler beim Löschen des Werkzeugs: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'message': f'Fehler beim Löschen: {str(e)}'
+        }), 500
 
 # Weitere Tool-Routen...

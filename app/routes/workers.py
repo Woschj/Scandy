@@ -206,20 +206,59 @@ def edit(barcode):
     
     return redirect(url_for('workers.details', barcode=barcode))
 
-@bp.route('/<barcode>/delete', methods=['POST', 'DELETE'])
+@bp.route('/<barcode>/delete', methods=['POST'])
 @admin_required
-def delete(barcode):
+def delete_by_barcode(barcode):
+    """Löscht einen Mitarbeiter anhand des Barcodes (Soft Delete)"""
     try:
-        print(f"Lösche Mitarbeiter: {barcode}")
-        result = Database.soft_delete('workers', barcode)
-        print(f"Lösch-Ergebnis: {result}")
-        return jsonify(result)
+        with Database.get_db() as conn:
+            # Prüfe ob der Mitarbeiter existiert
+            worker = conn.execute(
+                'SELECT * FROM workers WHERE barcode = ? AND deleted = 0',
+                [barcode]
+            ).fetchone()
+            
+            if not worker:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Mitarbeiter nicht gefunden'
+                }), 404
+            
+            # Prüfe ob der Mitarbeiter aktive Ausleihen hat
+            lending = conn.execute('''
+                SELECT * FROM lendings 
+                WHERE worker_barcode = ? 
+                AND returned_at IS NULL
+            ''', [barcode]).fetchone()
+            
+            if lending:
+                return jsonify({
+                    'success': False,
+                    'message': 'Mitarbeiter hat noch aktive Ausleihen'
+                }), 400
+            
+            # In den Papierkorb verschieben (soft delete)
+            conn.execute('''
+                UPDATE workers 
+                SET deleted = 1,
+                    deleted_at = datetime('now'),
+                    modified_at = datetime('now')
+                WHERE barcode = ?
+            ''', [barcode])
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': 'Mitarbeiter wurde in den Papierkorb verschoben'
+            })
+            
     except Exception as e:
-        print(f"Fehler beim Löschen: {e}")
+        print(f"Fehler beim Löschen des Mitarbeiters: {str(e)}")
         return jsonify({
             'success': False, 
-            'message': str(e)
-        })
+            'message': f'Fehler beim Löschen: {str(e)}'
+        }), 500
 
 @bp.route('/workers/search')
 def search():

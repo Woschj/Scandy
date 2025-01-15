@@ -212,14 +212,6 @@ const QuickScan = {
             }
 
             const action = this.determineAction();
-            const requestData = {
-                item_barcode: this.scannedItem.barcode,
-                worker_barcode: this.scannedWorker.barcode,
-                action: action,
-                quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
-            };
-            
-            console.log('Sende Anfrage:', requestData);
             
             // Headers vorbereiten
             const headers = {
@@ -231,6 +223,7 @@ const QuickScan = {
             
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
+<<<<<<< HEAD
                 headers: headers,
                 credentials: 'same-origin',
                 body: JSON.stringify(requestData)
@@ -267,6 +260,20 @@ const QuickScan = {
             if (!response.ok) {
                 throw new Error(result.message || `Fehler: ${response.status} ${response.statusText}`);
             }
+=======
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    item_barcode: this.scannedItem.barcode,
+                    worker_barcode: this.scannedWorker.barcode,
+                    action: action,
+                    quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
+                })
+            });
+            
+            const result = await response.json();
+>>>>>>> parent of 6577f56 (0.8.2)
             
             if (result.success) {
                 document.getElementById('successMessage').textContent = result.message;
@@ -278,10 +285,11 @@ const QuickScan = {
                     window.location.reload();
                 }, 3000);
             } else {
-                throw new Error(result.message || 'Fehler beim Verarbeiten der Aktion');
+                showToast('error', result.message || 'Fehler beim Verarbeiten der Aktion');
             }
             
         } catch (error) {
+<<<<<<< HEAD
             console.error('Fehler in processAction:', error);
             showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
             
@@ -291,6 +299,10 @@ const QuickScan = {
                     window.location.reload();
                 }, 2000);
             }
+=======
+            showToast('error', 'Fehler beim Verarbeiten der Aktion');
+            console.error(error);
+>>>>>>> parent of 6577f56 (0.8.2)
         }
     },
     

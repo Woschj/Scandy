@@ -139,18 +139,24 @@ function deleteConsumable(barcode) {
         return;
     }
     
-    fetch(`/admin/consumables/${barcode}/delete`, {
-        method: 'DELETE'
+    fetch(`/consumables/${barcode}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
-    .then(response => {
-        if (response.ok) {
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
             location.reload();
         } else {
-            alert('Fehler beim Löschen des Verbrauchsmaterials');
+            alert(data.message || 'Fehler beim Löschen des Verbrauchsmaterials');
         }
     })
     .catch(error => {
-        alert('Fehler: ' + error);
+        console.error('Fehler:', error);
+        alert('Fehler beim Löschen des Verbrauchsmaterials');
     });
 }
 </script>
