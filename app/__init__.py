@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 from flask_login import LoginManager
 from app.models.user import User
+from flask_wtf.csrf import CSRFProtect
 
 # Backup-System importieren
 sys.path.append(str(Path(__file__).parent.parent))
@@ -102,6 +103,10 @@ def create_app(test_config=None):
     app = Flask(__name__, 
                 static_folder='static',
                 static_url_path='/static')
+    
+    # CSRF-Schutz initialisieren
+    csrf = CSRFProtect()
+    csrf.init_app(app)
     
     # Session-Konfiguration
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-123')

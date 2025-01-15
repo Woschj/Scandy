@@ -221,12 +221,22 @@ const QuickScan = {
             
             console.log('Sende Anfrage:', requestData);
             
+            // Headers vorbereiten
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+
+            // CSRF-Token nur hinzufügen wenn verfügbar
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+            }
+            
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: headers,
+                credentials: 'same-origin',
                 body: JSON.stringify(requestData)
             });
             
@@ -244,7 +254,6 @@ const QuickScan = {
                 result = JSON.parse(responseText);
             } catch (parseError) {
                 console.error('JSON Parse Error:', parseError);
-                // Wenn es kein JSON ist, prüfe auf Redirect
                 if (response.redirected) {
                     window.location.href = response.url;
                     return;
@@ -301,7 +310,7 @@ const QuickScan = {
         
         // Aktualisiere Fortschrittsanzeige
         document.querySelectorAll('.steps .step').forEach((el, index) => {
-            if (index < step - 1) {
+            if (index + 1 <= step) {
                 el.classList.add('step-primary');
             } else {
                 el.classList.remove('step-primary');

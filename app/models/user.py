@@ -42,3 +42,6 @@ class User(UserMixin):
         except Exception as e:
             print(f"Fehler beim Laden des Users: {e}")
         return None
+
+    # Alias für Flask-Login Kompatibilität
+    get_by_id = get
