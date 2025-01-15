@@ -126,6 +126,39 @@ def get_backup_info():
     
     return backups
 
+def get_consumables_forecast():
+    """Berechnet die Bestandsprognose für Verbrauchsmaterialien"""
+    return Database.query('''
+        WITH avg_usage AS (
+            SELECT 
+                c.barcode,
+                c.name,
+                c.quantity as current_amount,
+                COALESCE(CAST(SUM(cu.quantity) AS FLOAT) / 30, 0) as avg_daily_usage
+            FROM consumables c
+            LEFT JOIN consumable_usages cu ON c.barcode = cu.consumable_barcode
+                AND cu.used_at >= date('now', '-30 days')
+            WHERE c.deleted = 0
+            GROUP BY c.barcode, c.name, c.quantity
+        )
+        SELECT 
+            name,
+            current_amount,
+            ROUND(avg_daily_usage, 2) as avg_daily_usage,
+            CASE 
+                WHEN avg_daily_usage > 0 THEN ROUND(current_amount / avg_daily_usage)
+                ELSE 999
+            END as days_remaining
+        FROM avg_usage
+        WHERE current_amount > 0
+        ORDER BY 
+            CASE 
+                WHEN avg_daily_usage > 0 THEN current_amount / avg_daily_usage
+                ELSE 999
+            END ASC
+        LIMIT 6
+    ''')
+
 @bp.route('/')
 @admin_required
 def dashboard():
@@ -184,6 +217,9 @@ def dashboard():
         LIMIT 10
     """)
     
+    # Bestandsprognose laden
+    consumables_forecast = get_consumables_forecast()
+    
     # Backup-Informationen laden
     backups = get_backup_info()
     
@@ -191,6 +227,7 @@ def dashboard():
                          stats=stats,
                          current_lendings=current_lendings,
                          consumable_usages=consumable_usages,
+                         consumables_forecast=consumables_forecast,
                          backups=backups,
                          Config=Config)
 
