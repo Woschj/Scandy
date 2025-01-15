@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
     
     <!-- Eigene Styles nach den Framework Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -29,8 +29,7 @@
             daisyui: {
                 themes: [{
                     light: {
-                        ...require("daisyui/src/theming/themes")["[data-theme=light]"],
-                        "primary": "#435C70",
+                        primary: "#435C70",
                         "primary-content": "#ffffff"
                     }
                 }]
@@ -38,10 +37,7 @@
         }
     </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>
-        mermaid.initialize({ startOnLoad: true });
-    </script>
+    {% block head %}{% endblock %}
 </head>
 
 <body class="min-h-screen bg-base-200">

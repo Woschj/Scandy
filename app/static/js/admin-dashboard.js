@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin Dashboard Script geladen');
     
     // Initial laden
+    console.log('Starte initiales Laden...');
     loadDepartments();
     loadLocations();
     loadCategories();
@@ -173,15 +174,18 @@ async function loadDepartments() {
         console.log('Lade Abteilungen...');
         const response = await fetch('/admin/departments/list');
         console.log('Abteilungen Response:', response);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         console.log('Abteilungen Daten:', data);
         
         if (data.success && data.departments) {
             departmentsList.innerHTML = data.departments.map(dept => `
                 <tr>
-                    <td>${dept}</td>
+                    <td>${dept.name}</td>
                     <td class="text-right">
-                        <button class="btn btn-error btn-xs" onclick="deleteDepartment('${dept}')">
+                        <button class="btn btn-error btn-xs" onclick="deleteDepartment('${dept.name}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -201,6 +205,9 @@ async function loadLocations() {
         console.log('Lade Standorte...');
         const response = await fetch('/admin/locations/list');
         console.log('Standorte Response:', response);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         console.log('Standorte Daten:', data);
         
@@ -229,6 +236,9 @@ async function loadCategories() {
         console.log('Lade Kategorien...');
         const response = await fetch('/admin/categories/list');
         console.log('Kategorien Response:', response);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         console.log('Kategorien Daten:', data);
         

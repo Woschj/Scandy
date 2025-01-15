@@ -946,6 +946,7 @@ def get_departments():
             'departments': [dept['name'] for dept in departments]
         })
     except Exception as e:
+        print(f"Fehler beim Laden der Abteilungen: {e}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -991,16 +992,26 @@ def delete_department(name):
 @bp.route('/locations', methods=['GET'])
 @admin_required
 def get_locations():
+    """Hole alle Standorte"""
     try:
-        with Database.get_db() as db:
-            cursor = db.execute(
-                "SELECT value as name FROM settings WHERE key LIKE 'location_%' AND value IS NOT NULL AND value != '' ORDER BY value"
-            )
-            locations = [dict(row) for row in cursor.fetchall()]
-            return jsonify({'success': True, 'locations': locations})
+        locations = Database.query('''
+            SELECT value as name, description
+            FROM settings
+            WHERE key LIKE 'location_%'
+            AND value IS NOT NULL
+            AND value != ''
+            ORDER BY value
+        ''')
+        return jsonify({
+            'success': True,
+            'locations': locations
+        })
     except Exception as e:
         print(f"Fehler beim Laden der Standorte: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden der Standorte'})
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @bp.route('/locations/add', methods=['POST'])
 @admin_required
@@ -1042,16 +1053,26 @@ def delete_location(name):
 @bp.route('/categories', methods=['GET'])
 @admin_required
 def get_categories():
+    """Hole alle Kategorien"""
     try:
-        with Database.get_db() as db:
-            cursor = db.execute(
-                "SELECT value as name FROM settings WHERE key LIKE 'category_%' AND value IS NOT NULL AND value != '' ORDER BY value"
-            )
-            categories = [dict(row) for row in cursor.fetchall()]
-            return jsonify({'success': True, 'categories': categories})
+        categories = Database.query('''
+            SELECT value as name, description
+            FROM settings
+            WHERE key LIKE 'category_%'
+            AND value IS NOT NULL
+            AND value != ''
+            ORDER BY value
+        ''')
+        return jsonify({
+            'success': True,
+            'categories': categories
+        })
     except Exception as e:
         print(f"Fehler beim Laden der Kategorien: {e}")
-        return jsonify({'success': False, 'message': 'Fehler beim Laden der Kategorien'})
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @bp.route('/categories/add', methods=['POST'])
 @admin_required
@@ -1270,7 +1291,7 @@ def list_departments():
         AND value != ''
         ORDER BY value
     """)
-    return jsonify({'success': True, 'departments': departments})
+    return jsonify({'success': True, 'departments': [dict(dept) for dept in departments]})
 
 @bp.route('/locations/list')
 @admin_required
@@ -1284,7 +1305,7 @@ def list_locations():
         AND value != ''
         ORDER BY value
     """)
-    return jsonify({'success': True, 'locations': locations})
+    return jsonify({'success': True, 'locations': [dict(loc) for loc in locations]})
 
 @bp.route('/categories/list')
 @admin_required
@@ -1298,4 +1319,4 @@ def list_categories():
         AND value != ''
         ORDER BY value
     """)
-    return jsonify({'success': True, 'categories': categories})
+    return jsonify({'success': True, 'categories': [dict(cat) for cat in categories]})
