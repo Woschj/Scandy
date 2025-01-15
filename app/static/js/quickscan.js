@@ -7,6 +7,14 @@ const QuickScan = {
     keyBuffer: '',
     isInitialized: false,
     
+    // Neuer Zwischenspeicher für den aktuellen Prozess
+    currentProcess: {
+        item: null,
+        worker: null,
+        action: null,
+        confirmed: false
+    },
+    
     init() {
         if (this.isInitialized) {
             this.reset();
@@ -86,16 +94,35 @@ const QuickScan = {
 
     handleScannerInput(barcode, input) {
         console.log('Scanner Input erkannt:', barcode);
-        showToast('info', 'Barcode erkannt: ' + barcode);
 
-        if (this.confirmationBarcode && barcode === this.confirmationBarcode) {
-            console.log('Bestätigungscode erkannt');
-            if (input.id === 'itemScanInput') {
-                this.confirmItem();
-            } else {
-                this.processAction();
+        // Prüfe zuerst auf Bestätigungscode
+        if (this.confirmationBarcode) {
+            console.log('Erwarteter Bestätigungscode:', this.confirmationBarcode);
+            // Prüfe ob der gescannte Code den Bestätigungscode enthält
+            if (barcode.includes(this.confirmationBarcode)) {
+                console.log('Bestätigungscode erkannt');
+                if (input.id === 'itemScanInput') {
+                    // Artikel wurde bestätigt
+                    this.currentProcess.confirmed = true;
+                    // Verstecke die Bestätigungskarte und zeige den Worker-Scan
+                    document.getElementById('itemConfirm').classList.add('hidden');
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    this.currentStep = 2;
+                    this.focusCurrentInput();
+                    this.confirmationBarcode = null;
+                } else if (input.id === 'workerScanInput') {
+                    // Mitarbeiter wurde bestätigt, jetzt können wir die Aktion ausführen
+                    document.getElementById('workerScanPrompt').classList.add('hidden');
+                    document.getElementById('finalConfirm').classList.remove('hidden');
+                    this.executeStoredProcess();
+                }
+                return;
             }
-        } else if (barcode.length >= 4) {
+        }
+
+        // Wenn kein Bestätigungscode, verarbeite als normalen Scan
+        if (barcode.length >= 4) {
             if (input.id === 'itemScanInput') {
                 this.handleItemScan(barcode);
             } else {
@@ -106,27 +133,40 @@ const QuickScan = {
 
     async handleItemScan(barcode) {
         try {
-            // Prüfe zuerst ob es ein Werkzeug ist
-            const toolResponse = await fetch(`/api/inventory/tools/${barcode}`);
+            // Entferne mögliche Präfixe für die Suche
+            const cleanBarcode = barcode.replace(/^[TC]/, '');
+            console.log('Suche Artikel mit bereinigtem Barcode:', cleanBarcode);
+            
+            // Versuche zuerst als Werkzeug
+            const toolResponse = await fetch(`/api/inventory/tools/${cleanBarcode}`);
             let data;
             
             if (toolResponse.ok) {
                 const response = await toolResponse.json();
                 if (response.success) {
                     data = response.data;
-                    data.itemType = 'tool';
+                    data.type = 'tool';
+                    data.barcode = cleanBarcode;  // Speichere bereinigten Barcode
+                    // Speichere im Prozess
+                    this.currentProcess.item = data;
+                    this.currentProcess.action = data.current_status === 'verfügbar' ? 'lend' : 'return';
                 } else {
                     showToast('error', response.message || 'Fehler beim Laden des Werkzeugs');
                     return;
                 }
             } else {
-                // Wenn kein Werkzeug gefunden, prüfe ob es ein Verbrauchsmaterial ist
-                const consumableResponse = await fetch(`/api/inventory/consumables/${barcode}`);
+                // Wenn kein Werkzeug gefunden, versuche als Verbrauchsmaterial
+                console.log('Versuche Verbrauchsmaterial:', cleanBarcode);
+                const consumableResponse = await fetch(`/api/inventory/consumables/${cleanBarcode}`);
                 if (consumableResponse.ok) {
                     const response = await consumableResponse.json();
                     if (response.success) {
                         data = response.data;
-                        data.itemType = 'consumable';
+                        data.type = 'consumable';
+                        data.barcode = cleanBarcode;  // Speichere bereinigten Barcode
+                        // Speichere im Prozess
+                        this.currentProcess.item = data;
+                        this.currentProcess.action = 'consume';
                     } else {
                         showToast('error', response.message || 'Fehler beim Laden des Verbrauchsmaterials');
                         return;
@@ -137,12 +177,10 @@ const QuickScan = {
                 }
             }
             
-            this.scannedItem = data;
-            
             // Bestimme Aktion und Farbe basierend auf Artikeltyp und Status
             let action, actionText, statusClass, details;
             
-            if (data.itemType === 'tool') {
+            if (data.type === 'tool') {
                 if (data.current_status === 'verfügbar') {
                     action = 'lend';
                     actionText = 'Wird ausgeliehen';
@@ -168,7 +206,8 @@ const QuickScan = {
             const itemName = document.getElementById('itemName');
             const itemStatusContainer = document.getElementById('itemStatusContainer');
             const itemStatus = document.getElementById('itemStatus');
-            const itemAction = document.getElementById('itemAction');
+            const returnIcon = document.getElementById('returnIcon');
+            const lendIcon = document.getElementById('lendIcon');
             const itemDetails = document.getElementById('itemDetails');
 
             itemName.textContent = data.name;
@@ -176,7 +215,17 @@ const QuickScan = {
             
             itemStatus.className = `badge badge-lg ${statusClass}`;
             itemStatus.textContent = data.status_text;
-            itemAction.textContent = actionText;
+            
+            // Icons statt Text anzeigen
+            returnIcon.classList.add('hidden');
+            lendIcon.classList.add('hidden');
+            
+            if (action === 'return') {
+                returnIcon.classList.remove('hidden');
+            } else if (action === 'lend' || action === 'consume') {
+                lendIcon.classList.remove('hidden');
+            }
+            
             itemStatusContainer.style.display = 'flex';
             
             itemDetails.textContent = details;
@@ -215,7 +264,10 @@ const QuickScan = {
                 throw new Error('Mitarbeiter nicht gefunden');
             }
             
-            this.scannedWorker = result;
+            // Speichere im Prozess und füge Barcode hinzu
+            result.barcode = barcode;  // Explizit den Barcode hinzufügen
+            this.currentProcess.worker = result;
+            console.log('Gespeicherter Worker:', this.currentProcess.worker);
             
             // Aktualisiere Worker-Bereich in der Info-Karte
             const workerName = document.getElementById('workerName');
@@ -240,59 +292,52 @@ const QuickScan = {
             });
             document.getElementById('finalConfirm').classList.remove('hidden');
             
-            // Direkt die Aktion ausführen
-            await this.processAction();
-            
         } catch (error) {
             console.error('Worker-Scan Fehler:', error);
             showToast('error', 'Fehler: ' + error.message);
         }
     },
 
-    async processAction() {
+    async executeStoredProcess() {
         try {
-            if (!this.scannedItem || !this.scannedWorker) {
-                showToast('error', 'Bitte wählen Sie einen Artikel und einen Mitarbeiter aus');
+            if (!this.currentProcess.item || !this.currentProcess.worker || !this.currentProcess.confirmed) {
+                showToast('error', 'Prozess unvollständig');
                 return;
             }
 
-            const action = this.determineAction();
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            };
-            
+            // Bereite die Barcodes vor
+            const itemBarcode = this.currentProcess.item.type === 'tool' ? 
+                this.currentProcess.item.barcode :
+                this.currentProcess.item.barcode;
+
             const requestData = {
-                item_barcode: this.scannedItem.barcode,
-                worker_barcode: this.scannedWorker.barcode,
-                action: action,
-                quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
+                item_barcode: itemBarcode,
+                worker_barcode: this.currentProcess.worker.barcode,
+                action: this.currentProcess.action,
+                item_type: this.currentProcess.item.type,
+                quantity: this.currentProcess.item.type === 'consumable' ? 1 : undefined
             };
+
+            console.log('Führe gespeicherten Prozess aus:', requestData);
+            console.log('Worker Data:', this.currentProcess.worker);
             
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
-                headers: headers,
-                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(requestData)
             });
             
-            const contentType = response.headers.get('content-type');
-            const responseText = await response.text();
-            
-            if (contentType?.includes('text/html')) {
-                throw new Error('Sitzung abgelaufen - Bitte laden Sie die Seite neu');
-            }
-            
-            let result;
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                throw new Error('Ungültige Server-Antwort');
-            }
+            const result = await response.json();
+            console.log('Server Antwort:', result);
             
             if (result.success) {
-                showToast('success', 'Vorgang erfolgreich abgeschlossen');
+                const actionText = this.currentProcess.action === 'return' ? 'zurückgegeben' : 
+                                 this.currentProcess.action === 'lend' ? 'ausgeliehen' : 
+                                 'ausgegeben';
+                showToast('success', `${this.currentProcess.item.name} erfolgreich ${actionText}`);
                 setTimeout(() => {
                     const modal = document.getElementById('quickScanModal');
                     if (modal) {
@@ -304,50 +349,28 @@ const QuickScan = {
                 throw new Error(result.message || 'Unbekannter Fehler');
             }
         } catch (error) {
-            console.error('Fehler in processAction:', error);
+            console.error('Fehler beim Ausführen des Prozesses:', error);
             showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
         }
     },
 
-    determineAction() {
-        if (this.scannedItem.itemType === 'tool') {
-            return this.scannedItem.current_status === 'verfügbar' ? 'lend' : 'return';
-        }
-        return 'consume';
-    },
-    
-    goToStep(step) {
-        document.querySelectorAll('.scan-step').forEach(el => el.classList.add('hidden'));
-        document.getElementById(`step${step}`).classList.remove('hidden');
-        
-        document.querySelectorAll('.steps .step').forEach((el, index) => {
-            if (index + 1 <= step) {
-                el.classList.add('step-primary');
-            } else {
-                el.classList.remove('step-primary');
-            }
-        });
-        
-        this.currentStep = step;
-        this.focusCurrentInput();
-    },
-    
-    focusCurrentInput() {
-        const currentInput = this.currentStep === 1 ? 'itemScanInput' : 'workerScanInput';
-        const input = document.getElementById(currentInput);
-        if (input) {
-            input.focus();
-        }
-    },
-    
     reset() {
+        // Zurücksetzen des Prozess-Speichers
+        this.currentProcess = {
+            item: null,
+            worker: null,
+            action: null,
+            confirmed: false
+        };
+        
+        // Rest des Reset-Codes wie gehabt...
         this.scannedItem = null;
         this.scannedWorker = null;
         this.confirmationBarcode = null;
         this.keyBuffer = '';
         this.goToStep(1);
         
-        // Reset UI
+        // UI-Reset wie gehabt...
         document.getElementById('itemScanInput').value = '';
         document.getElementById('workerScanInput').value = '';
         document.getElementById('itemConfirm').classList.add('hidden');
@@ -371,6 +394,31 @@ const QuickScan = {
         workerDepartment.classList.add('opacity-50');
         
         this.focusCurrentInput();
+    },
+
+    goToStep(step) {
+        document.querySelectorAll('.scan-step').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`step${step}`).classList.remove('hidden');
+        
+        document.querySelectorAll('.steps .step').forEach((el, index) => {
+            if (index + 1 <= step) {
+                el.classList.add('step-primary');
+            } else {
+                el.classList.remove('step-primary');
+            }
+        });
+        
+        this.currentStep = step;
+        this.focusCurrentInput();
+    },
+    
+    focusCurrentInput() {
+        const currentInput = this.currentStep === 1 ? 'itemScanInput' : 'workerScanInput';
+        const input = document.getElementById(currentInput);
+        if (input) {
+            input.focus();
+            input.select(); // Selektiert den vorhandenen Text
+        }
     },
 
     confirmItem() {

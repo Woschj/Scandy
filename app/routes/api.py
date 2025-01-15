@@ -36,47 +36,32 @@ def get_workers():
 
 @bp.route('/inventory/tools/<barcode>', methods=['GET'])
 def get_tool(barcode):
+    """Sucht ein Werkzeug anhand des Barcodes"""
     try:
         print(f"Suche Werkzeug mit Barcode: {barcode}")
         
         tool = Database.query('''
-            SELECT 
-                t.id,
-                t.barcode,
-                t.name,
-                t.description,
-                t.status,
-                t.category,
-                t.location,
-                CASE 
-                    WHEN EXISTS (
-                        SELECT 1 FROM lendings l 
-                        WHERE l.tool_barcode = t.barcode 
-                        AND l.returned_at IS NULL
-                    ) THEN 'ausgeliehen'
-                    WHEN t.status = 'defekt' THEN 'defekt'
-                    ELSE 'verfügbar'
-                END as current_status,
-                CASE 
-                    WHEN EXISTS (
-                        SELECT 1 FROM lendings l 
-                        WHERE l.tool_barcode = t.barcode 
-                        AND l.returned_at IS NULL
-                    ) THEN 'Ausgeliehen'
-                    WHEN t.status = 'defekt' THEN 'Defekt'
-                    ELSE 'Verfügbar'
-                END as status_text,
-                (
-                    SELECT w.firstname || ' ' || w.lastname
-                    FROM lendings l
-                    JOIN workers w ON l.worker_barcode = w.barcode
-                    WHERE l.tool_barcode = t.barcode
-                    AND l.returned_at IS NULL
-                    LIMIT 1
-                ) as current_worker
+            SELECT t.*,
+                   CASE 
+                       WHEN EXISTS (
+                           SELECT 1 FROM lendings l 
+                           WHERE l.tool_barcode = t.barcode 
+                           AND l.returned_at IS NULL
+                       ) THEN 'ausgeliehen'
+                       WHEN t.status = 'defekt' THEN 'defekt'
+                       ELSE 'verfügbar'
+                   END as current_status,
+                   CASE 
+                       WHEN EXISTS (
+                           SELECT 1 FROM lendings l 
+                           WHERE l.tool_barcode = t.barcode 
+                           AND l.returned_at IS NULL
+                       ) THEN 'Ausgeliehen'
+                       WHEN t.status = 'defekt' THEN 'Defekt'
+                       ELSE 'Verfügbar'
+                   END as status_text
             FROM tools t
-            WHERE t.barcode = ? 
-            AND t.deleted = 0
+            WHERE t.barcode = ? AND t.deleted = 0
         ''', [barcode], one=True)
         
         if not tool:
@@ -700,7 +685,6 @@ def scan():
 def quickscan_process_lending():
     """Verarbeitet eine Ausleihe oder Ausgabe im QuickScan"""
     try:
-        # Prüfe ob der Request JSON enthält
         if not request.is_json:
             return jsonify({
                 'success': False,
@@ -716,12 +700,14 @@ def quickscan_process_lending():
             
         item_barcode = data.get('item_barcode')
         worker_barcode = data.get('worker_barcode')
+        action = data.get('action')
+        item_type = data.get('item_type')
         quantity = data.get('quantity', 1)
         
-        if not item_barcode or not worker_barcode:
+        if not all([item_barcode, worker_barcode, action, item_type]):
             return jsonify({
                 'success': False,
-                'message': 'Artikel und Mitarbeiter müssen angegeben werden'
+                'message': 'Unvollständige Daten'
             }), 400
             
         with Database.get_db() as db:
@@ -736,9 +722,9 @@ def quickscan_process_lending():
                     'success': False,
                     'message': 'Mitarbeiter nicht gefunden'
                 }), 404
-            
-            # Prüfe ob es ein Werkzeug ist (T-Prefix)
-            if item_barcode.startswith('T'):
+
+            # Verarbeite basierend auf Item-Typ
+            if item_type == 'tool':
                 # Hole Werkzeug mit aktuellem Ausleihstatus
                 tool = db.execute('''
                     SELECT t.*, 
@@ -750,22 +736,7 @@ def quickscan_process_lending():
                                ) THEN 'ausgeliehen'
                                WHEN t.status = 'defekt' THEN 'defekt'
                                ELSE 'verfügbar'
-                           END as current_status,
-                           (
-                               SELECT w.firstname || ' ' || w.lastname
-                               FROM lendings l
-                               JOIN workers w ON l.worker_barcode = w.barcode
-                               WHERE l.tool_barcode = t.barcode
-                               AND l.returned_at IS NULL
-                               LIMIT 1
-                           ) as current_worker_name,
-                           (
-                               SELECT l.worker_barcode
-                               FROM lendings l
-                               WHERE l.tool_barcode = t.barcode
-                               AND l.returned_at IS NULL
-                               LIMIT 1
-                           ) as current_worker_barcode
+                           END as current_status
                     FROM tools t
                     WHERE t.barcode = ? AND t.deleted = 0
                 ''', [item_barcode]).fetchone()
@@ -776,45 +747,13 @@ def quickscan_process_lending():
                         'message': 'Werkzeug nicht gefunden'
                     }), 404
                 
-                # Wenn das Werkzeug ausgeliehen ist
-                if tool['current_status'] == 'ausgeliehen':
-                    # Rückgabe verarbeiten
-                    db.execute('''
-                        UPDATE lendings 
-                        SET returned_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
-                            modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
-                            sync_status = 'pending'
-                        WHERE tool_barcode = ? 
-                        AND returned_at IS NULL
-                    ''', [item_barcode])
-                    
-                    db.execute('''
-                        UPDATE tools 
-                        SET status = 'verfügbar',
-                            modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
-                            sync_status = 'pending'
-                        WHERE barcode = ?
-                    ''', [item_barcode])
-                    
-                    db.commit()
-                    return jsonify({
-                        'success': True,
-                        'message': f'Werkzeug {tool["name"]} wurde zurückgegeben',
-                        'action': 'rückgabe',
-                        'item': {
-                            'name': tool['name'],
-                            'barcode': tool['barcode'],
-                            'type': 'tool',
-                            'status': 'verfügbar'
-                        },
-                        'worker': {
-                            'name': f'{worker["firstname"]} {worker["lastname"]}',
-                            'barcode': worker['barcode']
-                        }
-                    })
-                
-                # Wenn das Werkzeug verfügbar ist
-                elif tool['current_status'] == 'verfügbar':
+                if action == 'lend':
+                    if tool['current_status'] != 'verfügbar':
+                        return jsonify({
+                            'success': False,
+                            'message': 'Werkzeug ist nicht verfügbar'
+                        }), 400
+                        
                     # Neue Ausleihe erstellen
                     db.execute('''
                         INSERT INTO lendings 
@@ -833,29 +772,41 @@ def quickscan_process_lending():
                     db.commit()
                     return jsonify({
                         'success': True,
-                        'message': f'Werkzeug {tool["name"]} wurde an {worker["firstname"]} {worker["lastname"]} ausgeliehen',
-                        'action': 'ausleihe',
-                        'item': {
-                            'name': tool['name'],
-                            'barcode': tool['barcode'],
-                            'type': 'tool',
-                            'status': 'ausgeliehen'
-                        },
-                        'worker': {
-                            'name': f'{worker["firstname"]} {worker["lastname"]}',
-                            'barcode': worker['barcode']
-                        }
+                        'message': f'Werkzeug {tool["name"]} wurde ausgeliehen'
                     })
-                
-                # Wenn das Werkzeug defekt ist
-                else:
+                    
+                elif action == 'return':
+                    if tool['current_status'] != 'ausgeliehen':
+                        return jsonify({
+                            'success': False,
+                            'message': 'Werkzeug ist nicht ausgeliehen'
+                        }), 400
+                        
+                    # Rückgabe verarbeiten
+                    db.execute('''
+                        UPDATE lendings 
+                        SET returned_at = datetime('now'),
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE tool_barcode = ? 
+                        AND returned_at IS NULL
+                    ''', [item_barcode])
+                    
+                    db.execute('''
+                        UPDATE tools 
+                        SET status = 'verfügbar',
+                            modified_at = datetime('now'),
+                            sync_status = 'pending'
+                        WHERE barcode = ?
+                    ''', [item_barcode])
+                    
+                    db.commit()
                     return jsonify({
-                        'success': False,
-                        'message': 'Dieses Werkzeug ist als defekt markiert'
-                    }), 400
-            
-            # Prüfe ob es ein Verbrauchsmaterial ist (C-Prefix)
-            elif item_barcode.startswith('C'):
+                        'success': True,
+                        'message': f'Werkzeug {tool["name"]} wurde zurückgegeben'
+                    })
+                    
+            elif item_type == 'consumable':
                 consumable = db.execute('''
                     SELECT * FROM consumables 
                     WHERE barcode = ? AND deleted = 0
@@ -892,24 +843,13 @@ def quickscan_process_lending():
                 db.commit()
                 return jsonify({
                     'success': True,
-                    'message': f'{quantity}x {consumable["name"]} wurde an {worker["firstname"]} {worker["lastname"]} ausgegeben',
-                    'action': 'ausgabe',
-                    'item': {
-                        'name': consumable['name'],
-                        'barcode': consumable['barcode'],
-                        'type': 'consumable',
-                        'quantity': quantity
-                    },
-                    'worker': {
-                        'name': f'{worker["firstname"]} {worker["lastname"]}',
-                        'barcode': worker['barcode']
-                    }
+                    'message': f'{quantity}x {consumable["name"]} wurde ausgegeben'
                 })
             
             else:
                 return jsonify({
                     'success': False,
-                    'message': 'Ungültiger Barcode-Typ'
+                    'message': 'Ungültiger Artikel-Typ'
                 }), 400
             
     except Exception as e:
@@ -921,6 +861,7 @@ def quickscan_process_lending():
 
 @bp.route('/inventory/consumables/<barcode>', methods=['GET'])
 def get_consumable(barcode):
+    """Sucht ein Verbrauchsmaterial anhand des Barcodes"""
     try:
         print(f"Suche Verbrauchsmaterial mit Barcode: {barcode}")
         

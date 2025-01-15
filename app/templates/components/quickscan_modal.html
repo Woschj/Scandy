@@ -1,46 +1,50 @@
 <!-- QuickScan Modal -->
 <dialog id="quickScanModal" class="modal">
-    <div class="modal-box max-w-4xl h-[600px] flex flex-col">
-        <h3 class="font-bold text-lg mb-4 text-center">QuickScan</h3>
+    <div class="modal-box w-[800px] h-[600px] flex flex-col p-4">
+        <h3 class="font-bold text-lg mb-2 text-center">QuickScan</h3>
         
         <!-- Progress Steps -->
-        <ul class="steps w-full mb-6">
+        <ul class="steps w-full mb-2">
             <li class="step step-primary" data-content="1">Artikel scannen</li>
             <li class="step" data-content="2">Mitarbeiter scannen</li>
         </ul>
         
         <!-- Content Container -->
-        <div class="flex flex-col flex-grow">
+        <div class="flex flex-col flex-1">
             <!-- Permanent Info Card Container -->
-            <div id="permanentInfo" class="mb-6">
+            <div id="permanentInfo" class="mb-2">
                 <div class="card bg-base-200">
-                    <div class="card-body p-6">
-                        <div class="grid grid-cols-2 gap-8">
+                    <div class="card-body p-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <!-- Artikel Info -->
-                            <div class="border-r pr-8">
-                                <div class="flex items-center gap-2 mb-2">
+                            <div class="border-r pr-4">
+                                <div class="flex items-center gap-2">
                                     <i class="fas fa-box text-primary text-xl"></i>
-                                    <h2 class="card-title">Artikel</h2>
+                                    <h2 class="card-title text-base">Artikel</h2>
                                 </div>
-                                <div class="divider my-2"></div>
-                                <div class="space-y-2">
-                                    <p id="itemName" class="font-bold text-lg opacity-50">Noch kein Artikel gescannt</p>
+                                <div class="divider my-1"></div>
+                                <div class="space-y-1">
+                                    <p id="itemName" class="font-bold text-base opacity-50">Noch kein Artikel gescannt</p>
                                     <div class="flex items-center gap-2" id="itemStatusContainer" style="display: none;">
                                         <span id="itemStatus" class="badge badge-lg"></span>
-                                        <span id="itemAction" class="text-sm"></span>
+                                        <!-- Ersetze Text durch Icons -->
+                                        <span id="itemActionIcon" class="text-xl">
+                                            <i class="fas fa-arrow-left text-success hidden" id="returnIcon" title="Wird zurückgegeben"></i>
+                                            <i class="fas fa-arrow-right text-warning hidden" id="lendIcon" title="Wird ausgeliehen"></i>
+                                        </span>
                                     </div>
                                     <p id="itemDetails" class="text-sm opacity-50">Details werden nach Scan angezeigt</p>
                                 </div>
                             </div>
                             <!-- Mitarbeiter Info -->
-                            <div class="pl-8">
-                                <div class="flex items-center gap-2 mb-2">
+                            <div class="pl-4">
+                                <div class="flex items-center gap-2">
                                     <i class="fas fa-user text-primary text-xl"></i>
-                                    <h2 class="card-title">Mitarbeiter</h2>
+                                    <h2 class="card-title text-base">Mitarbeiter</h2>
                                 </div>
-                                <div class="divider my-2"></div>
-                                <div class="space-y-2">
-                                    <p id="workerName" class="font-bold text-lg opacity-50">Noch kein Mitarbeiter gescannt</p>
+                                <div class="divider my-1"></div>
+                                <div class="space-y-1">
+                                    <p id="workerName" class="font-bold text-base opacity-50">Noch kein Mitarbeiter gescannt</p>
                                     <p id="workerDepartment" class="text-sm opacity-50">Abteilung wird nach Scan angezeigt</p>
                                 </div>
                             </div>
@@ -50,11 +54,11 @@
             </div>
 
             <!-- Steps Container -->
-            <div class="flex-grow relative">
+            <div class="flex-1 flex flex-col">
                 <!-- Step 1: Artikel Scan -->
-                <div id="step1" class="scan-step">
-                    <h4 class="font-bold text-lg mb-4 text-center">Werkzeug oder Material scannen</h4>
-                    <div class="scan-area bg-base-200 rounded-lg p-6 relative">
+                <div id="step1" class="scan-step flex-1">
+                    <h4 class="font-bold text-base mb-2 text-center">Werkzeug oder Material scannen</h4>
+                    <div class="scan-area bg-base-200 rounded-lg p-4 h-[200px] flex items-center justify-center relative">
                         <div class="scan-line"></div>
                         <input type="text" 
                                id="itemScanInput"
@@ -62,28 +66,23 @@
                                placeholder="Nur Barcode-Scanner Eingabe möglich"
                                autocomplete="off"
                                readonly>
-                        <div class="text-center">
+                        <div id="scanPrompt" class="text-center">
                             <i class="fas fa-barcode text-4xl text-primary mb-2"></i>
                             <p class="text-sm opacity-70">Bitte verwenden Sie den Barcode-Scanner</p>
                         </div>
-                    </div>
-                    
-                    <!-- Confirmation Barcode Section -->
-                    <div id="itemConfirm" class="mt-4 hidden">
-                        <div class="card bg-base-200">
-                            <div class="card-body items-center text-center p-4">
-                                <h3 class="card-title text-lg mb-2">Aktion bestätigen</h3>
-                                <p class="text-sm mb-4">Scannen Sie diesen Barcode zur Bestätigung</p>
-                                <canvas id="itemConfirmBarcode"></canvas>
-                            </div>
+                        <!-- Confirmation Barcode wird direkt im Scanner-Bereich angezeigt -->
+                        <div id="itemConfirm" class="text-center hidden absolute inset-0 flex flex-col items-center justify-center bg-base-200">
+                            <h3 class="font-bold text-base mb-1">Aktion bestätigen</h3>
+                            <p class="text-sm mb-2">Scannen Sie diesen Barcode zur Bestätigung</p>
+                            <canvas id="itemConfirmBarcode" class="max-w-full"></canvas>
                         </div>
                     </div>
                 </div>
 
                 <!-- Step 2: Mitarbeiter Scan -->
-                <div id="step2" class="scan-step hidden">
-                    <h4 class="font-bold text-lg mb-4 text-center">Mitarbeiter scannen</h4>
-                    <div class="scan-area bg-base-200 rounded-lg p-6 relative">
+                <div id="step2" class="scan-step hidden flex-1">
+                    <h4 class="font-bold text-base mb-2 text-center">Mitarbeiter scannen</h4>
+                    <div class="scan-area bg-base-200 rounded-lg p-4 h-[200px] flex items-center justify-center relative">
                         <div class="scan-line"></div>
                         <input type="text" 
                                id="workerScanInput"
@@ -91,27 +90,22 @@
                                placeholder="Nur Barcode-Scanner Eingabe möglich"
                                autocomplete="off"
                                readonly>
-                        <div class="text-center">
+                        <div id="workerScanPrompt" class="text-center">
                             <i class="fas fa-barcode text-4xl text-primary mb-2"></i>
                             <p class="text-sm opacity-70">Bitte verwenden Sie den Barcode-Scanner</p>
                         </div>
-                    </div>
-                    
-                    <!-- Final Confirmation Section -->
-                    <div id="finalConfirm" class="mt-4 hidden">
-                        <div class="card bg-base-200">
-                            <div class="card-body items-center text-center p-4">
-                                <h3 class="card-title text-lg mb-2">Vorgang bestätigen</h3>
-                                <p class="text-sm mb-4">Scannen Sie diesen Barcode zur Bestätigung</p>
-                                <canvas id="finalConfirmBarcode"></canvas>
-                            </div>
+                        <!-- Final Confirmation wird direkt im Scanner-Bereich angezeigt -->
+                        <div id="finalConfirm" class="text-center hidden absolute inset-0 flex flex-col items-center justify-center bg-base-200">
+                            <h3 class="font-bold text-base mb-1">Vorgang bestätigen</h3>
+                            <p class="text-sm mb-2">Scannen Sie diesen Barcode zur Bestätigung</p>
+                            <canvas id="finalConfirmBarcode" class="max-w-full"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="modal-action mt-4">
+        <div class="modal-action mt-2">
             <form method="dialog">
                 <button class="btn" onclick="QuickScan.reset()">Schließen</button>
             </form>
