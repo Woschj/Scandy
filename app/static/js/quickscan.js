@@ -255,7 +255,7 @@ const QuickScan = {
             } catch (parseError) {
                 console.error('JSON Parse Error:', parseError);
                 if (response.redirected) {
-                    window.location.href = response.url;
+                    showToast('error', 'Unerwartete Weiterleitung');
                     return;
                 }
                 throw new Error('Ungültige Server-Antwort: ' + responseText);
@@ -269,25 +269,20 @@ const QuickScan = {
             if (result.success) {
                 document.getElementById('successMessage').textContent = result.message;
                 this.goToStep(3); // Success Step
+                showToast('success', result.message);
                 
-                // Reset nach 2 Sekunden
+                // Verzögere das Neuladen der Seite
                 setTimeout(() => {
-                    this.reset();
-                    // Seite neu laden um die Änderungen zu sehen
                     window.location.reload();
-                }, 2000);
+                }, 3000);
             } else {
                 throw new Error(result.message || 'Fehler beim Verarbeiten der Aktion');
             }
             
         } catch (error) {
             console.error('Fehler in processAction:', error);
-            if (typeof showToast === 'function') {
-                showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
-            } else {
-                console.error('showToast ist nicht definiert');
-                alert(error.message || 'Fehler beim Verarbeiten der Aktion');
-            }
+            showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
+            // NICHT neuladen bei Fehler
         }
     },
     
