@@ -9,6 +9,7 @@ import barcode
 from barcode.writer import ImageWriter
 from io import BytesIO
 import base64
+from datetime import datetime, timedelta
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -970,4 +971,161 @@ def get_consumable(barcode):
         return jsonify({
             'success': False,
             'message': f'Fehler bei der Suche: {str(e)}'
+        }), 500
+
+@bp.route('/update_barcode', methods=['POST'])
+def update_barcode():
+    """Aktualisiert den Barcode eines Werkzeugs oder Verbrauchsmaterials"""
+    data = request.get_json()
+    old_barcode = data.get('old_barcode')
+    new_barcode = data.get('new_barcode')
+    item_type = data.get('type')  # 'tool' oder 'consumable'
+    
+    if not all([old_barcode, new_barcode, item_type]):
+        return jsonify({'success': False, 'message': 'Fehlende Parameter'})
+        
+    if item_type not in ['tool', 'consumable']:
+        return jsonify({'success': False, 'message': 'Ungültiger Typ'})
+    
+    try:
+        db = Database.get_db()
+        
+        # Prüfen ob der neue Barcode bereits existiert
+        exists_count = db.execute("""
+            SELECT COUNT(*) as count FROM (
+                SELECT barcode FROM tools WHERE barcode = ? AND deleted = 0
+                UNION ALL 
+                SELECT barcode FROM consumables WHERE barcode = ? AND deleted = 0
+            )
+        """, [new_barcode, new_barcode]).fetchone()['count']
+        
+        if exists_count > 0:
+            return jsonify({
+                'success': False, 
+                'message': 'Der neue Barcode existiert bereits'
+            })
+        
+        try:
+            if item_type == 'tool':
+                # Werkzeug-Barcode in allen relevanten Tabellen aktualisieren
+                
+                # 1. Haupttabelle
+                db.execute("""
+                    UPDATE tools SET barcode = ? WHERE barcode = ? AND deleted = 0
+                """, [new_barcode, old_barcode])
+                
+                # 2. Ausleihhistorie (inkl. aktive Ausleihen)
+                db.execute("""
+                    UPDATE lendings SET tool_barcode = ? 
+                    WHERE tool_barcode = ?
+                """, [new_barcode, old_barcode])
+                
+                # 3. Statusänderungen
+                db.execute("""
+                    UPDATE tool_status_changes SET tool_barcode = ? 
+                    WHERE tool_barcode = ?
+                """, [new_barcode, old_barcode])
+                
+            else:  # consumable
+                # Verbrauchsmaterial-Barcode in allen relevanten Tabellen aktualisieren
+                
+                # 1. Haupttabelle
+                db.execute("""
+                    UPDATE consumables SET barcode = ? WHERE barcode = ? AND deleted = 0
+                """, [new_barcode, old_barcode])
+                
+                # 2. Nutzungshistorie
+                db.execute("""
+                    UPDATE consumable_usages SET consumable_barcode = ? 
+                    WHERE consumable_barcode = ?
+                """, [new_barcode, old_barcode])
+            
+            db.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Barcode erfolgreich aktualisiert'
+            })
+            
+        except Exception as e:
+            db.rollback()
+            raise e
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Fehler beim Aktualisieren: {str(e)}'
+        })
+
+@bp.route('/consumables/<barcode>/forecast', methods=['GET'])
+def get_consumable_forecast(barcode):
+    """Berechnet eine Bestandsprognose für ein Verbrauchsmaterial"""
+    try:
+        # Hole die letzten 30 Tage Verbrauchsdaten
+        usage_data = Database.query("""
+            SELECT 
+                DATE(used_at) as date,
+                SUM(CASE WHEN worker_barcode != 'admin' THEN ABS(quantity) ELSE 0 END) as daily_usage
+            FROM consumable_usages 
+            WHERE consumable_barcode = ?
+            AND used_at >= DATE('now', '-30 days')
+            GROUP BY DATE(used_at)
+            ORDER BY date DESC
+        """, [barcode])
+
+        if not usage_data:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'avg_daily_usage': 0,
+                    'max_daily_usage': 0,
+                    'days_until_empty': None,
+                    'days_until_min': None
+                }
+            })
+
+        # Berechne durchschnittlichen und maximalen Tagesverbrauch
+        total_usage = sum(day['daily_usage'] for day in usage_data)
+        max_daily = max(day['daily_usage'] for day in usage_data)
+        avg_daily = round(total_usage / 30, 1)  # Durchschnitt über 30 Tage
+
+        # Hole aktuellen Bestand und Mindestbestand
+        consumable = Database.query("""
+            SELECT quantity, min_quantity 
+            FROM consumables 
+            WHERE barcode = ? AND deleted = 0
+        """, [barcode], one=True)
+
+        if not consumable:
+            return jsonify({
+                'success': False,
+                'message': 'Verbrauchsmaterial nicht gefunden'
+            }), 404
+
+        current_stock = consumable['quantity']
+        min_stock = consumable['min_quantity']
+
+        # Berechne Prognosen
+        days_until_empty = None
+        days_until_min = None
+
+        if avg_daily > 0:
+            days_until_empty = round(current_stock / avg_daily)
+            days_until_min = round((current_stock - min_stock) / avg_daily)
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'avg_daily_usage': avg_daily,
+                'max_daily_usage': max_daily,
+                'days_until_empty': days_until_empty,
+                'days_until_min': days_until_min
+            }
+        })
+
+    except Exception as e:
+        print(f"Fehler bei Bestandsprognose: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Fehler bei der Berechnung: {str(e)}'
         }), 500

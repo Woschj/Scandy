@@ -1,101 +1,304 @@
 {% extends "base.html" %}
 
+{% block title %}{{ consumable.name }}{% endblock %}
+
 {% block content %}
-<div class="card bg-base-100 shadow-xl">
-    <div class="card-body">
-        <h2 class="card-title">{{ consumable.name }}</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Bestandsinformationen -->
-            <div>
-                <h3 class="text-lg font-semibold mb-2">Bestandsinformationen</h3>
-                <div class="stats shadow">
-                    <div class="stat">
-                        <div class="stat-title">Aktueller Bestand</div>
-                        <div class="stat-value">{{ consumable.quantity }}</div>
-                        <div class="stat-desc">Mindestbestand: {{ consumable.min_quantity }}</div>
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">{{ consumable.name }}</h1>
+            <div class="flex gap-2">
+                <a href="{{ url_for('consumables.index') }}" class="btn btn-ghost">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Zurück
+                </a>
+                <button class="btn btn-primary" onclick="editConsumable()">
+                    <i class="fas fa-edit mr-2"></i>
+                    Bearbeiten
+                </button>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Basis-Informationen -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <div class="flex justify-between items-start">
+                        <h2 class="card-title">Details</h2>
+                        <button onclick="editConsumable()" class="btn btn-ghost btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <label class="text-sm font-medium text-base-content/60">Barcode</label>
+                                <p class="font-mono">{{ consumable.barcode }}</p>
+                            </div>
+                            <button onclick="showUpdateBarcodeModal()" class="btn btn-ghost btn-sm">
+                                <i class="fas fa-barcode"></i>
+                            </button>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Name</label>
+                            <p>{{ consumable.name }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Kategorie</label>
+                            <p>{{ consumable.category or '-' }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Lagerort</label>
+                            <p>{{ consumable.location or '-' }}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Bestand</label>
+                            <p>{{ consumable.quantity }} Stück</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Mindestbestand</label>
+                            <p>{{ consumable.min_quantity }} Stück</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-base-content/60">Status</label>
+                            <p>
+                                <span class="badge {% if consumable.status == 'verfügbar' %}badge-success{% elif consumable.status == 'niedrig' %}badge-warning{% else %}badge-error{% endif %}">
+                                    {{ consumable.status_text }}
+                                </span>
+                            </p>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Bestandsprognose -->
-                <div class="mt-4">
-                    <h4 class="text-md font-semibold mb-2">Bestandsprognose</h4>
-                    <div id="forecast-data" class="stats shadow">
+            </div>
+
+            <!-- Bestandsprognose -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Bestandsprognose</h2>
+                    <div id="forecast-data" class="stats shadow w-full">
                         <div class="stat">
                             <div class="stat-title">Wird geladen...</div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Weitere Informationen -->
-            <div>
-                <h3 class="text-lg font-semibold mb-2">Details</h3>
-                <div class="overflow-x-auto">
-                    <table class="table">
-                        <tbody>
-                            <tr>
-                                <td class="font-semibold">Barcode</td>
-                                <td><code>{{ consumable.barcode }}</code></td>
-                            </tr>
-                            <tr>
-                                <td class="font-semibold">Kategorie</td>
-                                <td>{{ consumable.category or '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="font-semibold">Standort</td>
-                                <td>{{ consumable.location or '-' }}</td>
-                            </tr>
-                            <tr>
-                                <td class="font-semibold">Beschreibung</td>
-                                <td>{{ consumable.description or '-' }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+            <!-- Beschreibung -->
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Beschreibung</h2>
+                    <p class="whitespace-pre-wrap">{{ consumable.description or 'Keine Beschreibung vorhanden' }}</p>
                 </div>
             </div>
-        </div>
-        
-        <!-- Bestandsverlauf -->
-        <div class="mt-8">
-            <h3 class="text-lg font-semibold mb-2">Bestandsverlauf</h3>
-            <div class="overflow-x-auto">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Datum</th>
-                            <th>Mitarbeiter</th>
-                            <th>Änderung</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in history %}
-                        <tr>
-                            <td>{{ entry.action_date }}</td>
-                            <td>{{ entry.worker_name }}</td>
-                            <td>
-                                {% if entry.quantity > 0 %}
-                                <span class="text-success">+{{ entry.quantity }}</span>
-                                {% else %}
-                                <span class="text-error">{{ entry.quantity }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+            <!-- Entnahme-Historie -->
+            <div class="card bg-base-100 shadow-xl col-span-2">
+                <div class="card-body">
+                    <h2 class="card-title">Entnahme-Historie</h2>
+                    {% if history %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Mitarbeiter</th>
+                                    <th>Änderung</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in history %}
+                                <tr>
+                                    <td>{{ entry.action_date|format_datetime }}</td>
+                                    <td>
+                                        <a href="{{ url_for('workers.details', barcode=entry.worker_barcode) }}" class="link link-primary">
+                                            {{ entry.worker_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if entry.quantity > 0 %}
+                                        <span class="text-success">+{{ entry.quantity }}</span>
+                                        {% else %}
+                                        <span class="text-error">{{ entry.quantity }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-base-content/60">Keine Entnahmen vorhanden</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Barcode Update Modal -->
+<dialog id="updateBarcodeModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Barcode ändern</h3>
+        <form onsubmit="updateBarcode(event)">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Aktueller Barcode</span>
+                </label>
+                <input type="text" id="oldBarcode" class="input input-bordered" readonly>
+            </div>
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Neuer Barcode</span>
+                </label>
+                <input type="text" id="newBarcode" class="input input-bordered" required>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="document.getElementById('updateBarcodeModal').close()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Edit Modal -->
+<dialog id="editModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Verbrauchsmaterial bearbeiten</h3>
+        <form method="POST" id="editForm">
+            <div class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Name</span>
+                    </label>
+                    <input type="text" name="name" class="input input-bordered" value="{{ consumable.name }}" required>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Beschreibung</span>
+                    </label>
+                    <textarea name="description" class="textarea textarea-bordered h-24">{{ consumable.description }}</textarea>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Kategorie</span>
+                    </label>
+                    <select name="category" class="select select-bordered">
+                        <option value="">Keine Kategorie</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if consumable and consumable.category == cat %}selected{% endif %}>
+                            {{ cat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Lagerort</span>
+                    </label>
+                    <input type="text" name="location" class="input input-bordered" value="{{ consumable.location }}">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Mindestbestand</span>
+                    </label>
+                    <input type="number" name="min_quantity" class="input input-bordered" value="{{ consumable.min_quantity }}" required>
+                </div>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="closeEditModal()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Lade Bestandsprognose
-    fetch(`/consumables/{{ consumable.barcode }}/forecast`)
+    // Barcode Update Funktionen
+    window.showUpdateBarcodeModal = function() {
+        const modal = document.getElementById('updateBarcodeModal');
+        document.getElementById('oldBarcode').value = '{{ consumable.barcode }}';
+        document.getElementById('newBarcode').value = '';
+        modal.showModal();
+    }
+
+    window.updateBarcode = async function(event) {
+        event.preventDefault();
+        
+        const oldBarcode = document.getElementById('oldBarcode').value;
+        const newBarcode = document.getElementById('newBarcode').value;
+        
+        try {
+            const response = await fetch('/api/update_barcode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    old_barcode: oldBarcode,
+                    new_barcode: newBarcode,
+                    type: 'consumable'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('success', result.message);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('error', result.message);
+            }
+            
+            document.getElementById('updateBarcodeModal').close();
+            
+        } catch (error) {
+            showToast('error', 'Fehler beim Aktualisieren des Barcodes');
+            console.error(error);
+        }
+    }
+
+    // Edit Funktionen
+    window.editConsumable = function() {
+        document.getElementById('editModal').showModal();
+    }
+
+    window.closeEditModal = function() {
+        document.getElementById('editModal').close();
+    }
+
+    // Form-Handler
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(window.location.pathname, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('editModal').close();
+                window.location.reload();
+            } else {
+                showToast('error', data.message || 'Ein Fehler ist aufgetreten');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'Ein Fehler ist aufgetreten');
+        });
+    });
+
+    // Bestandsprognose laden
+    fetch(`/api/consumables/{{ consumable.barcode }}/forecast`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -104,31 +307,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (forecastData.avg_daily_usage > 0) {
                     html = `
-                        <div class="stat">
-                            <div class="stat-title">Durchschnittlicher Tagesverbrauch</div>
-                            <div class="stat-value">${forecastData.avg_daily_usage}</div>
-                            <div class="stat-desc">Max. Tagesverbrauch: ${forecastData.max_daily_usage}</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-title">Prognose</div>
-                            <div class="stat-value">
-                                ${forecastData.days_until_empty !== null ? 
-                                  `${forecastData.days_until_empty} Tage` : 
-                                  'Nicht verfügbar'}
+                        <div class="stats stats-vertical shadow w-full">
+                            <div class="stat">
+                                <div class="stat-title">Durchschnittlicher Tagesverbrauch</div>
+                                <div class="stat-value">${forecastData.avg_daily_usage} Stück</div>
+                                <div class="stat-desc">Max. Tagesverbrauch: ${forecastData.max_daily_usage} Stück</div>
                             </div>
-                            <div class="stat-desc">
-                                ${forecastData.days_until_min !== null ? 
-                                  `Mindestbestand in ${forecastData.days_until_min} Tagen` : 
-                                  'Keine Prognose möglich'}
+                            <div class="stat">
+                                <div class="stat-title">Prognose</div>
+                                <div class="stat-value">
+                                    ${forecastData.days_until_empty !== null ? 
+                                      `${forecastData.days_until_empty} Tage` : 
+                                      'Nicht verfügbar'}
+                                </div>
+                                <div class="stat-desc">
+                                    ${forecastData.days_until_min !== null ? 
+                                      `Mindestbestand in ${forecastData.days_until_min} Tagen` : 
+                                      'Keine Prognose möglich'}
+                                </div>
                             </div>
                         </div>
                     `;
                 } else {
                     html = `
-                        <div class="stat">
-                            <div class="stat-title">Bestandsprognose</div>
-                            <div class="stat-value text-sm">Keine Verbrauchsdaten</div>
-                            <div class="stat-desc">Für eine Prognose werden Verbrauchsdaten benötigt</div>
+                        <div class="stats stats-vertical shadow w-full">
+                            <div class="stat">
+                                <div class="stat-title">Bestandsprognose</div>
+                                <div class="stat-value text-sm">Keine Verbrauchsdaten</div>
+                                <div class="stat-desc">Für eine Prognose werden Verbrauchsdaten der letzten 30 Tage benötigt</div>
+                            </div>
                         </div>
                     `;
                 }

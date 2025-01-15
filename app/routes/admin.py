@@ -1021,15 +1021,21 @@ def add_department():
         return jsonify({'success': False, 'message': 'Kein Name angegeben'})
     
     try:
+        db = Database.get_db()
         # Nächste freie ID finden
-        result = Database.query("SELECT MAX(CAST(SUBSTR(key, 12) AS INTEGER)) as max_id FROM settings WHERE key LIKE 'department_%'")
-        next_id = 1 if not result or result[0]['max_id'] is None else result[0]['max_id'] + 1
+        result = db.execute("""
+            SELECT MAX(CAST(SUBSTR(key, 12) AS INTEGER)) as max_id 
+            FROM settings 
+            WHERE key LIKE 'department_%'
+        """).fetchone()
+        next_id = 1 if not result or result['max_id'] is None else result['max_id'] + 1
         
         # Neue Abteilung einfügen
-        Database.execute(
+        db.execute(
             "INSERT INTO settings (key, value) VALUES (?, ?)",
             [f'department_{next_id}', name]
         )
+        db.commit()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -1082,15 +1088,21 @@ def add_location():
         return jsonify({'success': False, 'message': 'Kein Name angegeben'})
     
     try:
+        db = Database.get_db()
         # Nächste freie ID finden
-        result = Database.query("SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id FROM settings WHERE key LIKE 'location_%'")
-        next_id = 1 if not result or result[0]['max_id'] is None else result[0]['max_id'] + 1
+        result = db.execute("""
+            SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id 
+            FROM settings 
+            WHERE key LIKE 'location_%'
+        """).fetchone()
+        next_id = 1 if not result or result['max_id'] is None else result['max_id'] + 1
         
         # Neuen Standort einfügen
-        Database.execute(
+        db.execute(
             "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
             [f'location_{next_id}', name, 'both']
         )
+        db.commit()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
@@ -1143,15 +1155,21 @@ def add_category():
         return jsonify({'success': False, 'message': 'Kein Name angegeben'})
     
     try:
+        db = Database.get_db()
         # Nächste freie ID finden
-        result = Database.query("SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id FROM settings WHERE key LIKE 'category_%'")
-        next_id = 1 if not result or result[0]['max_id'] is None else result[0]['max_id'] + 1
+        result = db.execute("""
+            SELECT MAX(CAST(SUBSTR(key, 10) AS INTEGER)) as max_id 
+            FROM settings 
+            WHERE key LIKE 'category_%'
+        """).fetchone()
+        next_id = 1 if not result or result['max_id'] is None else result['max_id'] + 1
         
         # Neue Kategorie einfügen
-        Database.execute(
-            "INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
-            [f'category_{next_id}', name, 'both']
+        db.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?)",
+            [f'category_{next_id}', name]
         )
+        db.commit()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})

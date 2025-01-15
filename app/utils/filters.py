@@ -4,9 +4,18 @@ def format_datetime(value):
     """Formatiert ein Datum in deutsches Format"""
     if not value:
         return ''
-    if isinstance(value, str):
-        value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
-    return value.strftime('%d.%m.%Y %H:%M')
+    try:
+        if isinstance(value, str):
+            # Versuche verschiedene Datumsformate
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%d.%m.%Y %H:%M']:
+                try:
+                    value = datetime.strptime(value, fmt)
+                    break
+                except ValueError:
+                    continue
+        return value.strftime('%d.%m.%Y %H:%M')
+    except Exception:
+        return value
 
 def to_datetime(value):
     """Konvertiert einen String in ein datetime Objekt"""

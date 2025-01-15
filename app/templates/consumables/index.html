@@ -50,9 +50,13 @@
     data-location="{{ item.location or '' }}"
     data-status="{{ item.stock_status }}">
     <td>
+        {% if session.get('is_admin') %}
         <a href="{{ url_for('consumables.detail', barcode=item.barcode) }}" class="link link-hover font-medium">
             {{ item.name }}
         </a>
+        {% else %}
+        <span class="font-medium">{{ item.name }}</span>
+        {% endif %}
     </td>
     <td><code>{{ item.barcode }}</code></td>
     <td>

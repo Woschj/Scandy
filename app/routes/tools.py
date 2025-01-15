@@ -39,6 +39,7 @@ def index():
                 ) l ON t.barcode = l.tool_barcode
                 LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE t.deleted = 0
+                GROUP BY t.barcode
                 ORDER BY t.name
             ''').fetchall()
             
@@ -75,6 +76,7 @@ def index():
         return redirect(url_for('main.index'))
 
 @bp.route('/<barcode>')
+@admin_required
 def detail(barcode):
     """Zeigt die Details eines Werkzeugs"""
     tool = Database.query('''

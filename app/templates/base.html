@@ -110,6 +110,7 @@
             <!-- Rechte Seite -->
             <div class="flex-none">
                 <div class="flex items-center gap-2">
+                    <!-- Hilfe-Button entfernt -->
                     {% if session.get('is_admin') %}
                     <div class="dropdown dropdown-end">
                         <label tabindex="0" class="btn btn-ghost btn-sm">
@@ -209,7 +210,9 @@
 
     <!-- Eigene Services -->
     <script src="{{ url_for('static', filename='js/lending-service.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/help-system.js') }}" defer></script>
 
+    <!-- QuickScan Initialisierung - wird entfernt, da wir inline onclick verwenden -->
     <!-- Seiten-spezifische Scripts -->
     {% block scripts %}
     <!-- Externe Bibliotheken -->

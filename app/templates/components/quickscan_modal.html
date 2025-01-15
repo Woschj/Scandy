@@ -10,80 +10,103 @@
         </ul>
         
         <!-- Content Container -->
-        <div class="flex-grow relative">
-            <!-- Step 1: Artikel Scan -->
-            <div id="step1" class="scan-step absolute inset-0">
-                <h4 class="font-bold text-lg mb-4 text-center">Werkzeug oder Material scannen</h4>
-                <div class="scan-area bg-base-200 rounded-lg p-6 relative">
-                    <div class="scan-line"></div>
-                    <input type="text" 
-                           id="itemScanInput"
-                           class="input input-bordered w-full bg-transparent text-center" 
-                           placeholder="Barcode scannen oder eingeben..."
-                           autocomplete="off"
-                           autofocus>
-                </div>
-                
-                <!-- Artikel Info (erscheint nach Scan) -->
-                <div id="scannedItemInfo" class="mt-4 hidden">
-                    <div class="bg-base-200 rounded-lg p-6">
-                        <div class="text-center">
-                            <div class="font-bold text-xl mb-2" id="itemName"></div>
-                            <div class="badge badge-lg mb-2" id="itemStatus"></div>
-                            <div class="text-sm opacity-70" id="itemAction"></div>
-                            <div class="text-sm mt-2" id="itemDetails"></div>
+        <div class="flex flex-col flex-grow">
+            <!-- Permanent Info Card Container -->
+            <div id="permanentInfo" class="mb-6">
+                <div class="card bg-base-200">
+                    <div class="card-body p-6">
+                        <div class="grid grid-cols-2 gap-8">
+                            <!-- Artikel Info -->
+                            <div class="border-r pr-8">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-box text-primary text-xl"></i>
+                                    <h2 class="card-title">Artikel</h2>
+                                </div>
+                                <div class="divider my-2"></div>
+                                <div class="space-y-2">
+                                    <p id="itemName" class="font-bold text-lg opacity-50">Noch kein Artikel gescannt</p>
+                                    <div class="flex items-center gap-2" id="itemStatusContainer" style="display: none;">
+                                        <span id="itemStatus" class="badge badge-lg"></span>
+                                        <span id="itemAction" class="text-sm"></span>
+                                    </div>
+                                    <p id="itemDetails" class="text-sm opacity-50">Details werden nach Scan angezeigt</p>
+                                </div>
+                            </div>
+                            <!-- Mitarbeiter Info -->
+                            <div class="pl-8">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-user text-primary text-xl"></i>
+                                    <h2 class="card-title">Mitarbeiter</h2>
+                                </div>
+                                <div class="divider my-2"></div>
+                                <div class="space-y-2">
+                                    <p id="workerName" class="font-bold text-lg opacity-50">Noch kein Mitarbeiter gescannt</p>
+                                    <p id="workerDepartment" class="text-sm opacity-50">Abteilung wird nach Scan angezeigt</p>
+                                </div>
+                            </div>
                         </div>
-                        <div id="itemConfirm" class="mt-4">
-                            <p class="text-center text-sm mb-2">Scannen Sie diesen Barcode zur Bestätigung oder drücken Sie Enter</p>
-                            <div class="flex justify-center">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Steps Container -->
+            <div class="flex-grow relative">
+                <!-- Step 1: Artikel Scan -->
+                <div id="step1" class="scan-step">
+                    <h4 class="font-bold text-lg mb-4 text-center">Werkzeug oder Material scannen</h4>
+                    <div class="scan-area bg-base-200 rounded-lg p-6 relative">
+                        <div class="scan-line"></div>
+                        <input type="text" 
+                               id="itemScanInput"
+                               class="input input-bordered w-full bg-transparent text-center opacity-0 absolute inset-0" 
+                               placeholder="Nur Barcode-Scanner Eingabe möglich"
+                               autocomplete="off"
+                               readonly>
+                        <div class="text-center">
+                            <i class="fas fa-barcode text-4xl text-primary mb-2"></i>
+                            <p class="text-sm opacity-70">Bitte verwenden Sie den Barcode-Scanner</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Confirmation Barcode Section -->
+                    <div id="itemConfirm" class="mt-4 hidden">
+                        <div class="card bg-base-200">
+                            <div class="card-body items-center text-center p-4">
+                                <h3 class="card-title text-lg mb-2">Aktion bestätigen</h3>
+                                <p class="text-sm mb-4">Scannen Sie diesen Barcode zur Bestätigung</p>
                                 <canvas id="itemConfirmBarcode"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Step 2: Mitarbeiter Scan -->
-            <div id="step2" class="scan-step hidden absolute inset-0">
-                <h4 class="font-bold text-lg mb-4 text-center">Mitarbeiter scannen</h4>
-                <div class="scan-area bg-base-200 rounded-lg p-6 relative">
-                    <div class="scan-line"></div>
-                    <input type="text" 
-                           id="workerScanInput"
-                           class="input input-bordered w-full bg-transparent text-center" 
-                           placeholder="Mitarbeiter-Barcode scannen oder eingeben..."
-                           autocomplete="off">
-                </div>
-                
-                <!-- Mitarbeiter Info (erscheint nach Scan) -->
-                <div id="workerInfo" class="mt-4 hidden">
-                    <div class="bg-base-200 rounded-lg p-6">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div class="text-center">
-                                <h5 class="font-bold mb-2">Artikel</h5>
-                                <div id="finalItemInfo"></div>
-                            </div>
-                            <div class="text-center">
-                                <h5 class="font-bold mb-2">Mitarbeiter</h5>
-                                <div id="finalWorkerInfo"></div>
-                            </div>
+                <!-- Step 2: Mitarbeiter Scan -->
+                <div id="step2" class="scan-step hidden">
+                    <h4 class="font-bold text-lg mb-4 text-center">Mitarbeiter scannen</h4>
+                    <div class="scan-area bg-base-200 rounded-lg p-6 relative">
+                        <div class="scan-line"></div>
+                        <input type="text" 
+                               id="workerScanInput"
+                               class="input input-bordered w-full bg-transparent text-center opacity-0 absolute inset-0" 
+                               placeholder="Nur Barcode-Scanner Eingabe möglich"
+                               autocomplete="off"
+                               readonly>
+                        <div class="text-center">
+                            <i class="fas fa-barcode text-4xl text-primary mb-2"></i>
+                            <p class="text-sm opacity-70">Bitte verwenden Sie den Barcode-Scanner</p>
                         </div>
-                        <div id="finalConfirm" class="mt-4">
-                            <p class="text-center text-sm mb-2">Scannen Sie diesen Barcode zur Bestätigung oder drücken Sie Enter</p>
-                            <div class="flex justify-center">
+                    </div>
+                    
+                    <!-- Final Confirmation Section -->
+                    <div id="finalConfirm" class="mt-4 hidden">
+                        <div class="card bg-base-200">
+                            <div class="card-body items-center text-center p-4">
+                                <h3 class="card-title text-lg mb-2">Vorgang bestätigen</h3>
+                                <p class="text-sm mb-4">Scannen Sie diesen Barcode zur Bestätigung</p>
                                 <canvas id="finalConfirmBarcode"></canvas>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Success Message -->
-            <div id="successStep" class="scan-step hidden absolute inset-0">
-                <div class="text-center">
-                    <i class="fas fa-check-circle text-success text-5xl mb-4"></i>
-                    <h4 class="font-bold text-lg mb-2">Vorgang erfolgreich!</h4>
-                    <p id="successMessage" class="mb-4"></p>
                 </div>
             </div>
         </div>

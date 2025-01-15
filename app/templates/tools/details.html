@@ -27,9 +27,14 @@
                 <div class="card-body">
                     <h2 class="card-title">Details</h2>
                     <div class="space-y-4">
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Barcode</label>
-                            <p class="font-mono">{{ tool.barcode }}</p>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <label class="text-sm font-medium text-base-content/60">Barcode</label>
+                                <p class="font-mono">{{ tool.barcode }}</p>
+                            </div>
+                            <button onclick="showUpdateBarcodeModal()" class="btn btn-ghost btn-sm">
+                                <i class="fas fa-barcode"></i>
+                            </button>
                         </div>
                         <div>
                             <label class="text-sm font-medium text-base-content/60">Status</label>
@@ -233,6 +238,31 @@
     </div>
 </dialog>
 
+<!-- Barcode Update Modal -->
+<dialog id="updateBarcodeModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Barcode ändern</h3>
+        <form onsubmit="updateBarcode(event)">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Aktueller Barcode</span>
+                </label>
+                <input type="text" id="oldBarcode" class="input input-bordered" readonly>
+            </div>
+            <div class="form-control mt-4">
+                <label class="label">
+                    <span class="label-text">Neuer Barcode</span>
+                </label>
+                <input type="text" id="newBarcode" class="input input-bordered" required>
+            </div>
+            <div class="modal-action">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <button type="button" class="btn" onclick="updateBarcodeModal.close()">Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
 {% block scripts %}
 <script>
 // Tool-Daten für JavaScript verfügbar machen
@@ -316,6 +346,49 @@ function updateStatus(event) {
         }
     });
     return false;
+}
+
+function showUpdateBarcodeModal() {
+    const modal = document.getElementById('updateBarcodeModal');
+    document.getElementById('oldBarcode').value = '{{ tool.barcode }}';
+    document.getElementById('newBarcode').value = '';
+    modal.showModal();
+}
+
+async function updateBarcode(event) {
+    event.preventDefault();
+    
+    const oldBarcode = document.getElementById('oldBarcode').value;
+    const newBarcode = document.getElementById('newBarcode').value;
+    
+    try {
+        const response = await fetch('/api/update_barcode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                old_barcode: oldBarcode,
+                new_barcode: newBarcode,
+                type: 'tool'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('success', result.message);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast('error', result.message);
+        }
+        
+        document.getElementById('updateBarcodeModal').close();
+        
+    } catch (error) {
+        showToast('error', 'Fehler beim Aktualisieren des Barcodes');
+        console.error(error);
+    }
 }
 </script>
 {% endblock %}
