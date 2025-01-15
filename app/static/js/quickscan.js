@@ -225,11 +225,37 @@ const QuickScan = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(requestData)
             });
             
-            const result = await response.json();
+            // Debug-Informationen
+            console.log('Response Status:', response.status);
+            console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
+            
+            // Lese zuerst den rohen Text
+            const responseText = await response.text();
+            console.log('Raw Response:', responseText);
+            
+            // Versuche den Text als JSON zu parsen
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON Parse Error:', parseError);
+                // Wenn es kein JSON ist, prüfe auf Redirect
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+                throw new Error('Ungültige Server-Antwort: ' + responseText);
+            }
+            
+            // Prüfe auf HTTP-Fehler
+            if (!response.ok) {
+                throw new Error(result.message || `HTTP error! status: ${response.status}`);
+            }
             
             if (result.success) {
                 document.getElementById('successMessage').textContent = result.message;
@@ -247,7 +273,12 @@ const QuickScan = {
             
         } catch (error) {
             console.error('Fehler in processAction:', error);
-            showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
+            if (typeof showToast === 'function') {
+                showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
+            } else {
+                console.error('showToast ist nicht definiert');
+                alert(error.message || 'Fehler beim Verarbeiten der Aktion');
+            }
         }
     },
     
