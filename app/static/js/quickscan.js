@@ -153,12 +153,11 @@ const QuickScan = {
             const response = await fetch(`/api/inventory/workers/${barcode}`);
             const result = await response.json();
             
-            // Die API sendet die Daten direkt ohne success-Flag
             if (!response.ok) {
                 throw new Error('Mitarbeiter nicht gefunden');
             }
             
-            this.scannedWorker = result; // Direkte Verwendung der Antwort
+            this.scannedWorker = result;
             console.log('Gescannter Mitarbeiter:', this.scannedWorker);
             
             // Aktualisiere finale Übersicht
@@ -185,7 +184,19 @@ const QuickScan = {
             });
             
             document.getElementById('workerInfo').classList.remove('hidden');
-            this.goToStep(2);
+            
+            // Event-Listener für Enter-Taste oder Barcode-Scan zur Bestätigung
+            const workerInput = document.getElementById('workerScanInput');
+            workerInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const scannedCode = e.target.value.trim();
+                    if (scannedCode === '' || scannedCode === this.confirmationBarcode) {
+                        this.processAction();
+                    }
+                    e.target.value = '';
+                }
+            });
             
         } catch (error) {
             console.error('Worker-Scan Fehler:', error);
@@ -195,6 +206,11 @@ const QuickScan = {
     
     async processAction() {
         try {
+            if (!this.scannedItem || !this.scannedWorker) {
+                showToast('error', 'Bitte wählen Sie einen Artikel und einen Mitarbeiter aus');
+                return;
+            }
+
             const action = this.determineAction();
             const requestData = {
                 item_barcode: this.scannedItem.barcode,
@@ -209,17 +225,11 @@ const QuickScan = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(requestData)
             });
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
             const result = await response.json();
-            console.log('Server Antwort:', result);
             
             if (result.success) {
                 document.getElementById('successMessage').textContent = result.message;
