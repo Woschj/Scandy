@@ -233,10 +233,12 @@ const QuickScan = {
                 headers['X-CSRFToken'] = csrfToken;
             }
             
+            console.log('Request Headers:', headers);
+            
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
                 headers: headers,
-                credentials: 'same-origin',
+                credentials: 'include', // Wichtig für Session-Cookies
                 body: JSON.stringify(requestData)
             });
             
@@ -244,9 +246,19 @@ const QuickScan = {
             console.log('Response Status:', response.status);
             console.log('Response Headers:', Object.fromEntries(response.headers.entries()));
             
+            // Prüfe Content-Type
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+            
             // Lese zuerst den rohen Text
             const responseText = await response.text();
             console.log('Raw Response:', responseText);
+            
+            // Wenn es HTML ist, zeige einen spezifischen Fehler
+            if (contentType?.includes('text/html')) {
+                console.error('Server hat HTML zurückgegeben statt JSON');
+                throw new Error('Sitzung abgelaufen - Bitte laden Sie die Seite neu');
+            }
             
             // Versuche den Text als JSON zu parsen
             let result;
@@ -254,16 +266,12 @@ const QuickScan = {
                 result = JSON.parse(responseText);
             } catch (parseError) {
                 console.error('JSON Parse Error:', parseError);
-                if (response.redirected) {
-                    showToast('error', 'Unerwartete Weiterleitung');
-                    return;
-                }
-                throw new Error('Ungültige Server-Antwort: ' + responseText);
+                throw new Error('Ungültige Server-Antwort - Bitte versuchen Sie es erneut');
             }
             
             // Prüfe auf HTTP-Fehler
             if (!response.ok) {
-                throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                throw new Error(result.message || `Fehler: ${response.status} ${response.statusText}`);
             }
             
             if (result.success) {
@@ -274,7 +282,7 @@ const QuickScan = {
                 // Verzögere das Neuladen der Seite
                 setTimeout(() => {
                     window.location.reload();
-                }, 3000);
+                }, 2000);
             } else {
                 throw new Error(result.message || 'Fehler beim Verarbeiten der Aktion');
             }
@@ -282,7 +290,13 @@ const QuickScan = {
         } catch (error) {
             console.error('Fehler in processAction:', error);
             showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
-            // NICHT neuladen bei Fehler
+            
+            // Bei Sitzungsfehler, Seite nach kurzer Verzögerung neu laden
+            if (error.message.includes('Sitzung abgelaufen')) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
         }
     },
     
