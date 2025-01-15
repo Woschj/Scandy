@@ -38,6 +38,7 @@ def get_recent_activity():
         JOIN tools t ON l.tool_barcode = t.barcode
         JOIN workers w ON l.worker_barcode = w.barcode
         WHERE l.returned_at IS NULL
+        LIMIT 6
         
         UNION ALL
         
@@ -50,7 +51,7 @@ def get_recent_activity():
         JOIN consumables c ON cu.consumable_barcode = c.barcode
         JOIN workers w ON cu.worker_barcode = w.barcode
         ORDER BY action_date DESC
-        LIMIT 5
+        LIMIT 10
     ''')
 
 def get_material_usage():
@@ -169,12 +170,27 @@ def dashboard():
         ORDER BY l.lent_at DESC
     """)
     
+    # Materialausgaben laden
+    consumable_usages = Database.query("""
+        SELECT 
+            c.name as consumable_name,
+            cu.quantity,
+            w.firstname || ' ' || w.lastname as worker_name,
+            cu.used_at
+        FROM consumable_usages cu
+        JOIN consumables c ON cu.consumable_barcode = c.barcode
+        JOIN workers w ON cu.worker_barcode = w.barcode
+        ORDER BY cu.used_at DESC
+        LIMIT 10
+    """)
+    
     # Backup-Informationen laden
     backups = get_backup_info()
     
     return render_template('admin/dashboard.html',
                          stats=stats,
                          current_lendings=current_lendings,
+                         consumable_usages=consumable_usages,
                          backups=backups,
                          Config=Config)
 
