@@ -1,0 +1,422 @@
+# Scandy Abhängigkeiten und Verknüpfungen
+
+## Hauptdateien
+- server.py
+  - Importiert: app/__init__.py
+  - Startet den Flask-Server
+  - Setzt Konfigurationen
+
+## Modelle und Datenbank
+1. app/models/database.py (Zentrale Datenbankklasse)
+   - Importiert von:
+     - app/models/tool.py
+     - app/models/worker.py
+     - app/models/user.py
+     - app/models/settings.py
+   - Enthält:
+     - Database Klasse (Datenbankverbindung)
+     - BaseModel Klasse (Basisklasse für alle Modelle)
+     - init_db() Funktion (Datenbankinitialisierung)
+
+2. app/models/tool.py
+   - Erbt von: BaseModel
+   - Verwendet: Database
+   - Hauptfunktionen:
+     - get_all_with_status()
+     - get_by_barcode()
+
+3. app/models/worker.py
+   - Erbt von: BaseModel
+   - Verwendet: Database
+   - Hauptfunktionen:
+     - get_all_with_lendings()
+     - get_by_barcode()
+
+4. app/models/user.py
+   - Erbt von: UserMixin
+   - Verwendet: Database
+   - Hauptfunktionen:
+     - get()
+     - get_by_id()
+
+5. app/models/settings.py
+   - Verwendet: Database
+   - Hauptfunktionen:
+     - update_category_usage()
+     - update_location_usage()
+
+## Datenbanktabellen
+1. tools
+   - Werkzeugverwaltung
+   - Verknüpft mit: lendings (1:n)
+
+2. workers
+   - Mitarbeiterverwaltung
+   - Verknüpft mit: 
+     - lendings (1:n)
+     - consumable_usages (1:n)
+
+3. consumables
+   - Verbrauchsmaterialverwaltung
+   - Verknüpft mit: consumable_usages (1:n)
+
+4. lendings
+   - Ausleihverwaltung
+   - Verknüpft mit:
+     - tools (n:1)
+     - workers (n:1)
+
+5. consumable_usages
+   - Verbrauchserfassung
+   - Verknüpft mit:
+     - consumables (n:1)
+     - workers (n:1)
+
+6. users
+   - Benutzerverwaltung
+   - Unabhängige Tabelle
+
+7. sync_status
+   - Synchronisationsstatus
+   - Unabhängige Tabelle
+
+## Templates
+1. app/templates/base.html (Haupt-Template)
+   - Eingebundene Scripts:
+     - Externe Bibliotheken:
+       - @zxing/library
+       - jsbarcode@3.11.5
+       - qrcode@1.5.1
+       - htmx.org@1.9.10
+       - html5-qrcode
+     - Eigene Services:
+       - js/toast.js
+       - js/lending-service.js
+       - js/scanner.js
+       - js/quickscan.js
+       - js/main.js
+   - Eingebundene Styles:
+     - css/main.css
+     - css/quickscan.css
+   - Eingebundene Components:
+     - components/quickscan_modal.html
+
+2. app/templates/shared/base.html
+   - Erbt von: Eigenständiges Template
+   - Eingebundene Scripts:
+     - Externe Bibliotheken:
+       - daisyui@3.9.4
+       - tailwindcss
+   - Eingebundene Components:
+     - components/quickscan_modal.html
+
+3. app/templates/tools.html
+   - Erbt von: base.html
+   - Eingebundene Scripts:
+     - js/table-functions.js
+   - Verwendet Services:
+     - lending-service.js (für returnTool Funktion)
+
+4. app/templates/dashboard.html
+   - Erbt von: base.html
+   - Verwendet Services:
+     - lending-service.js (bereits in base.html)
+
+## JavaScript Services
+1. app/static/js/lending-service.js
+   - Verwendet von: 
+     - tools.html
+     - dashboard.html
+     - quickscan.js
+   - Funktionen:
+     - returnTool()
+     - processLending()
+
+2. app/static/js/quickscan.js
+   - Abhängig von:
+     - lending-service.js
+     - scanner.js
+   - Verwendet von:
+     - base.html
+     - components/quickscan_modal.html
+
+3. app/static/js/scanner.js
+   - Verwendet von:
+     - quickscan.js
+   - Funktionen:
+     - Kamera-Zugriff
+     - Barcode-Erkennung
+
+4. app/static/js/main.js
+   - Service Worker Registration
+   - Verwendet von:
+     - base.html
+
+5. app/static/js/toast.js
+   - Verwendet von:
+     - base.html
+     - Alle Templates die Benachrichtigungen anzeigen
+
+6. app/static/js/table-functions.js
+   - Verwendet von:
+     - tools.html
+   - Funktionen:
+     - Sortierung
+     - Filterung
+     - Suche
+
+## CSS Dateien
+1. app/static/css/main.css
+   - Verwendet von:
+     - base.html
+     - Alle abgeleiteten Templates
+
+2. app/static/css/quickscan.css
+   - Verwendet von:
+     - base.html
+     - components/quickscan_modal.html
+
+## Progressive Web App Dateien
+1. app/static/service-worker.js
+   - Registriert durch: main.js
+   - Cached Dateien:
+     - css/tailwind.css
+     - js/scanner.js
+     - icons/*
+
+2. app/static/manifest.json
+   - PWA Konfiguration
+   - Icons und App-Einstellungen 
+
+ROUTE-VERKNÜPFUNGEN:
+
+1. Haupt-Routen (app/routes/__init__.py):
+- Registriert alle Blueprints mit URL-Präfixen
+- Importiert: auth_bp, tools_bp, workers_bp, consumables_bp, api_bp, admin_bp, inventory_bp, quick_scan_bp, history_bp, main_bp
+- URL-Präfixe:
+  * /auth - Authentifizierung
+  * /admin - Admin-Funktionen
+  * /tools - Werkzeugverwaltung
+  * /workers - Mitarbeiterverwaltung
+  * /consumables - Verbrauchsmaterialverwaltung
+  * /api - API-Endpunkte
+  * /quick-scan - QuickScan-Funktionalität
+  * /history - Verlaufsanzeige
+
+2. Admin-Routen (app/routes/admin.py):
+- Dashboard mit Statistiken und Warnungen
+- Manuelle Ausleihe/Rückgabe
+- Backup-Verwaltung
+- Import/Export-Funktionen
+- Standort- und Kategorieverwaltung
+- Abhängigkeiten:
+  * Database für Datenbankzugriffe
+  * admin_required Decorator
+  * Verschiedene Template-Dateien
+
+3. Auth-Routen (app/routes/auth.py):
+- Login/Logout-Funktionalität
+- Setup-Überprüfung
+- Abhängigkeiten:
+  * Database für Benutzervalidierung
+  * werkzeug.security für Passwort-Hashing
+  * Session-Management
+
+4. QuickScan-Routen (app/routes/quick_scan.py):
+- Schnelle Ausleihe/Rückgabe via Barcode
+- Abhängigkeiten:
+  * login_required Decorator
+  * Database für Artikel- und Mitarbeitervalidierung
+  * quick_scan.html Template
+
+5. Inventory-Routen:
+- Werkzeug-Liste und Details
+- Verbrauchsmaterial-Liste und Details
+- Mitarbeiter-Liste und Details
+- Abhängigkeiten:
+  * Database für Inventarverwaltung
+  * Verschiedene Template-Dateien
+  * login_required/admin_required Decorators
+
+6. API-Routen:
+- Endpunkte für AJAX-Anfragen
+- Barcode-Validierung
+- Status-Updates
+- Abhängigkeiten:
+  * Database für Datenbankoperationen
+  * JSON-Responses
+
+7. History-Routen:
+- Verlaufsanzeige für Ausleihen/Rückgaben
+- Filterfunktionen
+- Abhängigkeiten:
+  * Database für Verlaufsdaten
+  * Template für Verlaufsanzeige
+
+8. Main-Route:
+- Startseite mit Übersicht
+- Keine URL-Präfix
+- Abhängigkeiten:
+  * Database für Statistiken
+  * System-Struktur-Informationen
+
+Gemeinsame Abhängigkeiten aller Routen:
+- Database-Klasse für Datenbankzugriffe
+- Decorators (login_required, admin_required)
+- Flask Blueprint-System
+- Template-Engine (Jinja2)
+- Session-Management
+- Flash-Nachrichten 
+
+TEMPLATE-VERKNÜPFUNGEN:
+
+1. Basis-Templates:
+- `app/templates/base.html`: Haupt-Template mit grundlegendem HTML-Gerüst
+  * Enthält: Navigation, QuickScan-Button, Toast-Container
+  * Lädt: CSS (Tailwind, DaisyUI, FontAwesome), JavaScript-Bibliotheken
+  * Definiert Blöcke: title, head, content, scripts
+
+- `app/templates/shared/list_base.html`: Basis für Listen-Ansichten
+  * Erweitert: base.html
+  * Enthält: Suchleiste, Filter, Tabellen-Struktur
+  * Definiert Blöcke: actions, filters, table_headers, table_rows
+
+2. Haupt-Templates:
+- `app/templates/index.html`: Startseite
+  * Erweitert: base.html
+  * Zeigt: Willkommenstext, Statistiken, Schnellzugriffe
+
+- `app/templates/about.html`: Über-Seite
+  * Erweitert: base.html
+  * Zeigt: Systembeschreibung, Anleitungen
+
+- `app/templates/error.html`: Fehlerseite
+  * Erweitert: base.html
+  * Zeigt: Fehlermeldungen, HTTP-Status
+
+3. Auth-Templates:
+- `app/templates/auth/login.html`: Login-Seite
+  * Erweitert: base.html
+  * Enthält: Login-Formular
+
+- `app/templates/auth/setup.html`: Setup-Seite
+  * Erweitert: base.html
+  * Enthält: Ersteinrichtungsformular
+
+4. Admin-Templates:
+- `app/templates/admin/dashboard.html`: Admin-Dashboard
+  * Erweitert: base.html
+  * Zeigt: Verwaltungskarten, Statistiken, Backup-Verwaltung
+
+- `app/templates/admin/manual_lending.html`: Manuelle Ausleihe
+  * Erweitert: base.html
+  * Verwendet: lending-service.js
+
+- `app/templates/admin/server_settings.html`: Server-Einstellungen
+  * Erweitert: base.html
+  * Zeigt: Konfigurationsoptionen
+
+- `app/templates/admin/trash.html`: Papierkorb
+  * Erweitert: base.html
+  * Zeigt: Gelöschte Einträge
+
+- `app/templates/admin/access_settings.html`: Zugriffseinstellungen
+  * Erweitert: base.html
+  * Zeigt: Berechtigungsverwaltung
+
+- `app/templates/admin/system_logs.html`: Systemprotokolle
+  * Erweitert: base.html
+  * Zeigt: Protokolleinträge
+
+5. Inventar-Templates:
+- `app/templates/tools.html`: Werkzeug-Liste
+  * Erweitert: list_base.html
+  * Verwendet: table-functions.js
+
+- `app/templates/tools/add_tool.html`: Werkzeug hinzufügen
+  * Erweitert: base.html
+  * Enthält: Werkzeugformular
+
+- `app/templates/tool_details.html`: Werkzeug-Details
+  * Erweitert: base.html
+  * Zeigt: Werkzeuginformationen, Historie
+
+- `app/templates/consumables.html`: Verbrauchsmaterial-Liste
+  * Erweitert: list_base.html
+  * Verwendet: table-functions.js
+
+- `app/templates/consumable_details.html`: Verbrauchsmaterial-Details
+  * Erweitert: base.html
+  * Zeigt: Materialinformationen, Bestand
+
+- `app/templates/edit_consumable.html`: Verbrauchsmaterial bearbeiten
+  * Erweitert: base.html
+  * Enthält: Bearbeitungsformular
+
+6. Mitarbeiter-Templates:
+- `app/templates/workers.html`: Mitarbeiter-Liste
+  * Erweitert: list_base.html
+  * Verwendet: table-functions.js
+
+- `app/templates/worker_details.html`: Mitarbeiter-Details
+  * Erweitert: base.html
+  * Zeigt: Mitarbeiterinformationen, Ausleihhistorie
+
+7. QuickScan-Komponenten:
+- `app/templates/components/quickscan_modal.html`: Haupt-Modal
+  * Eingebunden in: base.html
+  * Verwendet: quickscan.js, scanner.js
+
+- `app/templates/components/quickscan_step_*.html`: Einzelne Schritte
+  * Eingebunden in: quickscan_modal.html
+  * Zeigt: Fortschrittsanzeige, Scan-Interface
+
+8. Präsentation:
+- `app/templates/presentation.html`: Präsentationsmodus
+  * Eigenständiges Template
+  * Zeigt: Systempräsentation
+
+9. Template-Hierarchie (aktualisiert):
+base.html
+├── list_base.html
+│   ├── tools.html
+│   ├── consumables.html
+│   └── workers.html
+├── auth/
+│   ├── login.html
+│   └── setup.html
+├── admin/
+│   ├── dashboard.html
+│   ├── manual_lending.html
+│   ├── server_settings.html
+│   ├── trash.html
+│   ├── access_settings.html
+│   └── system_logs.html
+├── components/
+│   ├── quickscan_modal.html
+│   └── quickscan_step_*.html
+├── error.html
+├── about.html
+└── index.html
+
+10. Gemeinsame Komponenten:
+- Navigation (Vertikal + Horizontal)
+- QuickScan-Button
+- Toast-Container
+- Filter-System
+- Suchfunktionen
+- Tabellen-Layout
+- Modal-Dialoge
+
+11. JavaScript-Einbindung:
+- Basis-Skripte in base.html
+- Spezifische Skripte in jeweiligen Templates
+- Gemeinsame Funktionen in shared/
+- Event-Handler für Interaktionen
+
+12. CSS-Struktur:
+- Tailwind-Basis
+- DaisyUI-Komponenten
+- Benutzerdefinierte Styles
+- Responsive Design
+- Animationen 

@@ -196,21 +196,30 @@ const QuickScan = {
     async processAction() {
         try {
             const action = this.determineAction();
+            const requestData = {
+                item_barcode: this.scannedItem.barcode,
+                worker_barcode: this.scannedWorker.barcode,
+                action: action,
+                quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
+            };
+            
+            console.log('Sende Anfrage:', requestData);
             
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    item_barcode: this.scannedItem.barcode,
-                    worker_barcode: this.scannedWorker.barcode,
-                    action: action,
-                    quantity: this.scannedItem.itemType === 'consumable' ? 1 : undefined
-                })
+                body: JSON.stringify(requestData)
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const result = await response.json();
+            console.log('Server Antwort:', result);
             
             if (result.success) {
                 document.getElementById('successMessage').textContent = result.message;
@@ -223,12 +232,12 @@ const QuickScan = {
                     window.location.reload();
                 }, 2000);
             } else {
-                showToast('error', result.message || 'Fehler beim Verarbeiten der Aktion');
+                throw new Error(result.message || 'Fehler beim Verarbeiten der Aktion');
             }
             
         } catch (error) {
-            showToast('error', 'Fehler beim Verarbeiten der Aktion');
-            console.error(error);
+            console.error('Fehler in processAction:', error);
+            showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
         }
     },
     

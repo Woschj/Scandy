@@ -805,13 +805,14 @@ def quickscan_process_lending():
                     db.execute('''
                         INSERT INTO lendings 
                         (tool_barcode, worker_barcode, lent_at, modified_at, sync_status)
-                        VALUES (?, ?, datetime('now'), datetime('now'), 'pending')
+                        VALUES (?, ?, strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'), 
+                               strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'), 'pending')
                     ''', [item_barcode, worker_barcode])
                     
                     db.execute('''
                         UPDATE tools 
                         SET status = 'ausgeliehen',
-                            modified_at = datetime('now'),
+                            modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                             sync_status = 'pending'
                         WHERE barcode = ?
                     ''', [item_barcode])
@@ -863,14 +864,15 @@ def quickscan_process_lending():
                 db.execute('''
                     INSERT INTO consumable_usages 
                     (consumable_barcode, worker_barcode, quantity, used_at, modified_at, sync_status)
-                    VALUES (?, ?, ?, datetime('now'), datetime('now'), 'pending')
+                    VALUES (?, ?, ?, strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'), 
+                           strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'), 'pending')
                 ''', [item_barcode, worker_barcode, quantity])
                 
                 # Bestand aktualisieren
                 db.execute('''
                     UPDATE consumables
                     SET quantity = quantity - ?,
-                        modified_at = datetime('now'),
+                        modified_at = strftime('%Y-%m-%d %H:%M:%S', 'now', 'localtime'),
                         sync_status = 'pending'
                     WHERE barcode = ?
                 ''', [quantity, item_barcode])
