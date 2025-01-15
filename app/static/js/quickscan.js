@@ -221,16 +221,36 @@ const QuickScan = {
             
             console.log('Sende Anfrage:', requestData);
             
+            // CSRF-Token aus verschiedenen möglichen Quellen holen
+            let csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+            }
+            if (!csrfToken) {
+                // Versuche den Token aus dem Cookie zu lesen
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'csrf_token') {
+                        csrfToken = value;
+                        break;
+                    }
+                }
+            }
+            
+            console.log('CSRF Token gefunden:', csrfToken ? 'Ja' : 'Nein');
+            
             // Headers vorbereiten
             const headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             };
 
-            // CSRF-Token nur hinzufügen wenn verfügbar
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             if (csrfToken) {
                 headers['X-CSRFToken'] = csrfToken;
+            } else {
+                console.error('Kein CSRF-Token gefunden');
+                throw new Error('Sicherheitstoken fehlt - Bitte laden Sie die Seite neu');
             }
             
             console.log('Request Headers:', headers);
@@ -238,7 +258,7 @@ const QuickScan = {
             const response = await fetch('/api/quickscan/process_lending', {
                 method: 'POST',
                 headers: headers,
-                credentials: 'include', // Wichtig für Session-Cookies
+                credentials: 'include',
                 body: JSON.stringify(requestData)
             });
             
@@ -291,8 +311,8 @@ const QuickScan = {
             console.error('Fehler in processAction:', error);
             showToast('error', error.message || 'Fehler beim Verarbeiten der Aktion');
             
-            // Bei Sitzungsfehler, Seite nach kurzer Verzögerung neu laden
-            if (error.message.includes('Sitzung abgelaufen')) {
+            // Bei Sitzungsfehler oder fehlendem CSRF-Token, Seite nach kurzer Verzögerung neu laden
+            if (error.message.includes('Sitzung abgelaufen') || error.message.includes('Sicherheitstoken fehlt')) {
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
