@@ -159,6 +159,27 @@ def get_consumables_forecast():
         LIMIT 6
     ''')
 
+def create_excel(data, columns):
+    """Erstellt eine Excel-Datei aus den gegebenen Daten"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    # Headers hinzufügen
+    for col, header in enumerate(columns, 1):
+        ws.cell(row=1, column=col, value=header)
+    
+    # Daten einfügen
+    for row, item in enumerate(data, 2):
+        for col, key in enumerate(columns, 1):
+            ws.cell(row=row, column=col, value=item.get(key, ''))
+    
+    # Excel-Datei in BytesIO speichern
+    excel_file = BytesIO()
+    wb.save(excel_file)
+    excel_file.seek(0)
+    
+    return excel_file
+
 @bp.route('/')
 @admin_required
 def dashboard():
@@ -780,96 +801,81 @@ def server_settings():
 def export_table(table):
     """Exportiert eine Tabelle als Excel"""
     try:
-        if table == 'tools':
-            data = Database.query('''
-                SELECT t.*, 
-                       w.firstname || ' ' || w.lastname as lent_to
-                FROM tools t
-                LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
-                LEFT JOIN workers w ON l.worker_barcode = w.barcode
-                WHERE t.deleted = 0
-            ''')
-            headers = ['barcode', 'name', 'description', 'category', 'location', 'status', 'lent_to']
-            filename = 'werkzeuge.xlsx'
-            
-        elif table == 'workers':
-            data = Database.query('''
-                SELECT w.*, 
-                       COUNT(DISTINCT l.id) as active_lendings
-                FROM workers w
-                LEFT JOIN lendings l ON w.barcode = l.worker_barcode AND l.returned_at IS NULL
-                WHERE w.deleted = 0
-                GROUP BY w.id
-            ''')
-            headers = ['barcode', 'firstname', 'lastname', 'department', 'active_lendings']
-            filename = 'mitarbeiter.xlsx'
-            
-        elif table == 'consumables':
-            data = Database.query('''
-                SELECT * FROM consumables WHERE deleted = 0
-            ''')
-            headers = ['barcode', 'name', 'description', 'category', 'location', 'quantity', 'min_quantity']
-            filename = 'verbrauchsmaterial.xlsx'
-            
-        elif table == 'history':
-            data = Database.query('''
-                SELECT 
-                    'Werkzeug' as type,
-                    t.name as item_name,
-                    w.firstname || ' ' || w.lastname as worker_name,
-                    l.lent_at,
-                    l.returned_at,
-                    NULL as quantity
-                FROM lendings l
-                JOIN tools t ON l.tool_barcode = t.barcode
-                JOIN workers w ON l.worker_barcode = w.barcode
+        with Database.get_db() as conn:
+            if table == 'tools':
+                query = """
+                    SELECT 
+                        t.name, t.barcode, t.category, t.location,
+                        CASE WHEN l.id IS NULL THEN 'Nein' ELSE 'Ja' END as is_lent
+                    FROM tools t
+                    LEFT JOIN lendings l ON t.barcode = l.tool_barcode AND l.returned_at IS NULL
+                    WHERE t.deleted = 0
+                """
+                rows = [dict(row) for row in conn.execute(query).fetchall()]
+                excel_file = create_excel(rows, ['name', 'barcode', 'category', 'location', 'is_lent'])
+                filename = f'werkzeuge_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
                 
-                UNION ALL
+            elif table == 'workers':
+                query = """
+                    SELECT 
+                        w.firstname, w.lastname, w.department, w.barcode,
+                        COUNT(DISTINCT l.id) as active_lendings
+                    FROM workers w
+                    LEFT JOIN lendings l ON w.barcode = l.worker_barcode AND l.returned_at IS NULL
+                    WHERE w.deleted = 0
+                    GROUP BY w.id
+                """
+                rows = [dict(row) for row in conn.execute(query).fetchall()]
+                excel_file = create_excel(rows, ['firstname', 'lastname', 'department', 'barcode', 'active_lendings'])
+                filename = f'mitarbeiter_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
                 
-                SELECT 
-                    'Verbrauchsmaterial' as type,
-                    c.name as item_name,
-                    w.firstname || ' ' || w.lastname as worker_name,
-                    cu.used_at as lent_at,
-                    cu.used_at as returned_at,
-                    cu.quantity
-                FROM consumable_usages cu
-                JOIN consumables c ON cu.consumable_barcode = c.barcode
-                JOIN workers w ON cu.worker_barcode = w.barcode
-                ORDER BY lent_at DESC
-            ''')
-            headers = ['type', 'item_name', 'worker_name', 'lent_at', 'returned_at', 'quantity']
-            filename = 'verlauf.xlsx'
-        else:
-            return 'Ungültige Tabelle', 400
-
-        # Excel erstellen
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        
-        # Headers schreiben
-        for col, header in enumerate(headers, 1):
-            ws.cell(row=1, column=col, value=header)
-        
-        # Daten schreiben
-        for row_idx, row_data in enumerate(data, 2):
-            for col_idx, header in enumerate(headers, 1):
-                ws.cell(row=row_idx, column=col_idx, value=row_data.get(header))
-        
-        # Excel in BytesIO speichern
-        output = BytesIO()
-        wb.save(output)
-        output.seek(0)
-        
-        return send_file(
-            output,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=filename
-        )
-
+            elif table == 'consumables':
+                query = """
+                    SELECT name, barcode, category, location, quantity, min_quantity
+                    FROM consumables 
+                    WHERE deleted = 0
+                """
+                rows = [dict(row) for row in conn.execute(query).fetchall()]
+                excel_file = create_excel(rows, ['name', 'barcode', 'category', 'location', 'quantity', 'min_quantity'])
+                filename = f'verbrauchsmaterial_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                
+            elif table == 'history':
+                query = """
+                    SELECT 
+                        l.lent_at, l.returned_at, t.name as item_name, 
+                        w.firstname || ' ' || w.lastname as worker_name,
+                        'Werkzeug' as type
+                    FROM lendings l
+                    JOIN tools t ON l.tool_barcode = t.barcode
+                    JOIN workers w ON l.worker_barcode = w.barcode
+                    UNION ALL
+                    SELECT 
+                        cu.used_at as lent_at, 
+                        NULL as returned_at, 
+                        c.name as item_name,
+                        w.firstname || ' ' || w.lastname as worker_name,
+                        'Verbrauchsmaterial' as type
+                    FROM consumable_usages cu
+                    JOIN consumables c ON cu.consumable_barcode = c.barcode
+                    JOIN workers w ON cu.worker_barcode = w.barcode
+                    ORDER BY lent_at DESC
+                """
+                rows = [dict(row) for row in conn.execute(query).fetchall()]
+                excel_file = create_excel(rows, ['lent_at', 'returned_at', 'item_name', 'worker_name', 'type'])
+                filename = f'verlauf_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+            
+            else:
+                return jsonify({'success': False, 'message': 'Ungültige Tabelle'}), 400
+            
+            return send_file(
+                excel_file,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
+            
     except Exception as e:
-        flash(f'Fehler beim Export: {str(e)}', 'error')
+        print(f"Export-Fehler: {str(e)}")
         return redirect(url_for('admin.dashboard'))
 
 @bp.route('/import/<table>', methods=['POST'])
