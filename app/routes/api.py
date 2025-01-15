@@ -975,16 +975,16 @@ def get_consumable(barcode):
 
 @bp.route('/update_barcode', methods=['POST'])
 def update_barcode():
-    """Aktualisiert den Barcode eines Werkzeugs oder Verbrauchsmaterials"""
+    """Aktualisiert den Barcode eines Werkzeugs, Verbrauchsmaterials oder Mitarbeiters"""
     data = request.get_json()
     old_barcode = data.get('old_barcode')
     new_barcode = data.get('new_barcode')
-    item_type = data.get('type')  # 'tool' oder 'consumable'
+    item_type = data.get('type')  # 'tool', 'consumable' oder 'worker'
     
     if not all([old_barcode, new_barcode, item_type]):
         return jsonify({'success': False, 'message': 'Fehlende Parameter'})
         
-    if item_type not in ['tool', 'consumable']:
+    if item_type not in ['tool', 'consumable', 'worker']:
         return jsonify({'success': False, 'message': 'Ungültiger Typ'})
     
     try:
@@ -996,8 +996,10 @@ def update_barcode():
                 SELECT barcode FROM tools WHERE barcode = ? AND deleted = 0
                 UNION ALL 
                 SELECT barcode FROM consumables WHERE barcode = ? AND deleted = 0
+                UNION ALL
+                SELECT barcode FROM workers WHERE barcode = ? AND deleted = 0
             )
-        """, [new_barcode, new_barcode]).fetchone()['count']
+        """, [new_barcode, new_barcode, new_barcode]).fetchone()['count']
         
         if exists_count > 0:
             return jsonify({
@@ -1026,7 +1028,7 @@ def update_barcode():
                     WHERE tool_barcode = ?
                 """, [new_barcode, old_barcode])
                 
-            else:  # consumable
+            elif item_type == 'consumable':
                 # Verbrauchsmaterial-Barcode in allen relevanten Tabellen aktualisieren
                 
                 # 1. Haupttabelle
@@ -1038,6 +1040,26 @@ def update_barcode():
                 db.execute("""
                     UPDATE consumable_usages SET consumable_barcode = ? 
                     WHERE consumable_barcode = ?
+                """, [new_barcode, old_barcode])
+
+            else:  # worker
+                # Mitarbeiter-Barcode in allen relevanten Tabellen aktualisieren
+                
+                # 1. Haupttabelle
+                db.execute("""
+                    UPDATE workers SET barcode = ? WHERE barcode = ? AND deleted = 0
+                """, [new_barcode, old_barcode])
+                
+                # 2. Ausleihhistorie
+                db.execute("""
+                    UPDATE lendings SET worker_barcode = ? 
+                    WHERE worker_barcode = ?
+                """, [new_barcode, old_barcode])
+                
+                # 3. Verbrauchshistorie
+                db.execute("""
+                    UPDATE consumable_usages SET worker_barcode = ? 
+                    WHERE worker_barcode = ?
                 """, [new_barcode, old_barcode])
             
             db.commit()
