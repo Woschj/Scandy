@@ -212,6 +212,30 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Form-Handler
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch(window.location.pathname, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('editModal').close();
+                window.location.reload();
+            } else {
+                showToast('error', data.message || 'Ein Fehler ist aufgetreten');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'Ein Fehler ist aufgetreten');
+        });
+    });
+
     // Barcode Update Funktionen
     window.showUpdateBarcodeModal = function() {
         const modal = document.getElementById('updateBarcodeModal');
@@ -264,30 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.closeEditModal = function() {
         document.getElementById('editModal').close();
     }
-
-    // Form-Handler
-    document.getElementById('editForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        
-        fetch(window.location.pathname, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('editModal').close();
-                window.location.reload();
-            } else {
-                showToast('error', data.message || 'Ein Fehler ist aufgetreten');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('error', 'Ein Fehler ist aufgetreten');
-        });
-    });
 
     // Bestandsprognose laden
     fetch(`/api/consumables/{{ consumable.barcode }}/forecast`)
