@@ -1,48 +1,41 @@
+import sqlite3
 from werkzeug.security import generate_password_hash
-from app.models.database import Database
+import os
+from app.config import Config
 
-def init_users(app=None, password=None):
-    """Initialisiert die Benutzer-Tabelle"""
-    if password is None:
-        password = 'admin'  # Standard-Passwort
+def init_users(app=None):
+    """Initialisiert die Benutzerdatenbank und erstellt die Benutzer-Accounts"""
+    db_path = os.path.join(Config.DATABASE_DIR, 'users.db')
     
-    if app is None:
-        with Database.get_db() as db:
-            return _init_users_internal(db, password)
-    else:
-        with app.app_context():
-            with Database.get_db() as db:
-                return _init_users_internal(db, password)
-
-def _init_users_internal(db, password):
-    """Interne Funktion für die Benutzer-Initialisierung"""
-    # Users-Tabelle erstellen falls nicht vorhanden
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS users (
+    # Stelle sicher, dass das Verzeichnis existiert
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    
+    with sqlite3.connect(db_path) as conn:
+        # Erstelle users Tabelle (vereinfacht)
+        conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'admin'
-        )
-    ''')
-    
-    # Prüfe ob Benutzer existieren
-    result = db.execute("SELECT COUNT(*) FROM users").fetchone()
-    if result[0] > 0:
-        print("Es existieren bereits Benutzer")
-        return False
+            is_admin INTEGER DEFAULT 1
+        )''')
         
-    # Admin-Benutzer anlegen
-    admin_password = generate_password_hash(password)
-    print(f"Erstelle Admin-Benutzer mit Hash: {admin_password}")  # Debug
-    
-    db.execute(
-        "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-        ('admin', admin_password, 'admin')
-    )
-    db.commit()
-    print("Admin-Benutzer erfolgreich erstellt")
-    return True
+        # Prüfe ob bereits Benutzer existieren
+        if not conn.execute('SELECT 1 FROM users').fetchone():
+            # Erstelle die Benutzer-Accounts (alle als Admin)
+            conn.execute(
+                'INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)',
+                ('Admin', generate_password_hash('BTZ-Scandy25'))
+            )
+            conn.execute(
+                'INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)', 
+                ('TechnikMA', generate_password_hash('BTZ-Admin25'))
+            )
+            conn.execute(
+                'INSERT INTO users (username, password, is_admin) VALUES (?, ?, 1)',
+                ('TechnikTN', generate_password_hash('BTZ-TN'))
+            )
+            
+        conn.commit()
 
 if __name__ == '__main__':
     init_users() 
