@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from app.models.database import Database
-from app.utils.decorators import admin_required, login_required
+from app.utils.decorators import admin_required, login_required, tech_required
 from datetime import datetime
 import logging
 
@@ -8,6 +8,7 @@ import logging
 bp = Blueprint('tools', __name__, url_prefix='/tools')
 
 @bp.route('/')
+@tech_required
 def index():
     """Zeigt alle aktiven Werkzeuge"""
     try:
@@ -181,7 +182,7 @@ def update(id):
         return redirect(url_for('tools.index'))
 
 @bp.route('/add', methods=['GET', 'POST'])
-@admin_required
+@tech_required
 def add():
     """Fügt ein neues Werkzeug hinzu"""
     if request.method == 'POST':
@@ -301,7 +302,7 @@ def change_status(barcode):
         }), 500
 
 @bp.route('/<barcode>/edit', methods=['GET', 'POST'])
-@admin_required
+@tech_required
 def edit(barcode):
     """Bearbeitet ein bestehendes Werkzeug"""
     try:

@@ -1,24 +1,27 @@
 import os
 from pathlib import Path
 import sys
+from datetime import timedelta
+
+# Basis-Verzeichnis
+BASE_DIR = Path(__file__).parent.parent
 
 class Config:
     """Basis-Konfiguration"""
     
-    # Bestimme Basis-Verzeichnis
-    BASE_DIR = Path(__file__).parent.parent
-    
     # Plattformunabhängige Pfade
     DATABASE_DIR = BASE_DIR / 'app' / 'database'
     DATABASE = str(DATABASE_DIR / 'inventory.db')
-    BACKUP_DIR = BASE_DIR / 'backups'
+    BACKUP_DIR = str(BASE_DIR / 'backups')
+    UPLOAD_FOLDER = str(BASE_DIR / 'uploads')
     
     # Stelle sicher dass die Verzeichnisse existieren
-    DATABASE_DIR.mkdir(parents=True, exist_ok=True)
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    os.makedirs(DATABASE_DIR, exist_ok=True)
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     
     # Basis-Konfiguration
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev'
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-123')
     
     # Server-Konfiguration
     SERVER_MODE = False  # Standard: Client-Modus
@@ -32,15 +35,18 @@ class Config:
     BACKUP_INTERVAL = 86400  # Backup-Intervall in Sekunden (24 Stunden)
     
     # Upload-Konfiguration
-    UPLOAD_FOLDER = BASE_DIR / 'uploads'
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
+    
+    # Session-Konfiguration
+    SESSION_TYPE = 'filesystem'
+    SESSION_FILE_DIR = str(BASE_DIR / 'flask_session')
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=1)
+    
     @staticmethod
     def is_pythonanywhere():
         """Überprüft, ob die Anwendung auf PythonAnywhere läuft"""
-        return ('PYTHONANYWHERE_SITE' in os.environ or 
-                os.path.exists('/var/www') or 
-                any('uwsgi' in arg.lower() for arg in sys.argv))
+        return False
 
     @staticmethod
     def get_project_root():

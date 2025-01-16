@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g, send_file
 from app.models.database import Database
-from app.utils.decorators import admin_required
+from app.utils.decorators import admin_required, tech_required
 from werkzeug.utils import secure_filename
 import os
 from flask import current_app
@@ -181,6 +181,11 @@ def create_excel(data, columns):
     return excel_file
 
 @bp.route('/')
+@admin_required
+def index():
+    return redirect(url_for('admin.dashboard'))
+
+@bp.route('/dashboard')
 @admin_required
 def dashboard():
     """Admin Dashboard anzeigen"""

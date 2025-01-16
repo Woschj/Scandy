@@ -1,33 +1,45 @@
 from functools import wraps
-from flask import session, redirect, url_for, request, flash
+from flask import session, redirect, url_for, request, flash, g
 from datetime import datetime
 from app.utils.logger import loggers
 from app.utils.auth_utils import needs_setup
+from app.models.database import Database
 
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Setup-Route immer erlauben
-        if request.endpoint == 'auth.setup':
-            return f(*args, **kwargs)
-            
-        # Wenn Setup benötigt wird, dorthin weiterleiten
-        if needs_setup():
-            return redirect(url_for('auth.setup'))
-            
-        # Wenn nicht eingeloggt, zum Login weiterleiten
         if 'user_id' not in session:
-            return redirect(url_for('auth.login', next=request.url))
-            
+            flash('Bitte melden Sie sich an', 'warning')
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
-            flash('Bitte melden Sie sich als Administrator an.', 'warning')
-            return redirect(url_for('auth.login', next=request.url))
+        if 'user_id' not in session:
+            flash('Bitte melden Sie sich an', 'warning')
+            return redirect(url_for('auth.login'))
+            
+        # Prüfe ob der Benutzer Admin-Rechte hat
+        with Database.get_db() as db:
+            user = db.execute('SELECT is_admin FROM users WHERE id = ?', 
+                            [session['user_id']]).fetchone()
+            
+            if not user or not user['is_admin']:
+                flash('Sie haben keine Berechtigung für diese Seite', 'error')
+                return redirect(url_for('main.index'))
+                
+        return f(*args, **kwargs)
+    return decorated_function
+
+def tech_required(f):
+    """Decorator für Techniker-Zugriff (alle eingeloggten Benutzer)"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Bitte melden Sie sich an', 'warning')
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
