@@ -61,14 +61,6 @@
                             <label class="text-sm font-medium text-base-content/60">Mindestbestand</label>
                             <p>{{ consumable.min_quantity }} Stück</p>
                         </div>
-                        <div>
-                            <label class="text-sm font-medium text-base-content/60">Status</label>
-                            <p>
-                                <span class="badge {% if consumable.status == 'verfügbar' %}badge-success{% elif consumable.status == 'niedrig' %}badge-warning{% else %}badge-error{% endif %}">
-                                    {{ consumable.status_text }}
-                                </span>
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>

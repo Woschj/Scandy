@@ -30,18 +30,23 @@ const QuickScan = {
         // Event-Listener für Item-Scan
         const itemInput = document.getElementById('itemScanInput');
         if (itemInput) {
-            // Keypress Event für normale Eingaben
             itemInput.addEventListener('keypress', (e) => {
                 console.log('Keypress Event:', e.key, 'KeyCode:', e.keyCode);
                 this.handleKeyInput(e, itemInput);
             });
 
-            // Input Event für Scanner-Eingaben
             itemInput.addEventListener('input', (e) => {
                 console.log('Input Event:', e.target.value);
                 if (e.target.value) {
                     this.handleScannerInput(e.target.value, itemInput);
-                    e.target.value = ''; // Input zurücksetzen
+                    e.target.value = '';
+                }
+            });
+
+            // Fokus wiederherstellen bei Klick außerhalb
+            itemInput.addEventListener('blur', () => {
+                if (this.currentStep === 1) {
+                    setTimeout(() => this.focusCurrentInput(), 100);
                 }
             });
         }
@@ -49,18 +54,23 @@ const QuickScan = {
         // Event-Listener für Worker-Scan
         const workerInput = document.getElementById('workerScanInput');
         if (workerInput) {
-            // Keypress Event für normale Eingaben
             workerInput.addEventListener('keypress', (e) => {
                 console.log('Keypress Event:', e.key, 'KeyCode:', e.keyCode);
                 this.handleKeyInput(e, workerInput);
             });
 
-            // Input Event für Scanner-Eingaben
             workerInput.addEventListener('input', (e) => {
                 console.log('Input Event:', e.target.value);
                 if (e.target.value) {
                     this.handleScannerInput(e.target.value, workerInput);
-                    e.target.value = ''; // Input zurücksetzen
+                    e.target.value = '';
+                }
+            });
+
+            // Fokus wiederherstellen bei Klick außerhalb
+            workerInput.addEventListener('blur', () => {
+                if (this.currentStep === 2) {
+                    setTimeout(() => this.focusCurrentInput(), 100);
                 }
             });
         }
@@ -72,6 +82,20 @@ const QuickScan = {
                 this.reset();
             });
         }
+
+        // Event-Listener für Mengeneingabe-Buttons
+        document.querySelectorAll('.quantity-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();  // Verhindert Standard-Button-Verhalten
+                e.stopPropagation(); // Verhindert Event-Bubbling
+                const action = btn.dataset.action;
+                if (action === 'decrease') {
+                    this.decreaseQuantity();
+                } else if (action === 'increase') {
+                    this.increaseQuantity();
+                }
+            });
+        });
     },
 
     handleKeyInput(e, input) {
@@ -95,30 +119,26 @@ const QuickScan = {
     handleScannerInput(barcode, input) {
         console.log('Scanner Input erkannt:', barcode);
 
-        // Prüfe zuerst auf Bestätigungscode
-        if (this.confirmationBarcode) {
-            console.log('Erwarteter Bestätigungscode:', this.confirmationBarcode);
-            // Prüfe ob der gescannte Code den Bestätigungscode enthält
-            if (barcode.includes(this.confirmationBarcode)) {
-                console.log('Bestätigungscode erkannt');
-                if (input.id === 'itemScanInput') {
-                    // Artikel wurde bestätigt
-                    this.currentProcess.confirmed = true;
-                    // Verstecke die Bestätigungskarte und zeige den Worker-Scan
-                    document.getElementById('itemConfirm').classList.add('hidden');
-                    document.getElementById('step1').classList.add('hidden');
-                    document.getElementById('step2').classList.remove('hidden');
-                    this.currentStep = 2;
-                    this.focusCurrentInput();
-                    this.confirmationBarcode = null;
-                } else if (input.id === 'workerScanInput') {
-                    // Mitarbeiter wurde bestätigt, jetzt können wir die Aktion ausführen
-                    document.getElementById('workerScanPrompt').classList.add('hidden');
-                    document.getElementById('finalConfirm').classList.remove('hidden');
-                    this.executeStoredProcess();
-                }
-                return;
+        // Prüfe ZUERST auf Bestätigungscode
+        if (this.confirmationBarcode && barcode.includes(this.confirmationBarcode)) {
+            console.log('Bestätigungscode erkannt');
+            if (input.id === 'itemScanInput') {
+                // Artikel wurde bestätigt
+                this.currentProcess.confirmed = true;
+                // Verstecke die Bestätigungskarte und zeige den Worker-Scan
+                document.getElementById('itemConfirm').classList.add('hidden');
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+                this.currentStep = 2;
+                this.focusCurrentInput();
+                this.confirmationBarcode = null;
+            } else if (input.id === 'workerScanInput') {
+                // Mitarbeiter wurde bestätigt, jetzt können wir die Aktion ausführen
+                document.getElementById('workerScanPrompt').classList.add('hidden');
+                document.getElementById('finalConfirm').classList.remove('hidden');
+                this.executeStoredProcess();
             }
+            return;
         }
 
         // Wenn kein Bestätigungscode, verarbeite als normalen Scan
@@ -146,7 +166,7 @@ const QuickScan = {
                 if (response.success) {
                     data = response.data;
                     data.type = 'tool';
-                    data.barcode = cleanBarcode;  // Speichere bereinigten Barcode
+                    data.barcode = cleanBarcode;
                     // Speichere im Prozess
                     this.currentProcess.item = data;
                     this.currentProcess.action = data.current_status === 'verfügbar' ? 'lend' : 'return';
@@ -163,10 +183,12 @@ const QuickScan = {
                     if (response.success) {
                         data = response.data;
                         data.type = 'consumable';
-                        data.barcode = cleanBarcode;  // Speichere bereinigten Barcode
+                        data.barcode = cleanBarcode;
                         // Speichere im Prozess
                         this.currentProcess.item = data;
                         this.currentProcess.action = 'consume';
+                        // Setze Standardmenge auf 1
+                        this.currentProcess.quantity = 1;
                     } else {
                         showToast('error', response.message || 'Fehler beim Laden des Verbrauchsmaterials');
                         return;
@@ -209,6 +231,7 @@ const QuickScan = {
             const returnIcon = document.getElementById('returnIcon');
             const lendIcon = document.getElementById('lendIcon');
             const itemDetails = document.getElementById('itemDetails');
+            const quantityContainer = document.getElementById('quantityContainer');
 
             itemName.textContent = data.name;
             itemName.classList.remove('opacity-50');
@@ -230,6 +253,19 @@ const QuickScan = {
             
             itemDetails.textContent = details;
             itemDetails.classList.remove('opacity-50');
+            
+            // Zeige Mengenauswahl für Verbrauchsmaterial
+            if (data.type === 'consumable') {
+                quantityContainer.classList.remove('hidden');
+                const quantityDisplay = document.getElementById('quantityDisplay');
+                if (quantityDisplay) {
+                    quantityDisplay.textContent = '1';
+                    quantityDisplay.dataset.max = data.quantity;
+                    this.currentProcess.quantity = 1;
+                }
+            } else {
+                quantityContainer.classList.add('hidden');
+            }
             
             if (action) {
                 showToast('success', 'Artikel erkannt: ' + data.name);
@@ -305,17 +341,12 @@ const QuickScan = {
                 return;
             }
 
-            // Bereite die Barcodes vor
-            const itemBarcode = this.currentProcess.item.type === 'tool' ? 
-                this.currentProcess.item.barcode :
-                this.currentProcess.item.barcode;
-
             const requestData = {
-                item_barcode: itemBarcode,
+                item_barcode: this.currentProcess.item.barcode,
                 worker_barcode: this.currentProcess.worker.barcode,
                 action: this.currentProcess.action,
                 item_type: this.currentProcess.item.type,
-                quantity: this.currentProcess.item.type === 'consumable' ? 1 : undefined
+                quantity: this.currentProcess.item.type === 'consumable' ? this.currentProcess.quantity : undefined
             };
 
             console.log('Führe gespeicherten Prozess aus:', requestData);
@@ -426,6 +457,30 @@ const QuickScan = {
         document.getElementById('itemConfirm').classList.add('hidden');
         this.goToStep(2);
         this.focusCurrentInput();
+    },
+
+    // Neue Funktionen für Mengenänderung
+    decreaseQuantity() {
+        const quantityDisplay = document.getElementById('quantityDisplay');
+        const currentValue = parseInt(quantityDisplay.textContent);
+        if (currentValue > 1) {
+            quantityDisplay.textContent = currentValue - 1;
+            this.currentProcess.quantity = currentValue - 1;
+            // Fokus zurücksetzen
+            this.focusCurrentInput();
+        }
+    },
+
+    increaseQuantity() {
+        const quantityDisplay = document.getElementById('quantityDisplay');
+        const currentValue = parseInt(quantityDisplay.textContent);
+        const maxQuantity = parseInt(quantityDisplay.dataset.max);
+        if (currentValue < maxQuantity) {
+            quantityDisplay.textContent = currentValue + 1;
+            this.currentProcess.quantity = currentValue + 1;
+            // Fokus zurücksetzen
+            this.focusCurrentInput();
+        }
     }
 };
 

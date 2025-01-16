@@ -34,6 +34,21 @@
                                         </span>
                                     </div>
                                     <p id="itemDetails" class="text-sm opacity-50">Details werden nach Scan angezeigt</p>
+                                    <!-- Mengeneingabe für Verbrauchsmaterial -->
+                                    <div id="quantityContainer" class="form-control w-full max-w-xs hidden mt-2">
+                                        <label class="label p-0">
+                                            <span class="label-text text-sm">Menge</span>
+                                        </label>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" class="btn btn-sm btn-square quantity-btn" data-action="decrease">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <span id="quantityDisplay" class="text-lg font-bold min-w-[2rem] text-center">1</span>
+                                            <button type="button" class="btn btn-sm btn-square quantity-btn" data-action="increase">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Mitarbeiter Info -->
@@ -115,3 +130,33 @@
 
 <!-- JsBarcode Library -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script> 
+
+<!-- Info-Karte -->
+<div class="card bg-base-100 shadow-xl mb-4">
+    <div class="card-body">
+        <!-- Artikel-Name -->
+        <h2 id="itemName" class="card-title opacity-50">Noch kein Artikel gescannt</h2>
+        
+        <!-- Status -->
+        <div id="itemStatusContainer" class="flex items-center gap-2" style="display: none;">
+            <div id="itemStatus" class="badge badge-lg"></div>
+            <i id="returnIcon" class="fas fa-arrow-left text-success hidden"></i>
+            <i id="lendIcon" class="fas fa-arrow-right text-warning hidden"></i>
+        </div>
+        
+        <!-- Details -->
+        <p id="itemDetails" class="opacity-50">Details werden nach Scan angezeigt</p>
+        
+        <!-- Mengeneingabe für Verbrauchsmaterial -->
+        <div id="quantityContainer" class="form-control w-full max-w-xs hidden">
+            <label class="label">
+                <span class="label-text">Menge</span>
+            </label>
+            <input type="number" id="quantityInput" min="1" value="1" class="input input-bordered w-full max-w-xs" />
+        </div>
+        
+        <!-- Mitarbeiter -->
+        <h3 id="workerName" class="text-lg opacity-50">Noch kein Mitarbeiter gescannt</h3>
+        <p id="workerDepartment" class="opacity-50">Abteilung wird nach Scan angezeigt</p>
+    </div>
+</div> 
