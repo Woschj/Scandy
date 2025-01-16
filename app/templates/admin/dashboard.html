@@ -535,6 +535,19 @@
             </div>
         </div>
     </div>
+
+    <div class="divider">Über Scandy</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a href="{{ url_for('tickets.index') }}" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+            <div class="card-body">
+                <h2 class="card-title">
+                    <i class="fas fa-ticket-alt text-xl"></i>
+                    Tickets
+                </h2>
+                <p>Ticket-Liste anzeigen und verwalten</p>
+            </div>
+        </a>
+    </div>
 </div>
 {% endblock %}
 

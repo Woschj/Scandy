@@ -9,12 +9,12 @@ const QuickScan = {
     
     // Neuer Zwischenspeicher für den aktuellen Prozess
     currentProcess: {
-        item: null,
-        worker: null,
+                item: null,
+                worker: null,
         action: null,
         confirmed: false
     },
-    
+            
     init() {
         if (this.isInitialized) {
             this.reset();
@@ -25,11 +25,11 @@ const QuickScan = {
         this.focusCurrentInput();
         console.log('QuickScan initialisiert');
     },
-    
-    setupEventListeners() {
+
+        setupEventListeners() {
         // Event-Listener für Item-Scan
-        const itemInput = document.getElementById('itemScanInput');
-        if (itemInput) {
+            const itemInput = document.getElementById('itemScanInput');
+            if (itemInput) {
             itemInput.addEventListener('keypress', (e) => {
                 console.log('Keypress Event:', e.key, 'KeyCode:', e.keyCode);
                 this.handleKeyInput(e, itemInput);
@@ -39,18 +39,18 @@ const QuickScan = {
                 console.log('Input Event:', e.target.value);
                 if (e.target.value) {
                     this.handleScannerInput(e.target.value, itemInput);
-                    e.target.value = '';
-                }
-            });
+                        e.target.value = '';
+                    }
+                });
 
             // Fokus wiederherstellen bei Klick außerhalb
             itemInput.addEventListener('blur', () => {
                 if (this.currentStep === 1) {
                     setTimeout(() => this.focusCurrentInput(), 100);
-                }
-            });
-        }
-        
+                    }
+                });
+            }
+
         // Event-Listener für Worker-Scan
         const workerInput = document.getElementById('workerScanInput');
         if (workerInput) {
@@ -284,19 +284,19 @@ const QuickScan = {
                 showToast('error', 'Keine Aktion für diesen Artikel möglich');
             }
             
-        } catch (error) {
+            } catch (error) {
             showToast('error', 'Fehler beim Scannen des Artikels');
             console.error(error);
         }
     },
 
-    async handleWorkerScan(barcode) {
-        try {
-            console.log('Verarbeite Worker-Scan:', barcode);
+        async handleWorkerScan(barcode) {
+            try {
+                console.log('Verarbeite Worker-Scan:', barcode);
             const response = await fetch(`/api/inventory/workers/${barcode}`);
             const result = await response.json();
-            
-            if (!response.ok) {
+                
+                if (!response.ok) {
                 throw new Error('Mitarbeiter nicht gefunden');
             }
             
@@ -351,10 +351,10 @@ const QuickScan = {
 
             console.log('Führe gespeicherten Prozess aus:', requestData);
             console.log('Worker Data:', this.currentProcess.worker);
-            
-            const response = await fetch('/api/quickscan/process_lending', {
-                method: 'POST',
-                headers: {
+
+                const response = await fetch('/api/quickscan/process_lending', {
+                    method: 'POST',
+                    headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
@@ -388,8 +388,8 @@ const QuickScan = {
     reset() {
         // Zurücksetzen des Prozess-Speichers
         this.currentProcess = {
-            item: null,
-            worker: null,
+                item: null, 
+                worker: null, 
             action: null,
             confirmed: false
         };
