@@ -1,0 +1,5 @@
+# Führe Backup täglich um 06:00 Uhr aus
+0 6 * * * /app/backup_daily.sh
+
+# Exportiere Backups täglich um 06:15 Uhr (nach dem Backup)
+15 6 * * * cd /scandy-app && ./host-scripts/export-backups.sh 

@@ -94,37 +94,7 @@ def get_warnings():
 
 def get_backup_info():
     """Hole Informationen über vorhandene Backups"""
-    backups = []
-    backup_dir = Path(__file__).parent.parent.parent / 'backups'
-    
-    if backup_dir.exists():
-        for backup_file in sorted(backup_dir.glob('*.db'), reverse=True):
-            # Backup-Statistiken aus der Datei lesen
-            stats = None
-            try:
-                with sqlite3.connect(str(backup_file)) as conn:
-                    cursor = conn.cursor()
-                    stats = {
-                        'tools': cursor.execute('SELECT COUNT(*) FROM tools WHERE deleted = 0').fetchone()[0],
-                        'consumables': cursor.execute('SELECT COUNT(*) FROM consumables WHERE deleted = 0').fetchone()[0],
-                        'workers': cursor.execute('SELECT COUNT(*) FROM workers WHERE deleted = 0').fetchone()[0],
-                        'active_lendings': cursor.execute('SELECT COUNT(*) FROM lendings WHERE returned_at IS NULL').fetchone()[0]
-                    }
-            except:
-                stats = None
-            
-            # Unix-Timestamp in datetime umwandeln
-            created_timestamp = backup_file.stat().st_mtime
-            created_datetime = datetime.fromtimestamp(created_timestamp)
-            
-            backups.append({
-                'name': backup_file.name,
-                'size': backup_file.stat().st_size,
-                'created': created_datetime,
-                'stats': stats
-            })
-    
-    return backups
+    return backup_manager.list_all_backups()
 
 def get_consumables_forecast():
     """Berechnet die Bestandsprognose für Verbrauchsmaterialien"""
@@ -969,14 +939,6 @@ def restore_backup(filename):
     """Backup wiederherstellen"""
     try:
         logger.info(f"Versuche Backup wiederherzustellen: {filename}")
-        backup_path = backup_manager.backup_dir / filename
-        if not backup_path.exists():
-            error_msg = 'Backup-Datei nicht gefunden'
-            logger.error(f"{error_msg}: {backup_path}")
-            flash(error_msg, 'error')
-            return redirect(url_for('admin.dashboard'))
-        
-        # Datenbank wiederherstellen
         success = backup_manager.restore_backup(filename)
         if success:
             success_msg = 'Backup wurde erfolgreich wiederhergestellt'

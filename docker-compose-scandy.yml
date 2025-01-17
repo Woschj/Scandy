@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  scandy-app:
+    build:
+      context: ./scandy-app
+      dockerfile: Dockerfile
+    container_name: scandy-flask
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=server.py
+      - FLASK_ENV=development
+    volumes:
+      - ./logs:/app/logs
+      - ./database:/app/database
+      - ./scandy-app/backups:/app/backups
+    restart: always 

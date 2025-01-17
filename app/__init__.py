@@ -1,3 +1,44 @@
+"""
+Hauptmodul der Scandy-Anwendung
+------------------------------
+
+Dieses Modul initialisiert die Flask-Anwendung und konfiguriert alle notwendigen Komponenten.
+
+Komponenten-Struktur:
+1. Blueprints (app/blueprints/):
+   - tools.py: Werkzeugverwaltung
+   - workers.py: Mitarbeiterverwaltung
+   - consumables.py: Verbrauchsmaterialverwaltung
+
+2. Models (app/models/):
+   - tool.py: Werkzeug-Datenmodell
+   - worker.py: Mitarbeiter-Datenmodell
+   - consumable.py: Verbrauchsmaterial-Datenmodell
+   - database.py: Datenbankverbindung
+   - settings.py: Anwendungseinstellungen
+
+3. Routes (app/routes/):
+   - Alle Endpunkte der Anwendung
+   - API-Endpunkte für AJAX-Aufrufe
+
+4. Utils (app/utils/):
+   - auth.py: Authentifizierung
+   - error_handler.py: Fehlerbehandlung
+   - logger.py: Logging-Konfiguration
+
+Initialisierungsprozess:
+1. Flask-App erstellen
+2. Konfiguration laden
+3. Datenbank initialisieren
+4. Blueprints registrieren
+5. Error Handler einrichten
+6. Template-Filter registrieren
+
+Verwendung:
+- Wird von server.py oder wsgi.py importiert
+- Stellt die Flask-App-Instanz bereit
+"""
+
 from flask import Flask, jsonify, render_template, redirect, url_for, g, send_from_directory, session, request, flash
 from flask_session import Session  # Session-Management
 from .constants import Routes

@@ -1,3 +1,27 @@
+"""
+Hauptserver-Datei für die Scandy-Anwendung
+----------------------------------------
+
+Diese Datei ist der Haupteinstiegspunkt für die Scandy-Anwendung. Sie initialisiert
+den Flask-Server und stellt die grundlegende Konfiguration bereit.
+
+Abhängigkeiten:
+- app/: Das Hauptmodul der Anwendung
+- app/config.py: Enthält die Konfigurationseinstellungen
+- app/db_migration.py: Handhabt Datenbankmigrationen
+- app/models/: Enthält alle Datenbankmodelle
+
+Startprozess:
+1. Importiert die Flask-App aus dem app-Modul
+2. Konfiguriert Logging
+3. Führt ausstehende Datenbankmigrationen aus
+4. Startet den Entwicklungsserver
+
+Verwendung:
+- Entwicklung: python server.py
+- Produktion: Verwendet wsgi.py mit Gunicorn/uWSGI
+"""
+
 import os
 import logging
 from app.models.database import Database

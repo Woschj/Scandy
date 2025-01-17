@@ -1,3 +1,34 @@
+"""
+Datenbank-Konfiguration und Verbindungsmanagement
+----------------------------------------------
+
+Dieses Modul verwaltet die SQLite-Datenbankverbindung und stellt grundlegende Datenbankfunktionen bereit.
+
+Hauptfunktionen:
+1. Datenbankverbindung aufbauen und verwalten
+2. Verbindungspool für mehrere Threads bereitstellen
+3. Automatisches Schließen von Verbindungen
+4. Fehlerbehandlung bei Datenbankoperationen
+
+Datenbankstruktur:
+- inventory.db: Hauptdatenbank
+  - tools: Werkzeuge und deren Status
+  - workers: Mitarbeiterinformationen
+  - consumables: Verbrauchsmaterialien
+  - lending: Ausleihvorgänge
+  - history: Verlauf aller Aktionen
+
+Sicherheitsmerkmale:
+- Automatische Transaktion für jede Anfrage
+- Prepared Statements gegen SQL-Injection
+- Backup vor kritischen Operationen
+
+Verwendung:
+- Von allen Model-Klassen verwendet
+- Über get_db() Funktion zugreifen
+- Automatisches Schließen am Ende jeder Anfrage
+"""
+
 from flask import g, current_app
 import sqlite3
 from datetime import datetime

@@ -485,9 +485,10 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
+                                <th>Typ</th>
                                 <th>Größe</th>
                                 <th>Erstellt am</th>
-                                <th>Datenbankinhalt</th>
+                                <th>Beschreibung</th>
                                 <th>Aktionen</th>
                             </tr>
                         </thead>
@@ -495,26 +496,14 @@
                             {% for backup in backups %}
                             <tr>
                                 <td>{{ backup.name }}</td>
+                                <td>{{ backup.type }}</td>
                                 <td>{{ (backup.size / 1024)|round(1) }} KB</td>
                                 <td>{{ backup.created|format_datetime }}</td>
                                 <td>
-                                    {% if backup.stats %}
-                                    <div class="text-sm">
-                                        <span class="badge badge-info" title="Aktive Werkzeuge">
-                                            <i class="fas fa-tools"></i> {{ backup.stats.tools }}
-                                        </span>
-                                        <span class="badge badge-success" title="Aktive Verbrauchsmaterialien">
-                                            <i class="fas fa-box"></i> {{ backup.stats.consumables }}
-                                        </span>
-                                        <span class="badge badge-warning" title="Aktive Mitarbeiter">
-                                            <i class="fas fa-users"></i> {{ backup.stats.workers }}
-                                        </span>
-                                        <span class="badge badge-primary" title="Aktive Ausleihen">
-                                            <i class="fas fa-hand-holding"></i> {{ backup.stats.active_lendings }}
-                                        </span>
-                                    </div>
+                                    {% if backup.description %}
+                                        {{ backup.description }}
                                     {% else %}
-                                    <span class="text-gray-400">Keine Statistiken verfügbar</span>
+                                        <span class="text-gray-400">-</span>
                                     {% endif %}
                                 </td>
                                 <td>
