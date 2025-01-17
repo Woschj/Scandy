@@ -1,3 +1,0 @@
-"""
-Test-Paket für Scandy
-""" 

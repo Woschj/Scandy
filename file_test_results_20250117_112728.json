@@ -1,0 +1,249 @@
+{
+  "timestamp": "2025-01-17T11:27:28.810829",
+  "total_files_tested": 37,
+  "safe_to_remove": 36,
+  "needed_files": 1,
+  "results_by_type": {
+    "other": [
+      {
+        "file": "scandy.spec",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "tailwind.config.js",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "barcodes/werkzeuge_material_2.pdf",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "LICENSE",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": ".env",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "barcodes/werkzeuge_material_5.pdf",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "setup.iss",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "exports/workers_20241202_082139.xlsx",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/readme",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "setup_server.bat",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "build_installer.bat",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "render.yaml",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "Dockerfile",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "barcodes/mitarbeiter_1.pdf",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "server_setup.iss",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "build.bat",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": ".DS_Store",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "tash save Temporary backup of conflicted files",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "setup_server.sh",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "setup_backup_task.bat",
+        "type": "other",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      }
+    ],
+    "database": [
+      {
+        "file": "instance/scandy.db",
+        "type": "database",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "instance/inventory.db",
+        "type": "database",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "database/inventory.db",
+        "type": "database",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/database/inventory.db",
+        "type": "database",
+        "is_safe_to_remove": false,
+        "affected_routes": {
+          "/workers": {
+            "original": true,
+            "without_file": false
+          },
+          "/consumables": {
+            "original": true,
+            "without_file": false
+          }
+        }
+      },
+      {
+        "file": "instance/database/inventory.db",
+        "type": "database",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      }
+    ],
+    "configuration": [
+      {
+        "file": "app/config/db_schema.json",
+        "type": "configuration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "unused_files_report_20250117_110831.json",
+        "type": "configuration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      }
+    ],
+    "database_migration": [
+      {
+        "file": "app/migrations/007_add_consumable_usage_table.sql",
+        "type": "database_migration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/migrations/008_add_tool_status_changes.sql",
+        "type": "database_migration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/sql/design_settings.sql",
+        "type": "database_migration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/schema.sql",
+        "type": "database_migration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "migrations/add_uuid_columns.sql",
+        "type": "database_migration",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      }
+    ],
+    "documentation": [
+      {
+        "file": "readme.txt",
+        "type": "documentation",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "README.md",
+        "type": "documentation",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "requirements.txt",
+        "type": "documentation",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app/routes.md",
+        "type": "documentation",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      },
+      {
+        "file": "app_structure.md",
+        "type": "documentation",
+        "is_safe_to_remove": true,
+        "affected_routes": {}
+      }
+    ]
+  }
+}
