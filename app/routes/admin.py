@@ -159,18 +159,31 @@ def index():
 @admin_required
 def dashboard():
     """Admin Dashboard anzeigen"""
-    stats = {
-        'maintenance_issues': Database.query("""
-            SELECT name, status, 
-                CASE 
+    try:
+        # Hole aktive Ausleihen
+        current_lendings = Database.query("""
+            SELECT l.*, t.name as tool_name,
+                   (SELECT firstname || ' ' || lastname FROM workers WHERE barcode = l.worker_barcode) as worker_name
+            FROM lendings l
+            JOIN tools t ON l.tool_barcode = t.barcode
+            WHERE l.returned_at IS NULL
+            ORDER BY l.lent_at DESC
+        """)
+        
+        # Hole defekte Werkzeuge
+        defect_tools = Database.query("""
+            SELECT name, status,
+                CASE
                     WHEN status = 'defekt' THEN 'error'
                     ELSE 'warning'
                 END as severity
-            FROM tools 
+            FROM tools
             WHERE status = 'defekt' AND deleted = 0
             ORDER BY name
-        """),
-        'inventory_warnings': Database.query("""
+        """)
+        
+        # Hole Verbrauchsmaterial mit niedrigem Bestand
+        low_stock = Database.query("""
             SELECT
                 name as message,
                 CASE
@@ -185,47 +198,109 @@ def dashboard():
             WHERE quantity < min_quantity AND deleted = 0
             ORDER BY quantity / min_quantity ASC
             LIMIT 5
-        """),
-        'consumable_trend': get_consumable_trend()
-    }
-    
-    # Aktuelle Ausleihen laden
-    current_lendings = Database.query("""
-        SELECT l.*, t.name as tool_name, w.firstname || ' ' || w.lastname as worker_name
-        FROM lendings l
-        JOIN tools t ON l.tool_barcode = t.barcode
-        JOIN workers w ON l.worker_barcode = w.barcode
-        WHERE l.returned_at IS NULL
-        ORDER BY l.lent_at DESC
-    """)
-    
-    # Materialausgaben laden
-    consumable_usages = Database.query("""
-        SELECT 
-            c.name as consumable_name,
-            cu.quantity,
-            w.firstname || ' ' || w.lastname as worker_name,
-            cu.used_at
-        FROM consumable_usages cu
-        JOIN consumables c ON cu.consumable_barcode = c.barcode
-        JOIN workers w ON cu.worker_barcode = w.barcode
-        ORDER BY cu.used_at DESC
-        LIMIT 10
-    """)
-    
-    # Bestandsprognose laden
-    consumables_forecast = get_consumables_forecast()
-    
-    # Backup-Informationen laden
-    backups = get_backup_info()
-    
-    return render_template('admin/dashboard.html',
-                         stats=stats,
-                         current_lendings=current_lendings,
-                         consumable_usages=consumable_usages,
-                         consumables_forecast=consumables_forecast,
-                         backups=backups,
-                         Config=Config)
+        """)
+        
+        # Hole Verbrauchsmaterial-Statistiken der letzten 7 Tage
+        usage_stats = Database.query("""
+            WITH daily_usage AS (
+                SELECT
+                    c.name,
+                    date(cu.used_at) as date,
+                    SUM(CASE WHEN cu.quantity > 0 THEN cu.quantity ELSE 0 END) as daily_quantity
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode
+                WHERE cu.used_at >= date('now', '-6 days')
+                GROUP BY c.name, date(cu.used_at)
+            ),
+            dates AS (
+                SELECT date('now', '-' || n || ' days') as date
+                FROM (SELECT 0 as n UNION SELECT 1 UNION SELECT 2 UNION SELECT 3
+                     UNION SELECT 4 UNION SELECT 5 UNION SELECT 6)
+            ),
+            top_consumables AS (
+                SELECT
+                    c.name,
+                    SUM(CASE WHEN cu.quantity > 0 THEN cu.quantity ELSE 0 END) as total_quantity
+                FROM consumable_usages cu
+                JOIN consumables c ON cu.consumable_barcode = c.barcode
+                WHERE cu.used_at >= date('now', '-6 days')
+                GROUP BY c.name
+                ORDER BY total_quantity DESC
+                LIMIT 5
+            )
+            SELECT
+                dates.date as label,
+                tc.name,
+                COALESCE(du.daily_quantity, 0) as count
+            FROM dates
+            CROSS JOIN top_consumables tc
+            LEFT JOIN daily_usage du ON dates.date = du.date AND tc.name = du.name
+            ORDER BY tc.name, dates.date
+        """)
+
+        # Hole Statistiken für Werkzeuge und Verbrauchsmaterialien
+        tool_stats = Database.query("""
+            WITH valid_tools AS (
+                SELECT barcode
+                FROM tools
+                WHERE deleted = 0
+            )
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE
+                    WHEN NOT EXISTS (
+                        SELECT 1 FROM lendings l
+                        WHERE l.tool_barcode = t.barcode
+                        AND l.returned_at IS NULL
+                    ) AND status = 'verfügbar' THEN 1
+                    ELSE 0
+                END) as available,
+                (
+                    SELECT COUNT(DISTINCT l.tool_barcode)
+                    FROM lendings l
+                    JOIN valid_tools vt ON l.tool_barcode = vt.barcode
+                    WHERE l.returned_at IS NULL
+                ) as lent,
+                SUM(CASE WHEN status = 'defekt' THEN 1 ELSE 0 END) as defect
+            FROM tools t
+            WHERE t.deleted = 0
+        """)
+
+        consumable_stats = {
+            'total': Database.query("SELECT COUNT(*) as count FROM consumables WHERE deleted = 0")[0]['count'],
+            'in_stock': Database.query("SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity >= min_quantity")[0]['count'],
+            'low_stock': Database.query("SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity AND quantity >= min_quantity * 0.5")[0]['count'],
+            'critical': Database.query("SELECT COUNT(*) as count FROM consumables WHERE deleted = 0 AND quantity < min_quantity * 0.5")[0]['count']
+        }
+
+        worker_stats = {
+            'total': Database.query("SELECT COUNT(*) as count FROM workers WHERE deleted = 0")[0]['count'],
+            'departments': Database.query("""
+                SELECT department as name, COUNT(*) as count
+                FROM workers
+                WHERE deleted = 0 AND department IS NOT NULL
+                GROUP BY department
+                ORDER BY department
+            """)
+        }
+
+        stats = {
+            'tools': tool_stats[0] if tool_stats else {'total': 0, 'available': 0, 'lent': 0, 'defect': 0},
+            'consumables': consumable_stats,
+            'workers': worker_stats
+        }
+        
+        return render_template('admin/dashboard.html',
+                           current_lendings=current_lendings,
+                           defect_tools=defect_tools,
+                           low_stock=low_stock,
+                           usage_stats=usage_stats,
+                           stats=stats)
+                           
+    except Exception as e:
+        print(f"Fehler beim Laden des Dashboards: {str(e)}")
+        flash('Fehler beim Laden des Dashboards', 'error')
+        return redirect(url_for('main.index'))
 
 def get_consumable_trend():
     """Hole die Top 5 Materialverbrauch der letzten 7 Tage"""

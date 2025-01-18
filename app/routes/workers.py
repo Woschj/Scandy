@@ -16,14 +16,14 @@ def index():
         # Hole alle aktiven Mitarbeiter mit Ausleihzähler
         with Database.get_db() as conn:
             workers = conn.execute('''
-                SELECT w.*,
+                SELECT workers.*,
                        (SELECT COUNT(*) 
                         FROM lendings l 
-                        WHERE l.worker_barcode = w.barcode 
+                        WHERE l.worker_barcode = workers.barcode 
                         AND l.returned_at IS NULL) as active_lendings
-                FROM workers w
-                WHERE w.deleted = 0
-                ORDER BY w.lastname, w.firstname
+                FROM workers
+                WHERE workers.deleted = 0
+                ORDER BY workers.lastname, workers.firstname
             ''').fetchall()
         
         print(f"Gefundene Mitarbeiter: {len(workers)}")
@@ -52,7 +52,7 @@ def index():
         import traceback
         print(traceback.format_exc())
         flash('Fehler beim Laden der Mitarbeiter', 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('main.index'))
 
 @bp.route('/add', methods=['GET', 'POST'])
 @admin_required

@@ -8,6 +8,39 @@
     backdrop-filter: blur(8px);
 }
 
+/* Modal Styles */
+#quickScanModal {
+    position: fixed;
+    z-index: 9999;
+    background: transparent;
+}
+
+#quickScanModal::backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal-box {
+    position: relative;
+    z-index: 10000;
+    background: hsl(var(--b1));
+    border-radius: 1rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-height: min(600px, 80vh);
+    width: min(450px, 95vw);
+    margin: auto;
+}
+
+/* Hide QuickScan content when modal is not open */
+#quickScanModal:not([open]) .quickscan-content {
+    display: none !important;
+}
+
+/* Hide QuickScan content outside of modal */
+.quickscan-content:not(#quickScanModal *) {
+    display: none !important;
+}
+
 .scan-animation {
     position: relative;
     min-height: 3rem;

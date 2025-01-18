@@ -28,7 +28,7 @@ def index():
                            WHEN t.status = 'defekt' THEN 'defekt'
                            ELSE 'verfügbar'
                        END as current_status,
-                       w.firstname || ' ' || w.lastname as lent_to,
+                       (SELECT firstname || ' ' || lastname FROM workers WHERE barcode = l.worker_barcode) as lent_to,
                        l.lent_at as lending_date,
                        t.location,
                        t.category
@@ -38,7 +38,6 @@ def index():
                     FROM lendings
                     WHERE returned_at IS NULL
                 ) l ON t.barcode = l.tool_barcode
-                LEFT JOIN workers w ON l.worker_barcode = w.barcode
                 WHERE t.deleted = 0
                 GROUP BY t.barcode
                 ORDER BY t.name

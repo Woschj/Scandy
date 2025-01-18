@@ -12,7 +12,7 @@
         <!-- Content Container -->
         <div class="flex flex-col flex-1">
             <!-- Permanent Info Card Container -->
-            <div id="permanentInfo" class="mb-2">
+            <div id="permanentInfo" class="mb-2 quickscan-content">
                 <div class="card bg-base-200">
                     <div class="card-body p-4">
                         <div class="grid grid-cols-2 gap-4">
@@ -27,7 +27,6 @@
                                     <p id="itemName" class="font-bold text-base opacity-50">Noch kein Artikel gescannt</p>
                                     <div class="flex items-center gap-2" id="itemStatusContainer" style="display: none;">
                                         <span id="itemStatus" class="badge badge-lg"></span>
-                                        <!-- Ersetze Text durch Icons -->
                                         <span id="itemActionIcon" class="text-xl">
                                             <i class="fas fa-arrow-left text-success hidden" id="returnIcon" title="Wird zurückgegeben"></i>
                                             <i class="fas fa-arrow-right text-warning hidden" id="lendIcon" title="Wird ausgeliehen"></i>
@@ -52,7 +51,7 @@
                                 </div>
                             </div>
                             <!-- Mitarbeiter Info -->
-                            <div class="pl-4">
+                            <div>
                                 <div class="flex items-center gap-2">
                                     <i class="fas fa-user text-primary text-xl"></i>
                                     <h2 class="card-title text-base">Mitarbeiter</h2>
@@ -130,33 +129,3 @@
 
 <!-- JsBarcode Library -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script> 
-
-<!-- Info-Karte -->
-<div class="card bg-base-100 shadow-xl mb-4">
-    <div class="card-body">
-        <!-- Artikel-Name -->
-        <h2 id="itemName" class="card-title opacity-50">Noch kein Artikel gescannt</h2>
-        
-        <!-- Status -->
-        <div id="itemStatusContainer" class="flex items-center gap-2" style="display: none;">
-            <div id="itemStatus" class="badge badge-lg"></div>
-            <i id="returnIcon" class="fas fa-arrow-left text-success hidden"></i>
-            <i id="lendIcon" class="fas fa-arrow-right text-warning hidden"></i>
-        </div>
-        
-        <!-- Details -->
-        <p id="itemDetails" class="opacity-50">Details werden nach Scan angezeigt</p>
-        
-        <!-- Mengeneingabe für Verbrauchsmaterial -->
-        <div id="quantityContainer" class="form-control w-full max-w-xs hidden">
-            <label class="label">
-                <span class="label-text">Menge</span>
-            </label>
-            <input type="number" id="quantityInput" min="1" value="1" class="input input-bordered w-full max-w-xs" />
-        </div>
-        
-        <!-- Mitarbeiter -->
-        <h3 id="workerName" class="text-lg opacity-50">Noch kein Mitarbeiter gescannt</h3>
-        <p id="workerDepartment" class="opacity-50">Abteilung wird nach Scan angezeigt</p>
-    </div>
-</div> 

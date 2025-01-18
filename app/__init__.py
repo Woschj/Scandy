@@ -230,8 +230,29 @@ def create_app(test_config=None):
     
     # Datenbank initialisieren
     with app.app_context():
-        init_database_users(app)
-    
+        try:
+            # Benutzer-Datenbank initialisieren
+            init_database_users(app)
+            
+            # Hauptdatenbank-Schema initialisieren
+            db = Database()
+            db.ensure_db_exists()
+            
+            # Initialisiere alle Tabellen
+            from app.models.database import init_db
+            init_db()
+            
+            # Schema-Manager für zusätzliche Einstellungen
+            schema_manager = SchemaManager(db)
+            schema_manager.init_schema()
+            schema_manager.init_settings()
+            
+            logging.info("Datenbank erfolgreich initialisiert")
+            
+        except Exception as e:
+            logging.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
+            raise
+        
     # Automatische Datenbankbereinigung durchführen
     cleanup_database()
     

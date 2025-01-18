@@ -1,10 +1,10 @@
-from app.models.database import Database
+from app.models.database import UserDatabase
 from werkzeug.security import check_password_hash
 
 def needs_setup():
     """Überprüft, ob die Anwendung noch eingerichtet werden muss"""
     try:
-        with Database.get_db_connection() as conn:
+        with UserDatabase.get_db() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM users")
             user_count = cursor.fetchone()[0]
@@ -15,7 +15,7 @@ def needs_setup():
 def check_password(username, password):
     """Überprüft die Anmeldedaten eines Benutzers"""
     try:
-        with Database.get_db_connection() as conn:
+        with UserDatabase.get_db() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM users WHERE username = ?",

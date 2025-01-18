@@ -27,16 +27,18 @@ import sqlite3
 class DatabaseBackup:
     def __init__(self, app_path=None):
         # Basis-Verzeichnisse
-        self.base_dir = Path('/app')
-        self.internal_backup_dir = self.base_dir / 'internal_backups'
+        self.base_dir = Path(app_path) if app_path else Path.cwd()
+        self.internal_backup_dir = self.base_dir / 'backups'
         
         # Datenbank-Pfade
-        self.inventory_db_path = self.base_dir / 'database' / 'inventory.db'
-        self.users_db_path = self.base_dir / 'database' / 'users.db'
+        self.inventory_db_path = self.base_dir / 'app' / 'database' / 'inventory.db'
+        self.users_db_path = self.base_dir / 'app' / 'database' / 'users.db'
         self.max_days = 30
 
         # Stelle sicher dass Verzeichnisse existieren
-        self.internal_backup_dir.mkdir(exist_ok=True)
+        os.makedirs(self.internal_backup_dir, exist_ok=True)
+        os.makedirs(self.base_dir / 'app' / 'database', exist_ok=True)
+        os.makedirs(self.base_dir / 'logs', exist_ok=True)
         
         # Logging einrichten
         logging.basicConfig(

@@ -3,7 +3,7 @@ from flask import session, redirect, url_for, request, flash, g
 from datetime import datetime
 from app.utils.logger import loggers
 from app.utils.auth_utils import needs_setup
-from app.models.database import Database
+from app.models.database import UserDatabase
 
 def login_required(f):
     @wraps(f)
@@ -22,7 +22,7 @@ def admin_required(f):
             return redirect(url_for('auth.login'))
             
         # Prüfe ob der Benutzer Admin-Rechte hat
-        with Database.get_db() as db:
+        with UserDatabase.get_db() as db:
             user = db.execute('SELECT is_admin FROM users WHERE id = ?', 
                             [session['user_id']]).fetchone()
             

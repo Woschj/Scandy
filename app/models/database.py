@@ -47,6 +47,25 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+class UserDatabase:
+    """Separate Datenbankklasse für die Benutzerverwaltung"""
+    
+    @classmethod
+    def get_db(cls):
+        """Gibt eine Verbindung zur Benutzer-Datenbank zurück"""
+        if 'user_db' not in g:
+            db_path = os.path.join(Config.DATABASE_DIR, 'users.db')
+            g.user_db = sqlite3.connect(db_path)
+            g.user_db.row_factory = sqlite3.Row
+        return g.user_db
+    
+    @classmethod
+    def close_db(cls):
+        """Schließt die Benutzer-Datenbankverbindung"""
+        db = g.pop('user_db', None)
+        if db is not None:
+            db.close()
+
 class Database:
     """Datenbankklasse für SQLite"""
     
@@ -491,11 +510,11 @@ def init_db():
                 barcode TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 description TEXT,
-                status TEXT,
+                status TEXT DEFAULT 'verfügbar',
                 category TEXT,
                 location TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 deleted INTEGER DEFAULT 0,
                 deleted_at TIMESTAMP,
                 sync_status TEXT DEFAULT 'pending'
@@ -512,7 +531,7 @@ def init_db():
                 department TEXT,
                 email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 deleted INTEGER DEFAULT 0,
                 deleted_at TIMESTAMP,
                 sync_status TEXT DEFAULT 'pending'
@@ -531,7 +550,7 @@ def init_db():
                 category TEXT,
                 location TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 deleted INTEGER DEFAULT 0,
                 deleted_at TIMESTAMP,
                 sync_status TEXT DEFAULT 'pending'
@@ -546,7 +565,7 @@ def init_db():
                 worker_barcode TEXT NOT NULL,
                 lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 returned_at TIMESTAMP,
-                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 sync_status TEXT DEFAULT 'pending',
                 FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
                 FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
@@ -561,31 +580,10 @@ def init_db():
                 worker_barcode TEXT NOT NULL,
                 quantity INTEGER NOT NULL,
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 sync_status TEXT DEFAULT 'pending',
                 FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
                 FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-            )
-        ''')
-
-        # Benutzer
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                role TEXT NOT NULL
-            )
-        ''')
-
-        # Sync-Status
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sync_status (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                last_sync TIMESTAMP,
-                last_attempt TIMESTAMP,
-                status TEXT,
-                error TEXT
             )
         ''')
 
@@ -598,45 +596,29 @@ def init_db():
             )
         ''')
 
-        # Sync-Logs
+        # History
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sync_logs (
+            CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                client_name TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                changes_count INTEGER NOT NULL,
-                details TEXT
+                action TEXT NOT NULL,
+                item_type TEXT NOT NULL,
+                item_id TEXT NOT NULL,
+                user_id INTEGER,
+                details TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
-        # Tickets
+        # Tool Status Changes
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tickets (
+            CREATE TABLE IF NOT EXISTS tool_status_changes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL,
-                status TEXT DEFAULT 'offen',
-                priority TEXT DEFAULT 'normal',
-                created_by TEXT NOT NULL,
-                assigned_to TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                resolved_at TIMESTAMP,
-                resolution_notes TEXT,
-                FOREIGN KEY (created_by) REFERENCES users (username),
-                FOREIGN KEY (assigned_to) REFERENCES users (username)
-            )
-        ''')
-
-        # Ticket-Notizen
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS ticket_notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ticket_id INTEGER NOT NULL,
-                note TEXT NOT NULL,
-                created_by TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE
+                tool_barcode TEXT NOT NULL,
+                old_status TEXT NOT NULL,
+                new_status TEXT NOT NULL,
+                reason TEXT,
+                changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (tool_barcode) REFERENCES tools(barcode)
             )
         ''')
 

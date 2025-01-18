@@ -177,13 +177,13 @@
                 {% block content %}{% endblock %}
             </div>
         </main>
+
+        <!-- QuickScan Modal -->
+        {% include 'components/quickscan_modal.html' %}
+
+        <!-- Toast Container -->
+        <div id="toastContainer" class="toast toast-top toast-end"></div>
     </div>
-
-    <!-- QuickScan Modal -->
-    {% include 'components/quickscan_modal.html' %}
-
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast toast-top toast-end"></div>
 
     <!-- Toast Script -->
     <script>

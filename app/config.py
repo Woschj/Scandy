@@ -12,6 +12,7 @@ class Config:
     # Plattformunabhängige Pfade
     DATABASE_DIR = BASE_DIR / 'app' / 'database'
     DATABASE = str(DATABASE_DIR / 'inventory.db')
+    USERS_DATABASE = str(DATABASE_DIR / 'users.db')
     BACKUP_DIR = str(BASE_DIR / 'backups')
     UPLOAD_FOLDER = str(BASE_DIR / 'uploads')
     
