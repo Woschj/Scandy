@@ -147,7 +147,10 @@ def create_app(test_config=None):
     # Basis-Konfiguration
     app.config.update(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-key-123'),
-        SESSION_TYPE='filesystem'
+        SESSION_TYPE='filesystem',
+        SESSION_COOKIE_SAMESITE='Lax',  # Cookie SameSite-Einstellung
+        SESSION_COOKIE_SECURE=False,     # Für lokale Entwicklung auf False
+        PERMANENT_SESSION_LIFETIME=timedelta(days=1)
     )
     
     # Session-Konfiguration
@@ -194,47 +197,15 @@ def create_app(test_config=None):
     # Stelle sicher, dass alle Verzeichnisse existieren
     ensure_directories_exist()
     
-    # Wenn auf Render, lade Demo-Daten
-    if os.environ.get('RENDER') == 'true':
-        with app.app_context():
-            demo_data_lock = os.path.join(app.instance_path, 'demo_data.lock')
-            if not os.path.exists(demo_data_lock):
-                # Lösche vorhandene Benutzer
-                with Database.get_db() as db:
-                    db.execute("DELETE FROM users")
-                    db.commit()
-                    print("Vorhandene Benutzer gelöscht")
-                
-                # Erstelle Admin-Benutzer
-                from app.models.init_db import init_users
-                if init_users(app, 'admin'):
-                    print("Admin-Benutzer für Render erstellt (admin/admin)")
-                
-                # Demo-Daten laden
-                from app.models.demo_data import load_demo_data
-                load_demo_data()
-                print("Demo-Daten wurden geladen")
-                
-                # Erstelle Lock-Datei
-                os.makedirs(app.instance_path, exist_ok=True)
-                with open(demo_data_lock, 'w') as f:
-                    f.write('1')
-            else:
-                # Versuche das letzte Backup wiederherzustellen
-                backup = DatabaseBackup(app_path=Path(__file__).parent.parent)
-                latest_backup = "inventory_20250110_190000.db"
-                if backup.restore_backup(latest_backup):
-                    print(f"Backup {latest_backup} erfolgreich wiederhergestellt")
-                else:
-                    print("Konnte Backup nicht wiederherstellen, initialisiere neue Datenbank")
-    
     # Datenbank initialisieren
     with app.app_context():
         try:
-            # Benutzer-Datenbank initialisieren
-            init_database_users(app)
+            # Stelle sicher, dass das Datenbankverzeichnis existiert
+            from app.config import config
+            current_config = config['default']()
+            os.makedirs(os.path.dirname(current_config.DATABASE), exist_ok=True)
             
-            # Hauptdatenbank-Schema initialisieren
+            # Initialisiere die Datenbank
             db = Database()
             db.ensure_db_exists()
             
@@ -242,26 +213,21 @@ def create_app(test_config=None):
             from app.models.database import init_db
             init_db()
             
+            # Initialisiere Benutzer
+            init_database_users(app)
+            
             # Schema-Manager für zusätzliche Einstellungen
             schema_manager = SchemaManager(db)
             schema_manager.init_schema()
             schema_manager.init_settings()
+            
+            # Führe Datenbankbereinigung durch
+            cleanup_database()
             
             logging.info("Datenbank erfolgreich initialisiert")
             
         except Exception as e:
             logging.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
             raise
-        
-    # Automatische Datenbankbereinigung durchführen
-    cleanup_database()
-    
-    # Login-Manager initialisieren
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
-    
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.get_by_id(user_id)
     
     return app

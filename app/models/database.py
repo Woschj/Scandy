@@ -491,143 +491,168 @@ class BaseModel:
         )
 
 def init_db():
-    """Initialisiert die Datenbank"""
-    # Hole die Konfiguration
-    from app.config import config
-    current_config = config['default']()
-    
-    # Verbindung herstellen
-    conn = sqlite3.connect(current_config.DATABASE)
-    conn.row_factory = sqlite3.Row
-    
-    try:
+    """Initialisiert die Datenbank und stellt sicher, dass alle Tabellen existieren"""
+    with Database.get_db() as conn:
         cursor = conn.cursor()
         
-        # Werkzeuge
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tools (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                description TEXT,
-                status TEXT DEFAULT 'verfügbar',
-                category TEXT,
-                location TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP,
-                sync_status TEXT DEFAULT 'pending'
-            )
-        ''')
-
-        # Mitarbeiter
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT NOT NULL UNIQUE,
-                firstname TEXT NOT NULL,
-                lastname TEXT NOT NULL,
-                department TEXT,
-                email TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP,
-                sync_status TEXT DEFAULT 'pending'
-            )
-        ''')
-
-        # Verbrauchsmaterial
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS consumables (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                barcode TEXT NOT NULL UNIQUE,
-                name TEXT NOT NULL,
-                description TEXT,
-                quantity INTEGER DEFAULT 0,
-                min_quantity INTEGER DEFAULT 0,
-                category TEXT,
-                location TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                deleted INTEGER DEFAULT 0,
-                deleted_at TIMESTAMP,
-                sync_status TEXT DEFAULT 'pending'
-            )
-        ''')
-
-        # Ausleihen
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS lendings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_barcode TEXT NOT NULL,
-                worker_barcode TEXT NOT NULL,
-                lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                returned_at TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                sync_status TEXT DEFAULT 'pending',
-                FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
-                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-            )
-        ''')
-
-        # Verbrauchsmaterial-Nutzung
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS consumable_usages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                consumable_barcode TEXT NOT NULL,
-                worker_barcode TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                sync_status TEXT DEFAULT 'pending',
-                FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
-                FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
-            )
-        ''')
-
-        # Einstellungen
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT,
-                description TEXT
-            )
-        ''')
-
-        # History
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                action TEXT NOT NULL,
-                item_type TEXT NOT NULL,
-                item_id TEXT NOT NULL,
-                user_id INTEGER,
-                details TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-
-        # Tool Status Changes
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tool_status_changes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tool_barcode TEXT NOT NULL,
-                old_status TEXT NOT NULL,
-                new_status TEXT NOT NULL,
-                reason TEXT,
-                changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (tool_barcode) REFERENCES tools(barcode)
-            )
-        ''')
-
-        conn.commit()
-        logging.info("Datenbankschema erfolgreich initialisiert!")
+        # Prüfe und erstelle die Tabellen
+        tables = {
+            'tools': '''
+                CREATE TABLE IF NOT EXISTS tools (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT,
+                    location TEXT,
+                    status TEXT DEFAULT 'verfügbar',
+                    last_maintenance DATE,
+                    next_maintenance DATE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0
+                )
+            ''',
+            'workers': '''
+                CREATE TABLE IF NOT EXISTS workers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT UNIQUE NOT NULL,
+                    firstname TEXT NOT NULL,
+                    lastname TEXT NOT NULL,
+                    department TEXT,
+                    role TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0
+                )
+            ''',
+            'consumables': '''
+                CREATE TABLE IF NOT EXISTS consumables (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    barcode TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    category TEXT,
+                    location TEXT,
+                    quantity INTEGER DEFAULT 0,
+                    min_quantity INTEGER DEFAULT 0,
+                    unit TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted INTEGER DEFAULT 0
+                )
+            ''',
+            'lendings': '''
+                CREATE TABLE IF NOT EXISTS lendings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tool_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    lent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    due_at TIMESTAMP,
+                    returned_at TIMESTAMP,
+                    notes TEXT,
+                    FOREIGN KEY (tool_barcode) REFERENCES tools(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''',
+            'settings': '''
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    description TEXT
+                )
+            ''',
+            'history': '''
+                CREATE TABLE IF NOT EXISTS history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    action TEXT NOT NULL,
+                    item_type TEXT NOT NULL,
+                    item_id TEXT NOT NULL,
+                    user_id INTEGER,
+                    details TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''',
+            'consumable_usages': '''
+                CREATE TABLE IF NOT EXISTS consumable_usages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    consumable_barcode TEXT NOT NULL,
+                    worker_barcode TEXT NOT NULL,
+                    quantity INTEGER NOT NULL,
+                    used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (consumable_barcode) REFERENCES consumables(barcode),
+                    FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+                )
+            ''',
+            'tool_status_changes': '''
+                CREATE TABLE IF NOT EXISTS tool_status_changes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tool_barcode TEXT NOT NULL,
+                    old_status TEXT NOT NULL,
+                    new_status TEXT NOT NULL,
+                    reason TEXT,
+                    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (tool_barcode) REFERENCES tools(barcode)
+                )
+            ''',
+            'users': '''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'user',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''',
+            'tickets': '''
+                CREATE TABLE IF NOT EXISTS tickets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    status TEXT DEFAULT 'offen',
+                    priority TEXT DEFAULT 'normal',
+                    created_by TEXT NOT NULL,
+                    assigned_to TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    closed_at TIMESTAMP,
+                    FOREIGN KEY (created_by) REFERENCES users(username),
+                    FOREIGN KEY (assigned_to) REFERENCES users(username)
+                )
+            ''',
+            'ticket_comments': '''
+                CREATE TABLE IF NOT EXISTS ticket_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_id INTEGER NOT NULL,
+                    comment TEXT NOT NULL,
+                    created_by TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+                    FOREIGN KEY (created_by) REFERENCES users(username)
+                )
+            ''',
+            'ticket_notes': '''
+                CREATE TABLE IF NOT EXISTS ticket_notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_id INTEGER NOT NULL,
+                    note TEXT NOT NULL,
+                    created_by TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+                    FOREIGN KEY (created_by) REFERENCES users(username)
+                )
+            '''
+        }
         
-    except Exception as e:
-        logging.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+        # Erstelle alle Tabellen
+        for table_name, create_sql in tables.items():
+            try:
+                cursor.execute(create_sql)
+                logging.info(f"Tabelle {table_name} wurde überprüft/erstellt")
+            except Exception as e:
+                logging.error(f"Fehler beim Erstellen der Tabelle {table_name}: {str(e)}")
+        
+        # Commit die Änderungen
+        conn.commit()
+        logging.info("Datenbank-Initialisierung abgeschlossen")

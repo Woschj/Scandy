@@ -1,0 +1,119 @@
+<!-- Status Badge -->
+<div class="mb-4">
+    <span class="font-bold">Status:</span>
+    <span class="badge {% if ticket.status == 'gelöst' %}badge-success{% elif ticket.status == 'in_bearbeitung' %}badge-warning{% else %}badge-error{% endif %} ml-2">
+        {% if ticket.status == 'in_bearbeitung' %}
+            In Bearbeitung
+        {% else %}
+            {{ ticket.status|capitalize }}
+        {% endif %}
+    </span>
+</div>
+
+<!-- Update Form -->
+<form id="updateForm" class="space-y-4" method="POST" action="/tickets/{{ ticket.id }}/update">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-control">
+        <label class="label">
+            <span class="label-text">Status</span>
+        </label>
+        <select name="status" class="select select-bordered w-full" required>
+            <option value="offen" {% if ticket.status == 'offen' %}selected{% endif %}>Offen</option>
+            <option value="in_bearbeitung" {% if ticket.status == 'in_bearbeitung' %}selected{% endif %}>In Bearbeitung</option>
+            <option value="gelöst" {% if ticket.status == 'gelöst' %}selected{% endif %}>Gelöst</option>
+        </select>
+    </div>
+
+    <div class="form-control">
+        <label class="label">
+            <span class="label-text">Zugewiesen an</span>
+        </label>
+        <input type="text" name="assigned_to" class="input input-bordered" value="{{ ticket.assigned_to or '' }}">
+    </div>
+
+    <div class="form-control">
+        <label class="label">
+            <span class="label-text">Notizen zur Bearbeitung</span>
+        </label>
+        <textarea name="resolution_notes" class="textarea textarea-bordered h-24"></textarea>
+    </div>
+
+    <div class="form-control mt-6">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save mr-2"></i>Aktualisieren
+        </button>
+    </div>
+</form>
+
+<!-- Ticket Notes -->
+{% if notes %}
+<div class="mt-8">
+    <h3 class="text-lg font-bold mb-4">Bearbeitungsnotizen</h3>
+    <div class="space-y-4">
+        {% for note in notes %}
+        <div class="card bg-base-200">
+            <div class="card-body">
+                <div class="flex justify-between items-start">
+                    <div class="prose">
+                        {{ note.note|nl2br }}
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        <div>von {{ note.created_by }}</div>
+                        <div>{{ note.created_at|datetime }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+function updateTicket(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    
+    // Button deaktivieren und Ladeanimation anzeigen
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aktualisiere...';
+    
+    // Formular-Daten sammeln
+    const formData = new URLSearchParams(new FormData(form));
+    
+    fetch(`/tickets/{{ ticket.id }}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData.toString(),
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', 'Ticket erfolgreich aktualisiert');
+            form.resolution_notes.value = '';
+            
+            // Seite sanft aktualisieren
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            throw new Error(data.message || 'Fehler beim Aktualisieren');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', error.message || 'Fehler beim Aktualisieren des Tickets');
+    })
+    .finally(() => {
+        // Button wieder aktivieren
+        submitButton.disabled = false;
+        submitButton.innerHTML = 'Aktualisieren';
+    });
+}
+</script> 

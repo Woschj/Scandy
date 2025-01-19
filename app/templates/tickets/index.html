@@ -91,7 +91,11 @@
                                     else 'warning' if ticket.status == 'in_bearbeitung' 
                                     else 'error' 
                                 }}">
-                                    {{ ticket.status }}
+                                    {% if ticket.status == 'in_bearbeitung' %}
+                                        In Bearbeitung
+                                    {% else %}
+                                        {{ ticket.status|capitalize }}
+                                    {% endif %}
                                 </span>
                             </td>
                             <td>

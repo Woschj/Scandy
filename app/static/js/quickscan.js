@@ -6,88 +6,88 @@ const QuickScan = {
     lastKeyTime: 0,
     keyBuffer: '',
     isInitialized: false,
+    eventListeners: [],
     
     // Neuer Zwischenspeicher für den aktuellen Prozess
     currentProcess: {
-                item: null,
-                worker: null,
+        item: null,
+        worker: null,
         action: null,
         confirmed: false
     },
             
     init() {
         if (this.isInitialized) {
-            this.reset();
-        } else {
-            this.setupEventListeners();
-            this.isInitialized = true;
+            this.cleanup();
         }
+        this.setupEventListeners();
+        this.isInitialized = true;
         this.focusCurrentInput();
         console.log('QuickScan initialisiert');
     },
 
-        setupEventListeners() {
-        // Event-Listener für Item-Scan
-            const itemInput = document.getElementById('itemScanInput');
-            if (itemInput) {
-            itemInput.addEventListener('keypress', (e) => {
-                console.log('Keypress Event:', e.key, 'KeyCode:', e.keyCode);
-                this.handleKeyInput(e, itemInput);
-            });
+    cleanup() {
+        this.eventListeners.forEach(({element, type, listener}) => {
+            if (element) {
+                element.removeEventListener(type, listener);
+            }
+        });
+        this.eventListeners = [];
+        this.reset();
+    },
 
-            itemInput.addEventListener('input', (e) => {
-                console.log('Input Event:', e.target.value);
+    addListener(element, type, listener) {
+        if (element) {
+            const boundListener = listener.bind(this);
+            element.addEventListener(type, boundListener);
+            this.eventListeners.push({element, type, listener: boundListener});
+        }
+    },
+
+    setupEventListeners() {
+        const itemInput = document.getElementById('itemScanInput');
+        if (itemInput) {
+            this.addListener(itemInput, 'keypress', this.handleKeyInput);
+            this.addListener(itemInput, 'input', (e) => {
                 if (e.target.value) {
                     this.handleScannerInput(e.target.value, itemInput);
-                        e.target.value = '';
-                    }
-                });
-
-            // Fokus wiederherstellen bei Klick außerhalb
-            itemInput.addEventListener('blur', () => {
+                    e.target.value = '';
+                }
+            });
+            this.addListener(itemInput, 'blur', () => {
                 if (this.currentStep === 1) {
                     setTimeout(() => this.focusCurrentInput(), 100);
-                    }
-                });
-            }
+                }
+            });
+        }
 
-        // Event-Listener für Worker-Scan
         const workerInput = document.getElementById('workerScanInput');
         if (workerInput) {
-            workerInput.addEventListener('keypress', (e) => {
-                console.log('Keypress Event:', e.key, 'KeyCode:', e.keyCode);
-                this.handleKeyInput(e, workerInput);
-            });
-
-            workerInput.addEventListener('input', (e) => {
-                console.log('Input Event:', e.target.value);
+            this.addListener(workerInput, 'keypress', this.handleKeyInput);
+            this.addListener(workerInput, 'input', (e) => {
                 if (e.target.value) {
                     this.handleScannerInput(e.target.value, workerInput);
                     e.target.value = '';
                 }
             });
-
-            // Fokus wiederherstellen bei Klick außerhalb
-            workerInput.addEventListener('blur', () => {
+            this.addListener(workerInput, 'blur', () => {
                 if (this.currentStep === 2) {
                     setTimeout(() => this.focusCurrentInput(), 100);
                 }
             });
         }
 
-        // Event-Listener für Modal-Schließen
         const modal = document.getElementById('quickScanModal');
         if (modal) {
-            modal.addEventListener('close', () => {
-                this.reset();
+            this.addListener(modal, 'close', () => {
+                this.cleanup();
             });
         }
 
-        // Event-Listener für Mengeneingabe-Buttons
         document.querySelectorAll('.quantity-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();  // Verhindert Standard-Button-Verhalten
-                e.stopPropagation(); // Verhindert Event-Bubbling
+            this.addListener(btn, 'click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const action = btn.dataset.action;
                 if (action === 'decrease') {
                     this.decreaseQuantity();
@@ -98,7 +98,7 @@ const QuickScan = {
         });
     },
 
-    handleKeyInput(e, input) {
+    handleKeyInput(e) {
         const currentTime = new Date().getTime();
         const timeDiff = currentTime - this.lastKeyTime;
         this.lastKeyTime = currentTime;
@@ -108,7 +108,7 @@ const QuickScan = {
         if (e.key === 'Enter') {
             e.preventDefault();
             if (this.keyBuffer) {
-                this.handleScannerInput(this.keyBuffer, input);
+                this.handleScannerInput(this.keyBuffer, document.getElementById('itemScanInput'));
                 this.keyBuffer = '';
             }
         } else {
@@ -386,45 +386,43 @@ const QuickScan = {
     },
 
     reset() {
-        // Zurücksetzen des Prozess-Speichers
-        this.currentProcess = {
-                item: null, 
-                worker: null, 
-            action: null,
-            confirmed: false
-        };
-        
-        // Rest des Reset-Codes wie gehabt...
+        this.currentStep = 1;
         this.scannedItem = null;
         this.scannedWorker = null;
         this.confirmationBarcode = null;
         this.keyBuffer = '';
-        this.goToStep(1);
-        
-        // UI-Reset wie gehabt...
-        document.getElementById('itemScanInput').value = '';
-        document.getElementById('workerScanInput').value = '';
-        document.getElementById('itemConfirm').classList.add('hidden');
-        document.getElementById('finalConfirm').classList.add('hidden');
-        
-        // Reset Info-Karte
-        const itemName = document.getElementById('itemName');
-        const itemStatusContainer = document.getElementById('itemStatusContainer');
-        const itemDetails = document.getElementById('itemDetails');
-        const workerName = document.getElementById('workerName');
-        const workerDepartment = document.getElementById('workerDepartment');
+        this.currentProcess = {
+            item: null,
+            worker: null,
+            action: null,
+            confirmed: false
+        };
 
-        itemName.textContent = 'Noch kein Artikel gescannt';
-        itemName.classList.add('opacity-50');
-        itemStatusContainer.style.display = 'none';
-        itemDetails.textContent = 'Details werden nach Scan angezeigt';
-        itemDetails.classList.add('opacity-50');
-        workerName.textContent = 'Noch kein Mitarbeiter gescannt';
-        workerName.classList.add('opacity-50');
-        workerDepartment.textContent = 'Abteilung wird nach Scan angezeigt';
-        workerDepartment.classList.add('opacity-50');
+        // Reset UI elements
+        const elements = {
+            itemName: 'Noch kein Artikel gescannt',
+            itemDetails: 'Details werden nach Scan angezeigt',
+            workerName: 'Noch kein Mitarbeiter gescannt',
+            workerDepartment: 'Abteilung wird nach Scan angezeigt'
+        };
+
+        Object.entries(elements).forEach(([id, text]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+                element.classList.add('opacity-50');
+            }
+        });
+
+        // Reset step visibility
+        document.getElementById('step1')?.classList.remove('hidden');
+        document.getElementById('step2')?.classList.add('hidden');
+
+        // Reset status containers
+        document.getElementById('itemStatusContainer')?.classList.add('hidden');
+        document.getElementById('quantityContainer')?.classList.add('hidden');
         
-        this.focusCurrentInput();
+        console.log('QuickScan zurückgesetzt');
     },
 
     goToStep(step) {

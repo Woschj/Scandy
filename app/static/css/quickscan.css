@@ -31,6 +31,42 @@
     margin: auto;
 }
 
+/* Steps Styles */
+.steps-container {
+    position: relative;
+    z-index: 10;
+    margin: 1rem 0;
+    padding: 0.5rem;
+    background: hsl(var(--b1));
+}
+
+.steps {
+    --connector-size: 2px;
+    --step-padding: 1rem;
+    position: relative;
+    z-index: 20;
+}
+
+.steps .step {
+    --size: 2rem;
+}
+
+.steps .step:before {
+    height: var(--connector-size);
+    background-color: hsl(var(--b3));
+    z-index: 10;
+}
+
+.steps .step.step-primary:before {
+    background-color: hsl(var(--p));
+}
+
+.steps .step:after {
+    width: var(--size);
+    height: var(--size);
+    z-index: 20;
+}
+
 /* Hide QuickScan content when modal is not open */
 #quickScanModal:not([open]) .quickscan-content {
     display: none !important;
@@ -127,39 +163,6 @@
 
 .step.active {
     opacity: 1;
-}
-
-/* Steps */
-.steps {
-    --connector-size: 2px;
-    --step-padding: 1rem;
-}
-
-.steps .step {
-    --size: 2rem;
-}
-
-.steps .step:before {
-    height: var(--connector-size);
-    background-color: hsl(var(--b3));
-}
-
-.steps .step.step-primary:before {
-    background-color: hsl(var(--p));
-}
-
-.steps .step:after {
-    width: var(--size);
-    height: var(--size);
-    background-color: hsl(var(--b3));
-    border: var(--connector-size) solid hsl(var(--b2));
-    font-size: 0.8rem;
-}
-
-.steps .step.step-primary:after {
-    background-color: hsl(var(--p));
-    border-color: hsl(var(--p));
-    color: hsl(var(--pc));
 }
 
 /* Content Area */

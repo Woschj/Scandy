@@ -27,7 +27,10 @@ class SchemaManager:
                 ('workers.details', 0, 'Mitarbeiter-Details'),
                 ('admin.dashboard', 0, 'Admin-Dashboard'),
                 ('admin.trash', 0, 'Papierkorb'),
-                ('history.view', 0, 'Verlauf')
+                ('history.view', 0, 'Verlauf'),
+                ('tickets.index', 0, 'Ticket-System'),
+                ('tickets.create', 0, 'Ticket erstellen'),
+                ('tickets.edit', 0, 'Ticket bearbeiten')
             ]
             
             # Füge Standardeinstellungen ein
@@ -200,6 +203,37 @@ class SchemaManager:
                 used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (consumable_id) REFERENCES consumables(id),
                 FOREIGN KEY (worker_barcode) REFERENCES workers(barcode)
+            )
+        ''')
+        
+        # Tickets Tabelle
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT DEFAULT 'offen',
+                priority TEXT DEFAULT 'normal',
+                created_by TEXT NOT NULL,
+                assigned_to TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                closed_at TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(username),
+                FOREIGN KEY (assigned_to) REFERENCES users(username)
+            )
+        ''')
+        
+        # Ticket Comments Tabelle
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id INTEGER NOT NULL,
+                comment TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (ticket_id) REFERENCES tickets(id),
+                FOREIGN KEY (created_by) REFERENCES users(username)
             )
         ''')
         
