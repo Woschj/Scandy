@@ -218,11 +218,17 @@ def create_app(test_config=None):
             
             # Schema-Manager für zusätzliche Einstellungen
             schema_manager = SchemaManager(db)
+            schema_manager.init_tables()  # Erstellt alle Tabellen inkl. user_permissions
             schema_manager.init_schema()
             schema_manager.init_settings()
             
             # Führe Datenbankbereinigung durch
             cleanup_database()
+            
+            # Berechtigungen initialisieren
+            from app.models.init_db import init_permissions, init_default_roles
+            init_default_roles()  # Erstellt Rollen
+            init_permissions()    # Erstellt Berechtigungen und verknüpft sie mit Rollen
             
             logging.info("Datenbank erfolgreich initialisiert")
             

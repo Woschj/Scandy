@@ -19,6 +19,7 @@ import openpyxl
 from io import BytesIO
 from pathlib import Path
 from backup import DatabaseBackup
+from app.models.user import User
 
 # Logger einrichten
 logger = logging.getLogger(__name__)
@@ -1439,3 +1440,167 @@ def list_categories():
         ORDER BY value
     """)
     return jsonify({'success': True, 'categories': [dict(cat) for cat in categories]})
+
+@bp.route('/permissions')
+@admin_required
+def manage_permissions():
+    """Zeigt die Berechtigungsverwaltung an"""
+    with Database.get_db() as db:
+        # Alle Benutzer außer Admins
+        users = db.execute('''
+            SELECT u.id, u.username,
+                   EXISTS (
+                       SELECT 1 FROM user_roles ur 
+                       JOIN roles r ON ur.role_id = r.id 
+                       WHERE ur.user_id = u.id AND r.name = 'admin'
+                   ) as is_admin
+            FROM users u
+        ''').fetchall()
+        
+        # Alle verfügbaren Berechtigungen
+        permissions = db.execute('SELECT id, name, description FROM permissions').fetchall()
+        
+        # Benutzerberechtigungen abfragen (direkte + über Rollen)
+        user_permissions = {}
+        for user in users:
+            # Direkte Berechtigungen
+            direct_perms = db.execute('''
+                SELECT DISTINCT p.id as permission_id
+                FROM permissions p
+                LEFT JOIN user_permissions up ON p.id = up.permission_id
+                WHERE up.user_id = ?
+            ''', [user['id']]).fetchall()
+            
+            # Berechtigungen über Rollen
+            role_perms = db.execute('''
+                SELECT DISTINCT p.id as permission_id
+                FROM permissions p
+                JOIN role_permissions rp ON p.id = rp.permission_id
+                JOIN user_roles ur ON rp.role_id = ur.role_id
+                WHERE ur.user_id = ?
+            ''', [user['id']]).fetchall()
+            
+            # Kombiniere beide Berechtigungssets
+            all_perms = set()
+            for perm in direct_perms + role_perms:
+                all_perms.add(perm['permission_id'])
+            
+            user_permissions[user['id']] = list(all_perms)
+            
+    return render_template(
+        'admin/user_permissions.html',
+        users=users,
+        permissions=permissions,
+        user_permissions=user_permissions
+    )
+                         
+@bp.route('/permissions/save', methods=['POST'])
+@admin_required
+def save_permissions():
+    """Speichert die Benutzerberechtigungen"""
+    with Database.get_db() as db:
+        # Hole alle Benutzer die keine Admins sind
+        users = db.execute('''
+            SELECT u.id FROM users u 
+            WHERE NOT EXISTS (
+                SELECT 1 FROM user_roles ur 
+                JOIN roles r ON ur.role_id = r.id 
+                WHERE ur.user_id = u.id AND r.name = 'admin'
+            )
+        ''').fetchall()
+        
+        # Lösche alle bestehenden Berechtigungen für Nicht-Admin-User
+        for user in users:
+            db.execute('DELETE FROM user_permissions WHERE user_id = ?', [user['id']])
+        
+        # Speichere neue Berechtigungen
+        perms = request.form.to_dict()
+        if 'perms' in perms:
+            for user_id, permissions in eval(perms['perms']).items():
+                # Prüfe ob User kein Admin ist
+                is_admin = db.execute('''
+                    SELECT EXISTS (
+                        SELECT 1 FROM user_roles ur 
+                        JOIN roles r ON ur.role_id = r.id 
+                        WHERE ur.user_id = ? AND r.name = 'admin'
+                    ) as is_admin
+                ''', [user_id]).fetchone()['is_admin']
+                
+                if not is_admin:
+                    for perm_id in permissions:
+                        db.execute('''
+                            INSERT INTO user_permissions (user_id, permission_id)
+                            VALUES (?, ?)
+                        ''', [user_id, perm_id])
+        
+        db.commit()
+        flash('Berechtigungen wurden gespeichert', 'success')
+        
+    return redirect(url_for('admin.manage_permissions'))
+
+@bp.route('/users/add', methods=['POST'])
+@admin_required
+def add_user():
+    """Fügt einen neuen Benutzer hinzu"""
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    if not username or not password:
+        flash('Benutzername und Passwort sind erforderlich', 'error')
+        return redirect(url_for('admin.manage_permissions'))
+        
+    with Database.get_db() as db:
+        # Prüfen ob Benutzer bereits existiert
+        existing = db.execute(
+            'SELECT id FROM users WHERE username = ?',
+            [username]
+        ).fetchone()
+        
+        if existing:
+            flash(f'Benutzer {username} existiert bereits', 'error')
+            return redirect(url_for('admin.manage_permissions'))
+            
+        # Neuen Benutzer anlegen
+        db.execute('''
+            INSERT INTO users (username, password)
+            VALUES (?, ?)
+        ''', [username, generate_password_hash(password)])
+        
+        db.commit()
+        flash(f'Benutzer {username} wurde erfolgreich angelegt', 'success')
+        
+    return redirect(url_for('admin.manage_permissions'))
+
+@bp.route('/users/change-password', methods=['POST'])
+@admin_required
+def change_user_password():
+    """Ändert das Passwort eines Benutzers"""
+    user_id = request.form.get('user_id')
+    new_password = request.form.get('new_password')
+    
+    if not user_id or not new_password:
+        flash('Benutzer-ID und neues Passwort sind erforderlich', 'error')
+        return redirect(url_for('admin.manage_permissions'))
+        
+    with Database.get_db() as db:
+        # Prüfen ob Benutzer existiert
+        user = db.execute(
+            'SELECT username FROM users WHERE id = ?',
+            [user_id]
+        ).fetchone()
+        
+        if not user:
+            flash('Benutzer wurde nicht gefunden', 'error')
+            return redirect(url_for('admin.manage_permissions'))
+            
+        # Passwort aktualisieren
+        db.execute('''
+            UPDATE users 
+            SET password = ?
+            WHERE id = ?
+        ''', [generate_password_hash(new_password), user_id])
+        
+        db.commit()
+        flash(f'Passwort für {user["username"]} wurde erfolgreich geändert', 'success')
+        
+    return redirect(url_for('admin.manage_permissions'))

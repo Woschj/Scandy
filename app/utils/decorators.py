@@ -3,35 +3,77 @@ from flask import session, redirect, url_for, request, flash, g
 from datetime import datetime
 from app.utils.logger import loggers
 from app.utils.auth_utils import needs_setup
-from app.models.database import UserDatabase
+from app.models.database import UserDatabase, Database
+from app.models.user import User
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
+def login_required(view):
+    """Prüft ob ein Benutzer eingeloggt ist"""
+    @wraps(view)
+    def wrapped_view(**kwargs):
         if 'user_id' not in session:
-            flash('Bitte melden Sie sich an', 'warning')
-            return redirect(url_for('auth.login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Bitte melden Sie sich an', 'warning')
+            flash('Bitte melden Sie sich an', 'error')
             return redirect(url_for('auth.login'))
             
-        # Prüfe ob der Benutzer Admin-Rechte hat
-        with UserDatabase.get_db() as db:
-            user = db.execute('SELECT is_admin FROM users WHERE id = ?', 
-                            [session['user_id']]).fetchone()
+        # Lade den Benutzer in g
+        if not hasattr(g, 'user'):
+            g.user = User.get(session['user_id'])
             
-            if not user or not user['is_admin']:
-                flash('Sie haben keine Berechtigung für diese Seite', 'error')
+        return view(**kwargs)
+    return wrapped_view
+
+def admin_required(view):
+    """Prüft ob der Benutzer Admin-Rechte hat"""
+    @wraps(view)
+    def wrapped_view(**kwargs):
+        if 'user_id' not in session:
+            flash('Bitte melden Sie sich an.', 'error')
+            return redirect(url_for('auth.login'))
+            
+        # Lade den Benutzer in g
+        if not hasattr(g, 'user'):
+            g.user = User.get(session['user_id'])
+            
+        if not g.user:
+            flash('Bitte melden Sie sich an.', 'error')
+            return redirect(url_for('auth.login'))
+            
+        with Database.get_db() as db:
+            # Prüfe ob User Admin ist
+            is_admin = db.execute('''
+                SELECT EXISTS (
+                    SELECT 1 FROM user_roles ur 
+                    JOIN roles r ON ur.role_id = r.id 
+                    WHERE ur.user_id = ? AND r.name = 'admin'
+                ) as is_admin
+            ''', [g.user.id]).fetchone()['is_admin']
+            
+            if not is_admin:
+                flash('Sie haben keine Berechtigung für diese Seite.', 'error')
+                return redirect(url_for('index.index'))
+                
+        return view(**kwargs)
+    return wrapped_view
+
+def permission_required(permission):
+    """Prüft ob ein Benutzer eine bestimmte Berechtigung hat"""
+    def decorator(view):
+        @wraps(view)
+        def wrapped_view(**kwargs):
+            if 'user_id' not in session:
+                flash('Bitte melden Sie sich an', 'error')
+                return redirect(url_for('auth.login'))
+                
+            # Lade den Benutzer in g
+            if not hasattr(g, 'user'):
+                g.user = User.get(session['user_id'])
+                
+            if not g.user or not g.user.has_permission(permission):
+                flash('Sie haben keine Berechtigung für diese Aktion', 'error')
                 return redirect(url_for('main.index'))
                 
-        return f(*args, **kwargs)
-    return decorated_function
+            return view(**kwargs)
+        return wrapped_view
+    return decorator
 
 def tech_required(f):
     """Decorator für Techniker-Zugriff (alle eingeloggten Benutzer)"""

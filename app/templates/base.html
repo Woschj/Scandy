@@ -137,11 +137,50 @@
                                 </a>
                             </li>
                             <li>
+                                <a href="{{ url_for('admin.manage_permissions') }}" 
+                                   class="{% if request.endpoint == 'admin.manage_permissions' %}active{% endif %}">
+                                    <i class="fas fa-user-shield mr-2"></i>Berechtigungen
+                                </a>
+                            </li>
+                            <li>
                                 <a href="{{ url_for('main.about') }}" 
                                    class="{% if request.endpoint == 'main.about' %}active{% endif %}">
                                     <i class="fas fa-info-circle mr-2"></i>Über Scandy
                                 </a>
                             </li>
+                            {% if g.user %}
+                                {% if g.user.has_permission('admin.view') %}
+                                    <li>
+                                        <a href="{{ url_for('admin.dashboard') }}" class="tooltip tooltip-right" data-tip="Administration">
+                                            <i class="fas fa-cogs"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% if g.user.has_permission('tools.view') %}
+                                    <li>
+                                        <a href="{{ url_for('tools.index') }}" class="tooltip tooltip-right" data-tip="Werkzeuge">
+                                            <i class="fas fa-tools"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% if g.user.has_permission('consumables.view') %}
+                                    <li>
+                                        <a href="{{ url_for('consumables.index') }}" class="tooltip tooltip-right" data-tip="Verbrauchsmaterial">
+                                            <i class="fas fa-box-open"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% if g.user.has_permission('workers.view') %}
+                                    <li>
+                                        <a href="{{ url_for('workers.index') }}" class="tooltip tooltip-right" data-tip="Mitarbeiter">
+                                            <i class="fas fa-users"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
                         </ul>
                     </div>
                     <a href="{{ url_for('admin.trash') }}" 
